@@ -83,18 +83,18 @@ trait SessionDescriptionParser {
   /** sess-version =        1*DIGIT */
   def `sess-version` = number
 
-  def nettype = rule {
+  def nettype: Rule1[NetworkType] = rule {
     str("IN") ~ push(NetworkType.IN)
   }
 
-  def addrtype = rule {
+  def addrtype: Rule1[AddressType] = rule {
     str("IP4") ~ push(AddressType.IP4) | str("IP6") ~ push(AddressType.IP6)
   }
 
   /** unicast-address =     IP4-address / IP6-address / FQDN / extn-addr */
   // simplified
-  def `unicast-address` = rule {
-    text ~> (a ⇒ InetSocketAddress.createUnresolved(a, 0))
+  def `unicast-address`: Rule1[InetSocketAddress] = rule {
+    text ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
   }
 
   /** session-name-field =  %x73 "=" text CRLF */
@@ -135,7 +135,7 @@ trait SessionDescriptionParser {
   def `connection-address` = rule { `unicast-address` }
 
   def `bandwidth-field` = rule {
-    str("b=") ~ `bandwidth-type` ~ ch(':') ~ number ~ CRLF ~> ((t, n) ⇒ BandwidthInformation(t, n.toInt))
+    str("b=") ~ `bandwidth-type` ~ ch(':') ~ number ~ CRLF ~> ((t: BandwidthType, n: Long) ⇒ BandwidthInformation(t, n.toInt))
   }
 
   def `bandwidth-type`: Rule1[BandwidthType] = rule {
@@ -151,21 +151,21 @@ trait SessionDescriptionParser {
 
   /** repeat-fields =       %x72 "=" repeat-interval SP typed-time 1*(SP typed-time) */
   def `repeat-field` = rule {
-    str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ SP ~ zeroOrMore(`typed-time`) ~> ((a, b, c) ⇒ RepeatTimes(a, b, Seq(c)))
+    str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ SP ~ zeroOrMore(`typed-time`) ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
   }
 
   /** repeat-interval =     POS-DIGIT *DIGIT [fixed-len-time-unit] */
-  def `repeat-interval`: Rule2[Long, Option[TimeUnit]] = rule {
-    integer ~ optional(`fixed-len-time-unit`) // ~> ((a, b) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)))
+  def `repeat-interval`: Rule1[TimeSpan] = rule {
+    integer ~ optional(`fixed-len-time-unit`) ~> { (a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)) }
   }
 
   /** typed-time =          1*DIGIT [fixed-len-time-unit] */
   def `typed-time` = rule {
-    number ~ optional(`fixed-len-time-unit`) ~> (a, b): (Long, Option[TimeUnit]) ⇒ TimeSpan(a, b)
+    number ~ optional(`fixed-len-time-unit`) ~> { (a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)) }
   }
 
   /** fixed-len-time-unit = %x64 / %x68 / %x6d / %x73 */
-  def `fixed-len-time-unit` = rule {
+  def `fixed-len-time-unit`: Rule1[TimeUnit] = rule {
     (ch('d') ~ push(TimeUnit.Days)) |
       (ch('h') ~ push(TimeUnit.Hours)) |
       (ch('m') ~ push(TimeUnit.Minutes)) |
