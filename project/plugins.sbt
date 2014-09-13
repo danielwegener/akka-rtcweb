@@ -14,6 +14,5 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-osgi" % "0.6.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-pgp" % "0.8.1")
 
-
-
+addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.7.4")
 

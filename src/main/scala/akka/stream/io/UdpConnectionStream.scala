@@ -166,7 +166,6 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
       tryShutdown()
     }
     override protected def pumpFailed(e: Throwable): Unit = fail(e)
-    override protected def pumpContext: ActorRefFactory = context
   }
 
   object readPump extends Pump {
@@ -180,7 +179,6 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
       tryShutdown()
     }
     override protected def pumpFailed(e: Throwable): Unit = fail(e)
-    override protected def pumpContext: ActorRefFactory = context
   }
 
   override def receive =

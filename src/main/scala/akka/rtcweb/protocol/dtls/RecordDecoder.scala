@@ -16,8 +16,6 @@ import scala.collection.immutable
 
 private[dtls] class RecordDecoder(val serverSettings: ServerSettings) extends Transformer[UdpPacket, DtlsRecord] {
 
-  override def name = "RecordDecoder"
-
   /**
    * Invoked for each element to produce a (possibly empty) sequence of
    * output elements.

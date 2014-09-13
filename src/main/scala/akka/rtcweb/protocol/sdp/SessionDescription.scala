@@ -267,7 +267,7 @@ final case class Timing(startTime: Option[Long], stopTime: Option[Long]) extends
 final case class RepeatTimes(
   repeatInterval: TimeSpan,
   activeDuration: TimeSpan,
-  offsetFromStartTime: Seq[TimeSpan]) extends TimeDescription
+  offsetFromStartTime: Seq[TimeSpan] = Nil) extends TimeDescription
 
 object RepeatTimes {
   //def apply(repeatInterval: TimeSpan, activeDuration: TimeSpan, offsetFromStartTime: TimeSpan*): RepeatTimes =

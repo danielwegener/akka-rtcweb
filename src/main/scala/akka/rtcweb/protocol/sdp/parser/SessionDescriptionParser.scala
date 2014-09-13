@@ -40,7 +40,7 @@ trait SessionDescriptionParser {
 
   import CharacterClasses._
 
-  private def sessionDescriptionPart1 = rule {
+  private def part1 = rule {
     (`proto-version` ~
       `origin-field` ~
       `session-name-field` ~
@@ -48,7 +48,7 @@ trait SessionDescriptionParser {
       optional(`uri-field`)) ~> ((v, o, s, i, u) ⇒ (v, o, s, i, u))
   }
 
-  private def sessionDescriptionPart2 = rule {
+  private def part2 = rule {
     (zeroOrMore(`email-field`) ~
       zeroOrMore(`phone-field`) ~
       optional(`connection-field`) ~
@@ -58,7 +58,7 @@ trait SessionDescriptionParser {
   }
 
   def `session-description` = rule {
-    sessionDescriptionPart1 ~ sessionDescriptionPart2 ~ EOI ~>
+    part1 ~ part2 ~ EOI ~>
       ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5))
   }
 
@@ -151,16 +151,16 @@ trait SessionDescriptionParser {
 
   /** repeat-fields =       %x72 "=" repeat-interval SP typed-time 1*(SP typed-time) */
   def `repeat-field` = rule {
-    str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ SP ~ zeroOrMore(`typed-time`) ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
+    str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ zeroOrMore(SP ~ `typed-time`) ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
   }
 
   /** repeat-interval =     POS-DIGIT *DIGIT [fixed-len-time-unit] */
   def `repeat-interval`: Rule1[TimeSpan] = rule {
-    integer ~ optional(`fixed-len-time-unit`) ~> { (a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)) }
+    number ~ optional(`fixed-len-time-unit`) ~> { (a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)) }
   }
 
   /** typed-time =          1*DIGIT [fixed-len-time-unit] */
-  def `typed-time` = rule {
+  def `typed-time`: Rule1[TimeSpan] = rule {
     number ~ optional(`fixed-len-time-unit`) ~> { (a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)) }
   }
 

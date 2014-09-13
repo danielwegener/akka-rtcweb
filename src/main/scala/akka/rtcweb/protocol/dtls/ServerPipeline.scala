@@ -17,7 +17,7 @@ class ServerPipeline(serverSettings: ServerSettings, materializer: FlowMateriali
 
   override def apply(udpConnection: UdpConnection): DtlsConnection = {
 
-    val inputStream = Flow(udpConnection.inputStream).transform(recordDecoder)
+    //val inputStream = Flow(udpConnection.inputStream).transform(recordDecoder)
 
     //val outputStream =
 

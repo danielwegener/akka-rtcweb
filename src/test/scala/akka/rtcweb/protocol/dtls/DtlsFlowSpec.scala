@@ -2,7 +2,8 @@ package akka.rtcweb.protocol.dtls
 
 import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
-import org.scalatest.{Matchers, WordSpecLike, MustMatchers}
+import akka.actor.ActorSystem
+import org.scalatest.{ Matchers, WordSpecLike, MustMatchers }
 
 import scala.concurrent.duration._
 import akka.io.IO
@@ -17,16 +18,17 @@ import scala.concurrent.{ Await, Future }
 /**
  * @author Daniel Wegener (Holisticon AG)
  */
-class DtlsFlowSpec extends WordSpecLike with Matchers with MustMatchers  { // extends AkkaSpec
+class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
 
   val settings = MaterializerSettings(
     initialInputBufferSize = 4,
-    maximumInputBufferSize = 4,
+    maxInputBufferSize = 4,
     initialFanOutBufferSize = 2,
     maxFanOutBufferSize = 2,
     dispatcher = "akka.test.stream-dispatcher")
 
-  val materializer = FlowMaterializer(settings)
+  implicit val actorSystem = ActorSystem("dtls-flow-spec")
+  implicit val materializer = FlowMaterializer(settings)
 
   def temporaryServerAddress: InetSocketAddress = {
     val serverSocket = DatagramChannel.open().socket()
@@ -66,9 +68,9 @@ class DtlsFlowSpec extends WordSpecLike with Matchers with MustMatchers  { // ex
       //todo: does not compile
       //Flow(testInput).toPublisher(materializer).subscribe(conn.outputStream)
       val resultFuture: Future[ByteString] = Flow(conn.inputStream).take(10).
-        fold(ByteString.empty)((acc, in) ⇒ acc ++ in).toFuture(materializer)
+        fold(ByteString.empty)((acc, in) ⇒ acc ++ in).toFuture()
 
-      Await.result(resultFuture, 3.seconds) should be(expectedOutput)
+      Await.result(resultFuture, 3.seconds) must be(expectedOutput)
     }
   }
 

@@ -52,15 +52,15 @@ private[parser] trait CommonRules { this: Parser with StringBuilding ⇒
 
   /** Positive long value that does not start with a 0 (zero) */
   def integer: Rule1[Long] = rule {
-    capture(POSDIGIT ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> ((a) => a.toLong) | (oneOrMore(DIGIT) ~ push(999999999999999999L))
+    (capture(POSDIGIT ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> ((a) => a.toLong)) | ((oneOrMore(DIGIT) ~ &(!DIGIT) ~ push(999999999999999999L)))
   }
 
   // def number = rule((capture((1 to 18).times(DIGIT)) ~ !DIGIT) ~> (_.toLong)) | (oneOrMore(DIGIT) ~ push(999999999999999999L))
 
   // parses a potentially long series of digits and extracts its Long value capping at 999,999,999,999,999,999 in case of overflows
   def number: Rule1[Long] = rule {
-    (capture((1 to 18).times(DIGIT)) ~ !DIGIT ~> ((s) => (s.toLong))
-      | oneOrMore(DIGIT) ~ push(999999999999999999L)) ~ OWS
+    (capture((1 to 18).times(DIGIT)) ~ &(!DIGIT) ~> ((s) => (s.toLong))
+      | oneOrMore(DIGIT) ~ push(999999999999999999L))
 
   }
 
