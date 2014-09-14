@@ -59,7 +59,7 @@ trait SessionDescriptionParser {
 
   def `session-description` = rule {
     part1 ~ part2 ~ EOI ~>
-      ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5))
+      ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6))
   }
 
   /** proto-version =       %x76 "=" 1*DIGIT CRLF */
@@ -150,18 +150,18 @@ trait SessionDescriptionParser {
   }
 
   /** repeat-fields =       %x72 "=" repeat-interval SP typed-time 1*(SP typed-time) */
-  def `repeat-field` = rule {
-    str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ zeroOrMore(SP ~ `typed-time`) ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
+  def `repeat-field`:Rule1[RepeatTimes] = rule {
+    str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ oneOrMore(SP ~ `typed-time`) ~ CRLF ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
   }
 
   /** repeat-interval =     POS-DIGIT *DIGIT [fixed-len-time-unit] */
   def `repeat-interval`: Rule1[TimeSpan] = rule {
-    number ~ optional(`fixed-len-time-unit`) ~> { (a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)) }
+    integer ~ optional(`fixed-len-time-unit`) ~> ((a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)))
   }
 
   /** typed-time =          1*DIGIT [fixed-len-time-unit] */
   def `typed-time`: Rule1[TimeSpan] = rule {
-    number ~ optional(`fixed-len-time-unit`) ~> { (a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)) }
+    number ~ optional(`fixed-len-time-unit`) ~> ((a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)))
   }
 
   /** fixed-len-time-unit = %x64 / %x68 / %x6d / %x73 */
@@ -186,15 +186,6 @@ trait SessionDescriptionParser {
  *
  * proto-version =       %x76 "=" 1*DIGIT CRLF
  * ;this memo describes version 0
- *
- * origin-field =        %x6f "=" username SP sess-id SP sess-version SP
- * nettype SP addrtype SP unicast-address CRLF
- *
- *
- *
- * information-field =   [%x69 "=" text CRLF]
- *
- *
  *
  *
  *

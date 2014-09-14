@@ -4,6 +4,7 @@
 
 package akka.rtcweb.protocol.sdp.parser
 
+
 import scala.collection.immutable.Seq
 import akka.parboiled2._
 import akka.shapeless._
@@ -51,20 +52,19 @@ private[parser] trait CommonRules { this: Parser with StringBuilding ⇒
   def ws(s: String) = rule { s ~ OWS }
 
   /** Positive long value that does not start with a 0 (zero) */
-  def integer: Rule1[Long] = rule {
-    (capture(POSDIGIT ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> ((a) => a.toLong)) | ((oneOrMore(DIGIT) ~ &(!DIGIT) ~ push(999999999999999999L)))
-  }
+  def integer = rule(
+    (capture(POSDIGIT ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
+      | oneOrMore(DIGIT) ~ push(999999999999999999L)))
 
   // def number = rule((capture((1 to 18).times(DIGIT)) ~ !DIGIT) ~> (_.toLong)) | (oneOrMore(DIGIT) ~ push(999999999999999999L))
 
   // parses a potentially long series of digits and extracts its Long value capping at 999,999,999,999,999,999 in case of overflows
-  def number: Rule1[Long] = rule {
-    (capture((1 to 18).times(DIGIT)) ~ &(!DIGIT) ~> ((s) => (s.toLong))
-      | oneOrMore(DIGIT) ~ push(999999999999999999L))
+  // parses a potentially long series of digits and extracts its Long value capping at 999,999,999,999,999,999 in case of overflows
+  def number = rule(
+    (capture((1 to 18).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
+      | oneOrMore(DIGIT) ~ push(999999999999999999L)))
 
-  }
-
-  def numberDifferentThanZero(): Rule1[Option[Long]] = rule { (ch('0') ~ push(None)) | (number ~> ((n) ⇒ Option[Long](n))) }
+  def numberDifferentThanZero: Rule1[Option[Long]] = rule { (ch('0') ~ push(None)) | (number ~> ((n) ⇒ Option[Long](n))) }
 
   private def digitInt(c: Char): Int = c - '0'
   private def digitLong(c: Char): Long = (c - '0').toLong

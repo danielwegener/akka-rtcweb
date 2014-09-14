@@ -5,6 +5,7 @@ import java.net.InetSocketAddress
 import akka.parboiled2.ParseError
 import akka.parboiled2.ParserInput.StringBasedParserInput
 import akka.rtcweb.protocol.sdp._
+import scala.collection.immutable.Seq
 import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.util.{ Failure, Success }
@@ -26,7 +27,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |c=IN IP4 224.2.17.12/127
           |b=AS:1024
           |t=2873397496 2873404696
-          |r=604800 3600 0 90000m
+          |r=604800d 3600 0 90000m
         |""".stripMargin //
           .replace("\n", "\r\n")))
 
@@ -42,7 +43,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       result.connectionInformation should be(Some(ConnectionData(NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("224.2.17.12/127", 0))))
       result.bandwidthInformation should be(Some(BandwidthInformation(BandwidthType.AS, 1024)))
       result.timings should contain only Timing(Some(2873397496L), Some(2873404696L))
-      result.repeatTimes should contain only (RepeatTimes(TimeSpan(604800L), TimeSpan(3600L)), TimeSpan.ZERO, TimeSpan(90000, TimeUnit.Minutes))
+      result.repeatTimes should contain only RepeatTimes(TimeSpan(604800L, TimeUnit.Days), TimeSpan(3600L), Seq(TimeSpan.ZERO, TimeSpan(90000L, TimeUnit.Minutes)))
 
     }
 
