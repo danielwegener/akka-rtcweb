@@ -24,6 +24,11 @@ private[parser] trait CommonRules { this: Parser with StringBuilding ⇒
 
   def RWS = rule { oneOrMore(optional(CRLF) ~ oneOrMore(WSP)) } // extended with `obs-fold`
 
+
+
+
+  def token : Rule1[String] = rule { clearSB() ~ oneOrMore(`token-char` ~ appendSB()) ~ push(sb.toString) }
+
   def `byte-string`: Rule1[String] = rule { clearSB() ~ oneOrMore(BCHAR ~ appendSB()) ~ push(sb.toString) }
 
   def text = `byte-string`

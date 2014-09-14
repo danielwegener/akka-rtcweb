@@ -28,6 +28,9 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |b=AS:1024
           |t=2873397496 2873404696
           |r=604800d 3600 0 90000m
+          |k=prompt
+          |a=recvonly
+          |a=foo:bar
         |""".stripMargin //
           .replace("\n", "\r\n")))
 
@@ -44,7 +47,8 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       result.bandwidthInformation should be(Some(BandwidthInformation(BandwidthType.AS, 1024)))
       result.timings should contain only Timing(Some(2873397496L), Some(2873404696L))
       result.repeatTimes should contain only RepeatTimes(TimeSpan(604800L, TimeUnit.Days), TimeSpan(3600L), Seq(TimeSpan.ZERO, TimeSpan(90000L, TimeUnit.Minutes)))
-
+      result.sessionAttributes should contain only (PropertyAttribute("recvonly"), ValueAttribute("foo", "bar"))
+      result.encryptionKey should be(Some(PromptEncryptionKey))
     }
 
   }

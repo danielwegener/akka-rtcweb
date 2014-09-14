@@ -54,12 +54,15 @@ trait SessionDescriptionParser {
       optional(`connection-field`) ~
       optional(`bandwidth-field`) ~
       zeroOrMore(`time-field`) ~
-      zeroOrMore(`repeat-field`)) ~> ((e, p, c, b, t, r) ⇒ (e, p, c, b, t, r))
+      zeroOrMore(`repeat-field`) ~
+      //todo: zone corrections
+      optional(`key-field`) ~
+      zeroOrMore(`attribute-field`)) ~> ((e, p, c, b, t, r, k, a) ⇒ (e, p, c, b, t, r, k, a))
   }
 
   def `session-description` = rule {
     part1 ~ part2 ~ EOI ~>
-      ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6))
+      ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6, None, p2._7, p2._8))
   }
 
   /** proto-version =       %x76 "=" 1*DIGIT CRLF */
@@ -172,6 +175,36 @@ trait SessionDescriptionParser {
       (ch('s') ~ push(TimeUnit.Seconds))
   }
 
+  /** attribute-fields =    *(%x61 "=" attribute CRLF) */
+  def `attribute-field`:Rule1[Attribute] = rule {
+    str("a=") ~ attribute ~ CRLF
+  }
+
+  /** attribute =  (att-field ":" att-value) / att-field
+    * att-field =           token
+    * att-value =           byte-string
+    */
+  def attribute:Rule1[Attribute] = rule {
+    (token ~ ch(':') ~ `byte-string` ~> ((t,v) => ValueAttribute(t,v))) |
+      (token ~> ((t:String)=>PropertyAttribute(t)))
+  }
+
+  /** key-field = [%x6b "=" key-type CRLF] */
+  def `key-field`:Rule1[EncryptionKey] = rule {
+    str("k=") ~ `key-type` ~ CRLF
+  }
+
+  /**
+   * key-type = %x70 %x72 %x6f %x6d %x70 %x74 /     ; "prompt"
+   * %x63 %x6c %x65 %x61 %x72 ":" text / ; "clear:"
+   * %x62 %x61 %x73 %x65 "64:" base64 /  ; "base64:"
+   * %x75 %x72 %x69 ":" uri              ; "uri:"
+   */
+  def `key-type` : Rule1[EncryptionKey] = rule {
+    (str("prompt") ~ push(PromptEncryptionKey)) |
+      (str("clear:") ~ `byte-string` ~> ((s)=>ClearEncryptionKey(s)))
+  }
+
 }
 
 /**
@@ -183,30 +216,8 @@ trait SessionDescriptionParser {
  * defined in [4].
  *
  *
- *
- * proto-version =       %x76 "=" 1*DIGIT CRLF
- * ;this memo describes version 0
- *
- *
- *
- * phone-fields =        *(%x70 "=" phone-number CRLF)
- *
- *
- * bandwidth-fields =    *(%x62 "=" bwtype ":" bandwidth CRLF)
- *
- * time-fields =         1*( %x74 "=" start-time SP stop-time
- * (CRLF repeat-fields) CRLF)
- * [zone-adjustments CRLF]
- *
- * repeat-fields =       %x72 "=" repeat-interval SP typed-time
- * 1*(SP typed-time)
- *
  * zone-adjustments =    %x7a "=" time SP ["-"] typed-time
  * (SP time SP ["-"] typed-time)
- *
- * key-field =           [%x6b "=" key-type CRLF]
- *
- * attribute-fields =    *(%x61 "=" attribute CRLF)
  *
  * media-descriptions =  *( media-field
  * information-field

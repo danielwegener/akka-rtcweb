@@ -8,6 +8,7 @@ c=IN IP4 224.2.17.12/127
 b=CT:1024
 t=2873397496 2873404696
 r=604800 3600 0 90000m
+k=prompt
 a=recvonly
 m=audio 49170 RTP/AVP 0
 m=video 51372 RTP/AVP 99
