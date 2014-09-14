@@ -47,7 +47,6 @@ import scala.collection.immutable.Seq
  * all media)
  * @param bandwidthInformation {{{b=*}}} (zero or more bandwidth information lines)
  * @param timings One or more timings
- * @param timeZoneAdjustments {{{z=*}}} (time zone adjustments)
  * @param encryptionKey {{{k=*}}} (encryption key)
  * @param sessionAttributes {{{a=*}}} (zero or more session attribute lines)
  */
@@ -62,8 +61,6 @@ final case class SessionDescription(
     connectionInformation: Option[ConnectionData] = None,
     bandwidthInformation: Option[BandwidthInformation] = None,
     timings: Seq[Timing] = Nil,
-    repeatTimes: Seq[RepeatTimes] = Nil,
-    timeZoneAdjustments: Option[TimeZone] = None,
     encryptionKey: Option[EncryptionKey] = None,
     sessionAttributes: Seq[Attribute] = Nil,
     mediaDescriptions: Seq[MediaDescription] = Nil) {
@@ -229,7 +226,10 @@ sealed trait TimeDescription
  * the {{{<start-time>}}} is also zero, the session is regarded as permanent.
  *
  */
-final case class Timing(startTime: Option[Long], stopTime: Option[Long]) extends TimeDescription
+final case class Timing(startTime: Option[Long],
+                        stopTime: Option[Long],
+                        repeatings:Option[RepeatTimes] = None,
+                        zoneAdjustments:Seq[TimeZoneAdjustment] = Nil) extends TimeDescription
 
 /**
  * {{{r=* (zero or more repeat times)
@@ -322,8 +322,7 @@ object TimeUnit {
  * announcement.
  *
  */
-final case class TimeZone(
-  ajustments: Seq[(BigInt, TimeSpan)] = Nil)
+final case class TimeZoneAdjustment (base: Long, adjustment: TimeSpan)
 
 /**
  * {{{

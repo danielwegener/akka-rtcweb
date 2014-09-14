@@ -21,19 +21,20 @@ private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends 
 
 /**
  * ; SDP Syntax
- * session-description = proto-version
- * origin-field
- * session-name-field
- * information-field
- * uri-field
- * email-fields
- * phone-fields
- * connection-field
- * bandwidth-fields
- * time-fields
- * key-field
- * attribute-fields
- * media-descriptions
+ * session-description =
+ *   proto-version
+ *   origin-field
+ *   session-name-field
+ *   information-field
+ *   uri-field
+ *   email-fields
+ *   phone-fields
+ *   connection-field
+ *   bandwidth-fields
+ *   time-fields
+ *   key-field
+ *   attribute-fields
+ *   media-descriptions
  */
 trait SessionDescriptionParser {
   this: Parser with CommonRules with StringBuilding ⇒
@@ -54,15 +55,15 @@ trait SessionDescriptionParser {
       optional(`connection-field`) ~
       optional(`bandwidth-field`) ~
       zeroOrMore(`time-field`) ~
-      zeroOrMore(`repeat-field`) ~
+
       //todo: zone corrections
       optional(`key-field`) ~
-      zeroOrMore(`attribute-field`)) ~> ((e, p, c, b, t, r, k, a) ⇒ (e, p, c, b, t, r, k, a))
+      zeroOrMore(`attribute-field`)) ~> ((e, p, c, b, t, k, a) ⇒ (e, p, c, b, t, k, a))
   }
 
   def `session-description` = rule {
     part1 ~ part2 ~ EOI ~>
-      ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6, None, p2._7, p2._8))
+      ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6, p2._7))
   }
 
   /** proto-version =       %x76 "=" 1*DIGIT CRLF */
@@ -147,9 +148,11 @@ trait SessionDescriptionParser {
       (capture(str("X-") ~ oneOrMore(ALPHANUM)) ~> (s ⇒ BandwidthType.Experimental(s)))
   }
 
-  /** time-fields =         1*( %x74 "=" start-time SP stop-time */
+
+  /**  time-fields =         1*( %x74 "=" start-time SP stop-time (CRLF repeat-fields) CRLF) [zone-adjustments CRLF] **/
   def `time-field`: Rule1[Timing] = rule {
-    str("t=") ~ numberDifferentThanZero ~ SP ~ numberDifferentThanZero ~ CRLF ~> ((a, b) ⇒ Timing(a, b))
+    str("t=") ~ numberDifferentThanZero ~ SP ~ numberDifferentThanZero ~ CRLF ~ optional(`repeat-field`) ~ optional(`zone-adjustments`) ~>
+      ((a:Option[Long], b:Option[Long], r:Option[RepeatTimes], adjustments:Option[Seq[TimeZoneAdjustment]]) ⇒ Timing(a, b, r, adjustments.getOrElse(Nil)))
   }
 
   /** repeat-fields =       %x72 "=" repeat-interval SP typed-time 1*(SP typed-time) */
@@ -161,6 +164,19 @@ trait SessionDescriptionParser {
   def `repeat-interval`: Rule1[TimeSpan] = rule {
     integer ~ optional(`fixed-len-time-unit`) ~> ((a: Long, b: Option[TimeUnit]) ⇒ TimeSpan(a, b.getOrElse(TimeUnit.Seconds)))
   }
+
+  /** zone-adjustments =  %x7a "=" time SP ["-"] typed-time (SP time SP ["-"] typed-time) */
+  // todo: simplified, no negative allowed
+  def `zone-adjustments`:Rule1[Seq[TimeZoneAdjustment]] = rule {
+    str("z=") ~ `zone-adjustment` ~ zeroOrMore(SP ~ `zone-adjustment`) ~ CRLF ~>
+      ((first:TimeZoneAdjustment, more:Seq[TimeZoneAdjustment]) => Seq(first) ++ more )
+  }
+
+  def `zone-adjustment`:Rule1[TimeZoneAdjustment] = rule {
+    time ~ SP ~ `typed-time` ~> ((a:Long, b:TimeSpan) => TimeZoneAdjustment(a,b))
+  }
+
+  def time = number
 
   /** typed-time =          1*DIGIT [fixed-len-time-unit] */
   def `typed-time`: Rule1[TimeSpan] = rule {
@@ -205,6 +221,57 @@ trait SessionDescriptionParser {
       (str("clear:") ~ `byte-string` ~> ((s)=>ClearEncryptionKey(s)))
   }
 
+  /**
+   * media-descriptions =
+   * media-field
+   * information-field
+   * connection-field
+   * bandwidth-fields
+   * key-field
+   * attribute-fields
+   */
+  def `media-description` = rule {
+    `media-field` ~
+    optional(`information-field`) ~
+    optional(`connection-field`) ~
+    zeroOrMore(`bandwidth-field`) ~
+    zeroOrMore(`key-field`) ~
+    zeroOrMore(`attribute-field`) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, key))
+  }
+
+  /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */
+  def `media-field`:Rule1[(Media, PortRange, MediaTransportProtocol, Seq[String])] = rule {
+    str("m=") ~ media ~ SP ~ port ~ optional(ch('/') ~ integer) ~ SP ~ proto ~ zeroOrMore(SP ~ fmt) ~ CRLF ~>
+      ((m:Media, port:Long, portRange:Option[Long], proto:MediaTransportProtocol, fmts:Seq[String]) => (m,PortRange(port.toInt, portRange.map(_.toInt)), proto, fmts))
+  }
+
+  /** fmt = token ; typically an RTP payload type for audio and video media */
+  def fmt = rule {
+    token
+  }
+
+
+  /** media = token  ;typically "audio", "video", "text", "application" */
+  def media : Rule1[Media] = rule {
+    str("audio") ~ push(Media.audio) |
+    str("video") ~ push(Media.video) |
+    str("text") ~ push(Media.text)   |
+    str("application") ~ push(Media.application) |
+    token ~> ((t)=>CustomMedia(t))
+  }
+
+  def port : Rule1[Long] = rule {
+    number
+  }
+
+  /** proto = token *("/" token) ;typically "RTP/AVP" or "udp" */
+  // simplified
+  def proto: Rule1[MediaTransportProtocol] = rule {
+    str("udp") ~ push(MediaTransportProtocol.udp) |
+    str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
+    str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
+  }
+
 }
 
 /**
@@ -216,8 +283,6 @@ trait SessionDescriptionParser {
  * defined in [4].
  *
  *
- * zone-adjustments =    %x7a "=" time SP ["-"] typed-time
- * (SP time SP ["-"] typed-time)
  *
  * media-descriptions =  *( media-field
  * information-field

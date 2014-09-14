@@ -8,8 +8,6 @@ import akka.rtcweb.protocol.sdp._
 import scala.collection.immutable.Seq
 import org.scalatest.{ Matchers, WordSpecLike }
 
-import scala.util.{ Failure, Success }
-
 class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
 
   "A SessionDescriptorParser" should {
@@ -28,9 +26,11 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |b=AS:1024
           |t=2873397496 2873404696
           |r=604800d 3600 0 90000m
+          |z=0 0d
           |k=prompt
           |a=recvonly
           |a=foo:bar
+          |m=audio 49170 RTP/AVP 0
         |""".stripMargin //
           .replace("\n", "\r\n")))
 
@@ -45,8 +45,10 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       result.phoneNumbers should contain only "+4917624822132"
       result.connectionInformation should be(Some(ConnectionData(NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("224.2.17.12/127", 0))))
       result.bandwidthInformation should be(Some(BandwidthInformation(BandwidthType.AS, 1024)))
-      result.timings should contain only Timing(Some(2873397496L), Some(2873404696L))
-      result.repeatTimes should contain only RepeatTimes(TimeSpan(604800L, TimeUnit.Days), TimeSpan(3600L), Seq(TimeSpan.ZERO, TimeSpan(90000L, TimeUnit.Minutes)))
+      result.timings should contain only Timing(Some(2873397496L), Some(2873404696L),
+        repeatings = Some(RepeatTimes(TimeSpan(604800L, TimeUnit.Days), TimeSpan(3600L), Seq(TimeSpan.ZERO, TimeSpan(90000L, TimeUnit.Minutes)))),
+        zoneAdjustments = Seq(TimeZoneAdjustment(0, TimeSpan(0L, TimeUnit.Days)))
+      )
       result.sessionAttributes should contain only (PropertyAttribute("recvonly"), ValueAttribute("foo", "bar"))
       result.encryptionKey should be(Some(PromptEncryptionKey))
     }

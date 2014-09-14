@@ -18,12 +18,14 @@ import scala.collection.immutable.Seq
  */
 final case class MediaDescription(
   media: Media,
+  mediaTitle: Option[String],
   portRange: PortRange,
   protocol: MediaTransportProtocol,
   mediaAttributes: Seq[Attribute],
-  fmt: String,
-  mediaTitle: Option[String],
-  connectionInformation: Seq[ConnectionData])
+  fmt: Seq[String],
+  connectionInformation: Seq[ConnectionData],
+  encryptionKey:Option[EncryptionKey]
+                                   )
 
 /**
  * {{{<media>}}} is the media type.  Currently defined media are "audio",
@@ -39,6 +41,7 @@ object Media {
   case object application extends Media
   case object message extends Media
 }
+case class CustomMedia(token:String) extends Media
 
 final case class PortRange(
   port: Int,
