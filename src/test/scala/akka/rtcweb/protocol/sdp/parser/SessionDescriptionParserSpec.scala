@@ -4,6 +4,7 @@ import java.net.InetSocketAddress
 
 import akka.parboiled2.ParseError
 import akka.parboiled2.ParserInput.StringBasedParserInput
+import akka.rtcweb.protocol.sdp
 import akka.rtcweb.protocol.sdp._
 import scala.collection.immutable.Seq
 import org.scalatest.{ Matchers, WordSpecLike }
@@ -31,6 +32,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |a=recvonly
           |a=foo:bar
           |m=audio 49170 RTP/AVP 0
+          |a=custom
         |""".stripMargin //
           .replace("\n", "\r\n")))
 
@@ -51,6 +53,11 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       )
       result.sessionAttributes should contain only (PropertyAttribute("recvonly"), ValueAttribute("foo", "bar"))
       result.encryptionKey should be(Some(PromptEncryptionKey))
+      result.mediaDescriptions should not be 'empty
+      result.mediaDescriptions(0).media should be (Media.audio)
+      result.mediaDescriptions(0).connectionInformation should be (Nil)
+      result.mediaDescriptions(0).portRange should be (PortRange(49170))
+      result.mediaDescriptions(0).protocol should be(MediaTransportProtocol.`RTP/AVP`)
     }
 
   }

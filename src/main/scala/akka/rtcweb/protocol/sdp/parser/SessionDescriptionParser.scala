@@ -62,8 +62,8 @@ trait SessionDescriptionParser {
   }
 
   def `session-description` = rule {
-    part1 ~ part2 ~ EOI ~>
-      ((p1, p2) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6, p2._7))
+    part1 ~ part2 ~ zeroOrMore(`media-description`) ~ EOI ~>
+      ((p1, p2, mds) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6, p2._7, mds))
   }
 
   /** proto-version =       %x76 "=" 1*DIGIT CRLF */
@@ -148,15 +148,14 @@ trait SessionDescriptionParser {
       (capture(str("X-") ~ oneOrMore(ALPHANUM)) ~> (s ⇒ BandwidthType.Experimental(s)))
   }
 
-
   /**  time-fields =         1*( %x74 "=" start-time SP stop-time (CRLF repeat-fields) CRLF) [zone-adjustments CRLF] **/
   def `time-field`: Rule1[Timing] = rule {
     str("t=") ~ numberDifferentThanZero ~ SP ~ numberDifferentThanZero ~ CRLF ~ optional(`repeat-field`) ~ optional(`zone-adjustments`) ~>
-      ((a:Option[Long], b:Option[Long], r:Option[RepeatTimes], adjustments:Option[Seq[TimeZoneAdjustment]]) ⇒ Timing(a, b, r, adjustments.getOrElse(Nil)))
+      ((a: Option[Long], b: Option[Long], r: Option[RepeatTimes], adjustments: Option[Seq[TimeZoneAdjustment]]) ⇒ Timing(a, b, r, adjustments.getOrElse(Nil)))
   }
 
   /** repeat-fields =       %x72 "=" repeat-interval SP typed-time 1*(SP typed-time) */
-  def `repeat-field`:Rule1[RepeatTimes] = rule {
+  def `repeat-field`: Rule1[RepeatTimes] = rule {
     str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ oneOrMore(SP ~ `typed-time`) ~ CRLF ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
   }
 
@@ -167,13 +166,13 @@ trait SessionDescriptionParser {
 
   /** zone-adjustments =  %x7a "=" time SP ["-"] typed-time (SP time SP ["-"] typed-time) */
   // todo: simplified, no negative allowed
-  def `zone-adjustments`:Rule1[Seq[TimeZoneAdjustment]] = rule {
+  def `zone-adjustments`: Rule1[Seq[TimeZoneAdjustment]] = rule {
     str("z=") ~ `zone-adjustment` ~ zeroOrMore(SP ~ `zone-adjustment`) ~ CRLF ~>
-      ((first:TimeZoneAdjustment, more:Seq[TimeZoneAdjustment]) => Seq(first) ++ more )
+      ((first: TimeZoneAdjustment, more: Seq[TimeZoneAdjustment]) => Seq(first) ++ more)
   }
 
-  def `zone-adjustment`:Rule1[TimeZoneAdjustment] = rule {
-    time ~ SP ~ `typed-time` ~> ((a:Long, b:TimeSpan) => TimeZoneAdjustment(a,b))
+  def `zone-adjustment`: Rule1[TimeZoneAdjustment] = rule {
+    time ~ SP ~ `typed-time` ~> ((a: Long, b: TimeSpan) => TimeZoneAdjustment(a, b))
   }
 
   def time = number
@@ -192,21 +191,22 @@ trait SessionDescriptionParser {
   }
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */
-  def `attribute-field`:Rule1[Attribute] = rule {
+  def `attribute-field`: Rule1[Attribute] = rule {
     str("a=") ~ attribute ~ CRLF
   }
 
-  /** attribute =  (att-field ":" att-value) / att-field
-    * att-field =           token
-    * att-value =           byte-string
-    */
-  def attribute:Rule1[Attribute] = rule {
-    (token ~ ch(':') ~ `byte-string` ~> ((t,v) => ValueAttribute(t,v))) |
-      (token ~> ((t:String)=>PropertyAttribute(t)))
+  /**
+   * attribute =  (att-field ":" att-value) / att-field
+   * att-field =           token
+   * att-value =           byte-string
+   */
+  def attribute: Rule1[Attribute] = rule {
+    (token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
+      (token ~> ((t: String) => PropertyAttribute(t)))
   }
 
   /** key-field = [%x6b "=" key-type CRLF] */
-  def `key-field`:Rule1[EncryptionKey] = rule {
+  def `key-field`: Rule1[EncryptionKey] = rule {
     str("k=") ~ `key-type` ~ CRLF
   }
 
@@ -216,9 +216,9 @@ trait SessionDescriptionParser {
    * %x62 %x61 %x73 %x65 "64:" base64 /  ; "base64:"
    * %x75 %x72 %x69 ":" uri              ; "uri:"
    */
-  def `key-type` : Rule1[EncryptionKey] = rule {
+  def `key-type`: Rule1[EncryptionKey] = rule {
     (str("prompt") ~ push(PromptEncryptionKey)) |
-      (str("clear:") ~ `byte-string` ~> ((s)=>ClearEncryptionKey(s)))
+      (str("clear:") ~ `byte-string` ~> ((s) => ClearEncryptionKey(s)))
   }
 
   /**
@@ -232,17 +232,17 @@ trait SessionDescriptionParser {
    */
   def `media-description` = rule {
     `media-field` ~
-    optional(`information-field`) ~
-    optional(`connection-field`) ~
-    zeroOrMore(`bandwidth-field`) ~
-    zeroOrMore(`key-field`) ~
-    zeroOrMore(`attribute-field`) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, key))
+      optional(`information-field`) ~
+      zeroOrMore(`connection-field`) ~
+      zeroOrMore(`bandwidth-field`) ~
+      optional(`key-field`) ~
+      zeroOrMore(`attribute-field`) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, key))
   }
 
   /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */
-  def `media-field`:Rule1[(Media, PortRange, MediaTransportProtocol, Seq[String])] = rule {
+  def `media-field`: Rule1[(Media, PortRange, MediaTransportProtocol, Seq[String])] = rule {
     str("m=") ~ media ~ SP ~ port ~ optional(ch('/') ~ integer) ~ SP ~ proto ~ zeroOrMore(SP ~ fmt) ~ CRLF ~>
-      ((m:Media, port:Long, portRange:Option[Long], proto:MediaTransportProtocol, fmts:Seq[String]) => (m,PortRange(port.toInt, portRange.map(_.toInt)), proto, fmts))
+      ((m: Media, port: Long, portRange: Option[Long], proto: MediaTransportProtocol, fmts: Seq[String]) => (m, PortRange(port.toInt, portRange.map(_.toInt)), proto, fmts))
   }
 
   /** fmt = token ; typically an RTP payload type for audio and video media */
@@ -250,17 +250,16 @@ trait SessionDescriptionParser {
     token
   }
 
-
   /** media = token  ;typically "audio", "video", "text", "application" */
-  def media : Rule1[Media] = rule {
+  def media: Rule1[Media] = rule {
     str("audio") ~ push(Media.audio) |
-    str("video") ~ push(Media.video) |
-    str("text") ~ push(Media.text)   |
-    str("application") ~ push(Media.application) |
-    token ~> ((t)=>CustomMedia(t))
+      str("video") ~ push(Media.video) |
+      str("text") ~ push(Media.text) |
+      str("application") ~ push(Media.application) |
+      token ~> ((t) => CustomMedia(t))
   }
 
-  def port : Rule1[Long] = rule {
+  def port: Rule1[Long] = rule {
     number
   }
 
@@ -268,8 +267,8 @@ trait SessionDescriptionParser {
   // simplified
   def proto: Rule1[MediaTransportProtocol] = rule {
     str("udp") ~ push(MediaTransportProtocol.udp) |
-    str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
-    str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
+      str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
+      str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
   }
 
 }

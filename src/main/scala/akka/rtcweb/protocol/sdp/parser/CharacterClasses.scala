@@ -28,10 +28,8 @@ private[sdp] object CharacterClasses {
   val WSPCRLF = WSP ++ CR ++ LF
 
   /** token-char =          %x21 / %x23-27 / %x2A-2B / %x2D-2E / %x30-39 * / %x41-5A / %x5E-7E **/
-  val `token-char` = CharPredicate('\u0021', '\u0023'  to '\u0027', '\u002A' to '\u002B', '\u002D' to '\u002E' , '\u0030' to '\u0039', '\u0041' to '\u005A',
+  val `token-char` = CharPredicate('\u0021', '\u0023' to '\u0027', '\u002A' to '\u002B', '\u002D' to '\u002E', '\u0030' to '\u0039', '\u0041' to '\u005A',
     '\u005E' to '\u007E')
-
-
 
   val NWSVCHAR = VCHAR ++ CharPredicate('\u0080', '\u00FF')
 

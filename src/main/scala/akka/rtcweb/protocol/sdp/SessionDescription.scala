@@ -227,9 +227,9 @@ sealed trait TimeDescription
  *
  */
 final case class Timing(startTime: Option[Long],
-                        stopTime: Option[Long],
-                        repeatings:Option[RepeatTimes] = None,
-                        zoneAdjustments:Seq[TimeZoneAdjustment] = Nil) extends TimeDescription
+  stopTime: Option[Long],
+  repeatings: Option[RepeatTimes] = None,
+  zoneAdjustments: Seq[TimeZoneAdjustment] = Nil) extends TimeDescription
 
 /**
  * {{{r=* (zero or more repeat times)
@@ -322,7 +322,7 @@ object TimeUnit {
  * announcement.
  *
  */
-final case class TimeZoneAdjustment (base: Long, adjustment: TimeSpan)
+final case class TimeZoneAdjustment(base: Long, adjustment: TimeSpan)
 
 /**
  * {{{

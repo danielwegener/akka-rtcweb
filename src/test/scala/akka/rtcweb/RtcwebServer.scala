@@ -1,77 +1,66 @@
+import java.net.InetSocketAddress
+
 import akka.actor.ActorSystem
 import akka.http.Http
 import akka.http.model.HttpMethods._
 import akka.http.model._
 import akka.io.IO
-import akka.stream.scaladsl.Flow
+import akka.rtcweb.protocol.dtls.StreamDtls
 import akka.stream.{ MaterializerSettings, FlowMaterializer }
-import akka.util.Timeout
+import akka.util.{ByteString, Timeout}
 import com.typesafe.config.{ ConfigFactory, Config }
 import scala.concurrent.duration._
 import akka.pattern.ask
 
+import scala.io.Source
+
 object RtcwebServer extends App {
-  val testConf: Config = ConfigFactory.parseString("""
-    akka.loglevel = INFO
-    akka.log-dead-letters = off
-                                                   """)
-  implicit val system = ActorSystem("ServerTest", testConf)
+
+  implicit val system = ActorSystem("RtcwebServer")
   import system.dispatcher
 
-  val requestHandler: HttpRequest ⇒ HttpResponse = {
-    case HttpRequest(GET, Uri.Path("/"), _, _, _) ⇒ index
-    case HttpRequest(POST, Uri.Path("/offer"), _, entity, _) ⇒
-      system.log.info(s"received offer: $entity"); HttpResponse(200, entity = "Unknown resource!")
-    case _: HttpRequest ⇒ HttpResponse(404, entity = "Unknown resource!")
-  }
+  implicit val materializer = FlowMaterializer(MaterializerSettings(system))
 
-  implicit val materializer = FlowMaterializer(MaterializerSettings(testConf))
+  implicit val askTimeout: Timeout = 5000.millis
 
-  implicit val askTimeout: Timeout = 500.millis
-  val bindingFuture = IO(Http) ? Http.Bind(interface = "localhost", port = 8080)
-  bindingFuture foreach {
-    case Http.ServerBinding(localAddress, connectionStream) ⇒
-      Flow(connectionStream).foreach({
-        case Http.IncomingConnection(remoteAddress, requestPublisher, responseSubscriber) ⇒
-          println("Accepted new connection from " + remoteAddress)
-          Flow(requestPublisher).map(requestHandler).produceTo(responseSubscriber)
-      })
+
+  //(IO(StreamDtls) ? StreamDtls.Bind(materializer.settings, InetSocketAddress.createUnresolved("127.0.0.1", 4242))).mapTo[StreamDtls.DtlsConnection]
+
+
+  val httpBindingFuture = (IO(Http) ? Http.Bind(interface = "127.0.0.1", port = 8080)).mapTo[Http.ServerBinding]
+
+  import akka.http.routing.ScalaRoutingDSL._
+
+  handleConnections(httpBindingFuture) withRoute {
+    get {
+      path("") {
+        complete(index)
+      } ~
+      /*path("offer") {
+        //post {
+          complete(HttpResponse(StatusCodes.NoContent))
+        //}
+      } ~*/
+        path("ping") {
+          complete("PONG!")
+        } ~
+        path("crash") {
+          complete(sys.error("BOOM!"))
+        }
+    }
   }
 
   println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+
+  val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
+  val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
 
   Console.readLine()
   system.shutdown()
 
   ////////////// helpers //////////////
 
-  lazy val index = HttpResponse(
-    entity = HttpEntity(MediaTypes.`text/html`,
-      """|<html>
-        | <head>
-        | <script type="text/javascript">
-        | var iceServers = {
-        |    iceServers: [{
-        |        url: 'stun:stun.l.google.com:19302'
-        |    }]
-        |};
-        |
-        |var optionalRtpDataChannels = {
-        |    optional: [{
-        |        RtpDataChannels: true
-        |    }]
-        |};
-        |
-        | </script>
-        | </head>
-        | <body>
-        |
-        |    <h1>Say hello to <i>akka-http-core</i>!</h1>
-        |    <p>Defined resources:</p>
-        |    <ul>
-        |      <li><a href="/ping">/ping</a></li>
-        |      <li><a href="/crash">/crash</a></li>
-        |    </ul>
-        |  </body>
-        |</html>""".stripMargin))
+
+
+
 }

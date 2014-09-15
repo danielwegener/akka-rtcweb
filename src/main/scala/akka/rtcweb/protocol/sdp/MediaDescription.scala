@@ -24,8 +24,7 @@ final case class MediaDescription(
   mediaAttributes: Seq[Attribute],
   fmt: Seq[String],
   connectionInformation: Seq[ConnectionData],
-  encryptionKey:Option[EncryptionKey]
-                                   )
+  encryptionKey: Option[EncryptionKey])
 
 /**
  * {{{<media>}}} is the media type.  Currently defined media are "audio",
@@ -41,11 +40,11 @@ object Media {
   case object application extends Media
   case object message extends Media
 }
-case class CustomMedia(token:String) extends Media
+case class CustomMedia(token: String) extends Media
 
 final case class PortRange(
   port: Int,
-  range: Option[Int])
+  range: Option[Int] = None)
 
 sealed trait MediaTransportProtocol
 object MediaTransportProtocol {
