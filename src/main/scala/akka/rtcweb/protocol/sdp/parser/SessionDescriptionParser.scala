@@ -281,18 +281,7 @@ trait SessionDescriptionParser {
  * This section provides an Augmented BNF grammar for SDP.  ABNF is
  * defined in [4].
  *
- *
- *
- * media-descriptions =  *( media-field
- * information-field
- * connection-field
- * bandwidth-fields
- * key-field
- * attribute-fields )
- *
- * media-field =         %x6d "=" media SP port ["/" integer]
- * SP proto 1*(SP fmt) CRLF
- *
+ * *
  * ; sub-rules of 'o='
  * username =            non-ws-string
  * ;pretty wide definition, but doesn't

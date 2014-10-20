@@ -1,14 +1,10 @@
-import java.net.InetSocketAddress
 
 import akka.actor.ActorSystem
 import akka.http.Http
-import akka.http.model.HttpMethods._
 import akka.http.model._
 import akka.io.IO
-import akka.rtcweb.protocol.dtls.StreamDtls
-import akka.stream.{ MaterializerSettings, FlowMaterializer }
-import akka.util.{ByteString, Timeout}
-import com.typesafe.config.{ ConfigFactory, Config }
+import akka.stream.scaladsl2.FlowMaterializer
+import akka.util.Timeout
 import scala.concurrent.duration._
 import akka.pattern.ask
 
@@ -17,19 +13,21 @@ import scala.io.Source
 object RtcwebServer extends App {
 
   implicit val system = ActorSystem("RtcwebServer")
+
   import system.dispatcher
 
-  implicit val materializer = FlowMaterializer(MaterializerSettings(system))
+  //implicit val materializer = FlowMaterializer(MaterializerSettings(system))
 
-  implicit val askTimeout: Timeout = 5000.millis
+  implicit val materializer = FlowMaterializer()
 
+  implicit val askTimeout: Timeout = 500.millis
 
   //(IO(StreamDtls) ? StreamDtls.Bind(materializer.settings, InetSocketAddress.createUnresolved("127.0.0.1", 4242))).mapTo[StreamDtls.DtlsConnection]
 
-
   val httpBindingFuture = (IO(Http) ? Http.Bind(interface = "127.0.0.1", port = 8080)).mapTo[Http.ServerBinding]
 
-  import akka.http.routing.ScalaRoutingDSL._
+
+  import akka.http.server.ScalaRoutingDSL._
 
   handleConnections(httpBindingFuture) withRoute {
     get {
