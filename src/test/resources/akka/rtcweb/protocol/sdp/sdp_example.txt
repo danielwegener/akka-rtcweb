@@ -10,6 +10,7 @@ t=2873397496 2873404696
 r=604800 3600 0 90000m
 k=prompt
 a=recvonly
+m=data 8080 RTP/SAVP 1
 m=audio 49170 RTP/AVP 0
 m=video 51372 RTP/AVP 99
 a=rtpmap:99 h263-1998/90000

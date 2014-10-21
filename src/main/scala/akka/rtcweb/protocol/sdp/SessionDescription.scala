@@ -5,10 +5,7 @@ import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
 
 /**
- *    Session description
- *
- *
- * Time description
+ * Session description
  * @param protocolVersion v=  (protocol version)
  * @param origin o=  (originator and session identifier)
  * @param sessionName s=  (session name) The "s=" field is the textual session name.  There MUST be one and
@@ -74,7 +71,7 @@ final case class SessionDescription(
 
 }
 
-sealed trait ProtocolVersion
+sealed trait ProtocolVersion { final def value = productPrefix; def productPrefix:String }
 object ProtocolVersion {
   case object `0` extends ProtocolVersion
 }

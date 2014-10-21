@@ -58,9 +58,15 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       result.mediaDescriptions(0).connectionInformation should be (Nil)
       result.mediaDescriptions(0).portRange should be (PortRange(49170))
       result.mediaDescriptions(0).protocol should be(MediaTransportProtocol.`RTP/AVP`)
+      result.mediaDescriptions(0).mediaAttributes should be(Seq(PropertyAttribute("custom")))
     }
 
+
+
   }
+
+
+
 
   def input(str: String) = new StringBasedParserInput(str)
 

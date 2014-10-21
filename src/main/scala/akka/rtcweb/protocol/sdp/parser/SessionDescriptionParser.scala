@@ -10,7 +10,7 @@ import scala.collection.immutable.Seq
 
 import scala.util.{ Try, Failure, Success }
 
-private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends Parser with CommonRules
+private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends Parser with CommonRules with Base64Parsing
     with StringBuilding
     with SessionDescriptionParser {
 
@@ -37,7 +37,7 @@ private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends 
  *   media-descriptions
  */
 trait SessionDescriptionParser {
-  this: Parser with CommonRules with StringBuilding ⇒
+  this: Parser with CommonRules with Base64Parsing with StringBuilding ⇒
 
   import CharacterClasses._
 
@@ -218,7 +218,9 @@ trait SessionDescriptionParser {
    */
   def `key-type`: Rule1[EncryptionKey] = rule {
     (str("prompt") ~ push(PromptEncryptionKey)) |
-      (str("clear:") ~ `byte-string` ~> ((s) => ClearEncryptionKey(s)))
+      (str("clear:") ~ `byte-string` ~> ((s) => ClearEncryptionKey(s))) |
+      (str("base64:") ~ rfc2045String ~> ((bytes) => Base64EncryptionKey(bytes))) |
+      (str("uri:") ~ `non-ws-string` ~> ((s) => UriEncryptionKey(s)))
   }
 
   /**

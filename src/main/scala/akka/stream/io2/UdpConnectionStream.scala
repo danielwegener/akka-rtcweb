@@ -1,16 +1,16 @@
 /**
  * Copyright (C) 2009-2014 Typesafe Inc. <http://www.typesafe.com>
  */
-package akka.stream.io
+package akka.stream.io2
 
 import akka.actor._
 import akka.io.Udp._
 import akka.io.{ IO, Udp }
 import akka.stream.MaterializerSettings
 import akka.stream.impl._
-import akka.stream.io.StreamUdp.{ UdpConnection, UdpPacket }
-import akka.stream.io.StreamUdpManager.ExposedProcessor
-import akka.stream.io.UdpActor.{ UdpStreamException, WriteAck }
+import akka.stream.io2.StreamUdp.{ UdpConnection, UdpPacket }
+import akka.stream.io2.StreamUdpManager.ExposedProcessor
+import akka.stream.io2.UdpActor.{ UdpStreamException, WriteAck }
 import org.reactivestreams.Processor
 
 import scala.util.control.NoStackTrace
