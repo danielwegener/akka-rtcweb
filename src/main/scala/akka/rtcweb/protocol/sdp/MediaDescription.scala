@@ -53,4 +53,7 @@ object MediaTransportProtocol {
 
   /** denotes the Secure Real-time Transport Protocol [23] running over UDP. */
   case object `RTP/SAVP` extends MediaTransportProtocol
+
+  /** Real-time Transport Control Protocol (RTCP)-Based Feedback (RTP/SAVPF) rfc5124. */
+  case object `RTP/SAVPF` extends MediaTransportProtocol
 }

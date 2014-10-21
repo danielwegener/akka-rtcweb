@@ -3,11 +3,11 @@ package akka.rtcweb.protocol.dtls
 import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
 import akka.actor.ActorSystem
-import org.scalatest.{ Matchers, WordSpecLike, MustMatchers }
+import org.scalatest.{ WordSpecLike, MustMatchers }
 
 import scala.concurrent.duration._
 import akka.io.IO
-import akka.stream.io.StreamUdp
+import akka.stream.io2.StreamUdp
 import akka.stream.scaladsl.Flow
 import akka.stream.{ FlowMaterializer, MaterializerSettings }
 import akka.testkit.TestProbe

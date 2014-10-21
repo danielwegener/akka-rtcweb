@@ -3,7 +3,7 @@ package akka.rtcweb.protocol.dtls
 import akka.rtcweb.protocol.dtls.StreamDtls.DtlsRecord
 import akka.rtcweb.protocol.dtls.record.DtlsPlaintext
 import akka.stream.Transformer
-import akka.stream.io.StreamUdp.UdpPacket
+import akka.stream.io2.StreamUdp.UdpPacket
 import akka.util.ByteString
 
 import scodec._

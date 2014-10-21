@@ -36,7 +36,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
         |""".stripMargin //
           .replace("\n", "\r\n")))
 
-      val result = parser.parseSessionDescription().recover { case e @ ParseError(position, traces) => fail(s"${parser.formatErrorProblem(e)}: ${parser.formatErrorLine(e)}: ${e.formatTraces}", e) }.get
+      val result = parser.parseSessionDescription().recover { case e @ ParseError(position, traces) => fail(s"\n${parser.formatErrorProblem(e)}: ${parser.formatErrorLine(e)}: ${e.formatTraces}", e) }.get
 
       result.origin should be(Origin(Some("jdoe"), 2890844526L, 2890842807L, NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("10.47.16.5", 0)))
       result.protocolVersion should be(ProtocolVersion.`0`)

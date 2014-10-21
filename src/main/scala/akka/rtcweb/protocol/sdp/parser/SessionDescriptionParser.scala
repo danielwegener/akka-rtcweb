@@ -6,6 +6,7 @@ import akka.parboiled2._
 import akka.rtcweb.protocol.sdp._
 import akka.rtcweb.protocol.sdp.parser.CharacterClasses._
 import akka.shapeless.{ HNil, :: }
+import akka.util.ByteString
 import scala.collection.immutable.Seq
 
 import scala.util.{ Try, Failure, Success }
@@ -17,6 +18,11 @@ private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends 
   def parseSessionDescription(): Try[SessionDescription] =
     `session-description`.run()
 
+}
+
+object SessionDescriptionParser {
+
+  def parse(payload: String): SessionDescription = new SessionDescriptionParserImpl(ParserInput(payload)).parseSessionDescription().get
 }
 
 /**
@@ -270,6 +276,7 @@ trait SessionDescriptionParser {
   def proto: Rule1[MediaTransportProtocol] = rule {
     str("udp") ~ push(MediaTransportProtocol.udp) |
       str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
+      str("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
       str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
   }
 

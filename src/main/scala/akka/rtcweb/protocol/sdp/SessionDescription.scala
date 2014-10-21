@@ -71,7 +71,7 @@ final case class SessionDescription(
 
 }
 
-sealed trait ProtocolVersion { final def value = productPrefix; def productPrefix:String }
+sealed trait ProtocolVersion { final def value = productPrefix; def productPrefix: String }
 object ProtocolVersion {
   case object `0` extends ProtocolVersion
 }

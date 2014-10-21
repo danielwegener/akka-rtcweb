@@ -3,9 +3,8 @@ package akka.rtcweb.protocol.dtls
 import akka.event.LoggingAdapter
 import akka.rtcweb.protocol.dtls.StreamDtls.{ DtlsRecord, DtlsConnection }
 import akka.stream.{ Transformer, FlowMaterializer }
-import akka.stream.io.StreamUdp.{ UdpPacket, UdpConnection }
-import akka.stream.io.StreamUdp
-import akka.stream.scaladsl.Flow
+import akka.stream.io2.StreamUdp.{ UdpPacket, UdpConnection }
+import akka.stream.io2.StreamUdp
 
 trait DtlsRecordParser extends Transformer[UdpPacket, DtlsRecord]
 

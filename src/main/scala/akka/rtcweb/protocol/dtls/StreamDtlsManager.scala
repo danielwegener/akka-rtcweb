@@ -3,7 +3,7 @@ package akka.rtcweb.protocol.dtls
 import akka.actor.{ Status, Props, ActorLogging, Actor }
 import akka.io.IO
 import akka.stream.FlowMaterializer
-import akka.stream.io.{ StreamUdp }
+import akka.stream.io2.{ StreamUdp }
 import akka.util.Timeout
 import scala.concurrent.duration._
 import akka.pattern.ask

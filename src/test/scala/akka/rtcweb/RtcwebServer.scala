@@ -2,9 +2,14 @@
 import akka.actor.ActorSystem
 import akka.http.Http
 import akka.http.model._
+import akka.http.server.directives.BasicDirectives._
+import akka.http.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.io.IO
+import akka.rtcweb.protocol.sdp.SessionDescription
+import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.stream.scaladsl2.FlowMaterializer
 import akka.util.Timeout
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import akka.pattern.ask
 
@@ -26,19 +31,33 @@ object RtcwebServer extends App {
 
   val httpBindingFuture = (IO(Http) ? Http.Bind(interface = "127.0.0.1", port = 8080)).mapTo[Http.ServerBinding]
 
+  val sdpMediaType = MediaType.custom("application/sdp")
+
+  val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
+  val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
+
+  implicit val toSessionDescriptionUnmarshaller = Unmarshaller.strict[String, SessionDescription](SessionDescriptionParser.parse)
 
   import akka.http.server.ScalaRoutingDSL._
 
   handleConnections(httpBindingFuture) withRoute {
-    get {
+    (get | post) {
       path("") {
         complete(index)
       } ~
-      /*path("offer") {
-        //post {
-          complete(HttpResponse(StatusCodes.NoContent))
-        //}
-      } ~*/
+        path("offer") {
+          extractLog { log =>
+            extract(_.request.entity) { entity =>
+            
+            val r = Unmarshal(entity).to[String].flatMap[SessionDescription](s => Future(SessionDescriptionParser.parse(s)))
+
+            val result = Await.result(r, Duration.Inf)
+            log.info("received and parsed: "+result.toString)
+
+            complete(HttpResponse(entity = "foo"))
+           }
+          }
+        } ~
         path("ping") {
           complete("PONG!")
         } ~
@@ -50,15 +69,13 @@ object RtcwebServer extends App {
 
   println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
 
-  val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
-  val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
+
+
 
   Console.readLine()
   system.shutdown()
 
   ////////////// helpers //////////////
-
-
 
 
 }

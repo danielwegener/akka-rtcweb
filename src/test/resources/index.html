@@ -3,12 +3,18 @@
 <head>
     <script type="text/javascript">
 
-        var cfg = {"iceServers":[{"url":"stun:23.21.150.121"}]};
-        var con = { 'optional': [{'DtlsSrtpKeyAgreement': true}] };
+        var RTCPeerConnection = window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+        var IceCandidate = window.mozRTCIceCandidate || window.RTCIceCandidate;
+        var SessionDescription = window.mozRTCSessionDescription || window.RTCSessionDescription;
+        navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
+
+        var configuration = {"iceServers":[{"url":"stun:23.21.150.121"}]};
+        //var cfg = {"iceServers":[]};
+        var options = { 'optional': [{'DtlsSrtpKeyAgreement': true}, {"RtpDataChannels": true}] };
 
         /* THIS IS ALICE, THE CALLER/SENDER */
 
-        var pc1 = new webkitRTCPeerConnection(cfg, con);
+        var pc1 = new RTCPeerConnection(configuration, options);
         var tn1 = null;
         var dc1 = pc1.createDataChannel('myDataChannel', {reliable:true});
         console.log("Created datachannel dc1 (pc1)");
@@ -29,9 +35,32 @@
         pc1.onicecandidate = function (e) {
             console.log("ICE candidate (pc1)", e);
             console.log("LocalDescription is now: ", pc1.localDescription);
+            pc1.onicecandidate = null;
+            sendOffer(pc1.localDescription.sdp)
         };
 
-        var pc1icedone = false;
+        function sendOffer(candidate) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/offer", true);
+            xhr.setRequestHeader("Content-type", "application/sdp", true);
+            var xhrSuccess = function () {
+                if (xhr.readyState==4) {
+                    if (xhr.status == 200) {
+                        receiveOfferResponse(xhr.responseText)
+                    } else {
+                        console.log("Ajax call failed :(")
+                    }
+                }
+            }
+            xhr.onreadystatechange = xhrSuccess;
+            xhr.send(candidate)
+        }
+
+        function receiveOfferResponse(offerResponse) {
+            console.log("OfferResponse from Server: "+offerResponse)
+        }
+
+
 
 
         pc1.onconnection = function() {
@@ -54,6 +83,8 @@
 
 
 
+
+
         //todo: talk to the server and get a offer reply
 
         //pc1.addIceCandidate(iceCandidatesFromServer);
@@ -63,5 +94,6 @@
 
 </head>
 <body>
+    Here we go
 </body>
 </html>

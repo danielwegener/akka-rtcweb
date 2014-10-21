@@ -381,7 +381,7 @@ object RsaClientKeyExchange {
 }
 
 //todo: continue
-case class DhClientKeyExchange extends ClientKeyExchange
+case object DhClientKeyExchange extends ClientKeyExchange
 
 /**
  * {{{
