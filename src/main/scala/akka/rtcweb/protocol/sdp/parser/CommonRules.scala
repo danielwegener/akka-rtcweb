@@ -39,6 +39,8 @@ private[parser] trait CommonRules { this: Parser with StringBuilding ⇒
   //                                    helpers
   // ******************************************************************************************
 
+  def `numeric-string`: Rule1[String] = rule { clearSB() ~ oneOrMore(DIGIT ~ appendSB()) ~ push(sb.toString) }
+
   def listSep = rule { ',' ~ OWS }
 
   def digit = rule { DIGIT ~ push(digitInt(lastChar)) }

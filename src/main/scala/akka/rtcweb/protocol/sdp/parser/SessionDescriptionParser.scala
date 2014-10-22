@@ -1,12 +1,10 @@
 package akka.rtcweb.protocol.sdp.parser
 
-import java.net.{ InetSocketAddress, URI, InetAddress }
+import java.net.{ InetSocketAddress }
 
 import akka.parboiled2._
 import akka.rtcweb.protocol.sdp._
-import akka.rtcweb.protocol.sdp.parser.CharacterClasses._
 import akka.shapeless.{ HNil, :: }
-import akka.util.ByteString
 import scala.collection.immutable.Seq
 
 import scala.util.{ Try, Failure, Success }
@@ -88,7 +86,7 @@ trait SessionDescriptionParser {
   }
 
   /** sess-id =        1*DIGIT */
-  def `sess-id` = number
+  def `sess-id` = `numeric-string`
 
   /** sess-version =        1*DIGIT */
   def `sess-version` = number
@@ -243,8 +241,8 @@ trait SessionDescriptionParser {
       optional(`information-field`) ~
       zeroOrMore(`connection-field`) ~
       zeroOrMore(`bandwidth-field`) ~
-      optional(`key-field`) ~
-      zeroOrMore(`attribute-field`) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, key))
+      optional(`key-field`) ~ // the ignored zeroOrMore(`bandwidth-field`) is a workaround for chromes missplaced sdp bandwidth rendering
+      zeroOrMore(`attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, bf) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, key))
   }
 
   /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */

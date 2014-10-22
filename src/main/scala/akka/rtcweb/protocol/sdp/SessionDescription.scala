@@ -116,7 +116,7 @@ object ProtocolVersion {
  */
 final case class Origin(
   username: Option[String],
-  `sess-id`: Long,
+  `sess-id`: String,
   `sess-version`: Long,
   nettype: NetworkType = NetworkType.IN,
   addrtype: AddressType,
