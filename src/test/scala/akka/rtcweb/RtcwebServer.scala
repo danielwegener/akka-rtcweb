@@ -7,6 +7,7 @@ import akka.http.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.io.IO
 import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
+import akka.rtcweb.protocol.sdp.serializer.SdpRendering
 import akka.stream.scaladsl2.FlowMaterializer
 import akka.util.Timeout
 import scala.concurrent.{ Future, Await }
@@ -53,8 +54,9 @@ object RtcwebServer extends App {
 
               val result = Await.result(r, Duration.Inf)
               log.info("received and parsed: " + result.toString)
-
-              complete(HttpResponse(entity = "foo"))
+              val response = SdpRendering.render(result)
+              log.info("returning: "+response)
+              complete(HttpResponse(entity = response))
             }
           }
         } ~

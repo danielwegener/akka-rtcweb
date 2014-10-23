@@ -9,6 +9,12 @@ object SdpRendering extends SdpRenderingLowPriorityImplicits {
 
   def render(ctx: StringRenderingContext, sessionDescription: SessionDescription): Unit = sessionSerializer.append(ctx, sessionDescription)
 
+  def render(sessionDescription:SessionDescription):String = {
+    val ctx = new StringRenderingContext()
+    render(ctx, sessionDescription)
+    ctx.result()
+  }
+
 }
 
 trait SdpRenderingLowPriorityImplicits {
@@ -77,7 +83,11 @@ trait SdpRenderingLowPriorityImplicits {
 
   private def originSerializerMaker(implicit nettypeSerializer: StringRenderable[NetworkType],
     addrtypeSerializer: StringRenderable[AddressType],
-    connectionAddressSerializer: StringRenderable[InetSocketAddress]): StringRenderable[Origin] = ???
+    connectionAddressSerializer: StringRenderable[InetSocketAddress]): StringRenderable[Origin] = {
+    new StringRenderable[Origin] {
+      override def append(context: StringRenderingContext, t: Origin): Unit = ???
+    }
+  }
 
   implicit val sessionSerializer = sessionSerializerMaker
 
