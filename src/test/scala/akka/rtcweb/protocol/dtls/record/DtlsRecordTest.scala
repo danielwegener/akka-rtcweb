@@ -12,7 +12,7 @@ class DtlsRecordTest extends WordSpecLike with Matchers {
   "A DtlsRecord" must {
     "be codable forth and back" in {
       val record = DtlsCiphertext(
-        typee = ContentType.alert,
+        `type` = ContentType.alert,
         version = ProtocolVersion.`DTLS 1.2`,
         epoch = 0, sequenceNumber = 1, fragment = ByteVector(0x01, 0x02))
 

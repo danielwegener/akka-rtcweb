@@ -29,7 +29,7 @@ sealed case class Extension(
   extensionData: ByteVector)
 
 object Extension {
-  implicit val codec = {
+  implicit val codec = "Extension" | {
     ("extension_type" | ExtensionType.codec) :: variableSizeBytes(uint16, "extensionData" | bytes)
   }.as[Extension]
 }

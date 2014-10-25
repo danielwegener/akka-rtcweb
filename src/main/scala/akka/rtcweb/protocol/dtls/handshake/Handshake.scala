@@ -4,13 +4,10 @@ import java.security.SecureRandom
 
 import akka.rtcweb.protocol.DoNotExport
 import akka.rtcweb.protocol.dtls._
-import akka.util.ByteString
-import scala.collection.immutable.Seq
 import scodec._
 import scodec.bits._
 import codecs._
 
-import scalaz.\/
 
 /**
  * 4 byte
@@ -20,7 +17,8 @@ case class SessionId(raw: ByteVector) {
 }
 
 object SessionId {
-  implicit val codec = bytes(4).as[SessionId]
+  implicit val codec = "SessionId" | bytes(4).as[SessionId]
+  implicit val optionCodec = "Option[SessionId]" | optional(recover(constant(ByteVector.low(4))), bytes(4).as[SessionId])
 }
 
 /**
@@ -41,7 +39,7 @@ case class Random(
 
 object Random {
 
-  implicit val codec = {
+  implicit val codec = "Random" | {
     ("gmtUnixTime" | uint32) ::
       ("random_bytes" | bytes(28))
   }.as[Random]
@@ -77,7 +75,7 @@ object HandshakeType {
   case object client_key_exchange extends HandshakeType //(16)
   case object finished extends HandshakeType //(20)
 
-  implicit val codec: Codec[HandshakeType] = mappedEnum(uint8,
+  implicit val codec: Codec[HandshakeType] = "HandshakeType" | mappedEnum(uint8,
     hello_request -> 0,
     client_hello -> 1,
     server_hello -> 2,
@@ -128,8 +126,9 @@ object Cookie {
 case class HelloVerifyRequest(
   serverVersion: ProtocolVersion,
   cookie: Cookie) extends HandshakeBody
+
 object HelloVerifyRequest {
-  implicit val codec = {
+  implicit val codec = "HelloVerifyRequest" | {
     ("server_version" | ProtocolVersion.codec) ::
       ("cookie" | Cookie.codec)
   }.as[HelloVerifyRequest]
@@ -168,8 +167,7 @@ object ServerHello {
    * } ServerHello;
    * }}}
    */
-  implicit val codec = {
-
+  implicit val codec = "ServerHello" | {
     ("server_version" | ProtocolVersion.codec) ::
       ("random" | Random.codec) ::
       ("session_id" | SessionId.codec) ::
@@ -222,10 +220,10 @@ case class ClientHello(
 
 object ClientHello {
 
-  implicit val cookie = {
+  implicit val cookie = "ClientHello" | {
     ("client_version" | ProtocolVersion.codec) ::
       ("random" | Random.codec) ::
-      ("session_id" | optional(provide(true), SessionId.codec)) :: // todo:fix the guard!
+      ("session_id" | SessionId.optionCodec) ::
       ("cookie" | Cookie.codec) ::
       ("cipher_suites" | listOfN(uint8, CipherSuite.codec)) ::
       ("compression_methods" | listOfN(uint8, CompressionMethod.codec)) ::
@@ -293,15 +291,15 @@ object HandshakeFinished {
    * Future cipher suites MAY specify other lengths but such length
    * MUST be at least 12 bytes.
    */
-  implicit val codec = bytes(12)
+  implicit val codec = "HandshakeFinished" | { bytes(12).as[HandshakeFinished] }
 }
 
 object ServerHelloDone extends HandshakeBody {
-  implicit val codec = akka.rtcweb.protocol.empty(ServerHelloDone)
+  implicit val codec:Codec[ServerHelloDone.type] = "ServerHelloDone" | provide(ServerHelloDone)
 }
 
 object ClientHelloDone extends HandshakeBody {
-  implicit val codec = akka.rtcweb.protocol.empty(ClientHelloDone)
+  implicit val codec:Codec[ClientHelloDone.type] = "ClientHelloDone" | provide(ClientHelloDone)
 }
 
 /**
@@ -327,7 +325,7 @@ object ClientHelloDone extends HandshakeBody {
  * connection with a fatal alert.
  */
 object HelloRequest extends HandshakeBody {
-  implicit val codec = akka.rtcweb.protocol.empty(HelloRequest)
+  implicit val codec:Codec[HelloRequest.type ] = "HelloRequest" | provide(HelloRequest)
 }
 
 /**
@@ -375,7 +373,7 @@ sealed trait ClientKeyExchange
 case class RsaClientKeyExchange(exchangeKeys: EncryptedPreMasterSecret) extends ClientKeyExchange
 
 object RsaClientKeyExchange {
-  implicit val codec = {
+  implicit val codec = "RsaClientKeyExchange" | {
     "exchange_keys" | EncryptedPreMasterSecret.codec
   }.as[RsaClientKeyExchange]
 }
@@ -400,7 +398,7 @@ case class PreMasterSecret(
   random: ByteVector)
 
 object PreMasterSecret {
-  implicit val codec = {
+  implicit val codec = "PreMasterSecret" | {
     ("client_version" | ProtocolVersion.codec) ::
       ("random" | bytes(48))
   }.as[PreMasterSecret]
@@ -443,7 +441,7 @@ object PublicValueEncoding {
 case class EncryptedPreMasterSecret(preMasterSecret: PreMasterSecret)
 
 object EncryptedPreMasterSecret {
-  implicit val codec = {
+  implicit val codec = "EncryptedPreMasterSecret" | {
     "preMasterSecret" | PreMasterSecret.codec
   }.as[EncryptedPreMasterSecret]
 }

@@ -9,6 +9,8 @@ import javax.crypto.{ Mac, Cipher }
 
 import akka.rtcweb.protocol.dtls.handshake._
 
+case object SecurityParameters
+
 /**
  * struct {
  * ConnectionEnd          entity;
@@ -42,10 +44,11 @@ case class SecurityParameters(
   mac_key_length: Int,
   compression_algorithm: CompressionMethod)
 
+
 sealed trait ConnectionEnd
 
 object ConnectionEnd {
-  implicit val codec = mappedEnum(uint8,
+  implicit val codec = "ConnectionEnd" | mappedEnum(uint8,
     ServerConnectionEnd -> 0,
     ClientConnectionEnd -> 1)
 
@@ -56,7 +59,7 @@ object ConnectionEnd {
 sealed trait PRFAlgorithm
 
 object PRFAlgorithm {
-  implicit val codec = mappedEnum(uint8, tls_prf_sha256 -> 0)
+  implicit val codec = { "PRFAlgorithm" | mappedEnum(uint8, tls_prf_sha256 -> 0) }
 
   case object tls_prf_sha256 extends PRFAlgorithm
 }
@@ -70,7 +73,7 @@ object BulkCipherAlgorithm {
   case object `3des` extends BulkCipherAlgorithm { def cipher() = Cipher.getInstance("DESede") }
   case object aes extends BulkCipherAlgorithm { def cipher() = Cipher.getInstance("AES") }
 
-  implicit val codec: Codec[BulkCipherAlgorithm] = mappedEnum(uint8,
+  implicit val codec: Codec[BulkCipherAlgorithm] = "BulkCipherAlgorithm" | mappedEnum(uint8,
     `null` -> 0,
     rc4 -> 1,
     `3des` -> 2,
@@ -85,7 +88,7 @@ sealed trait CompressionMethod
 
 object CompressionMethod {
 
-  implicit val codec: Codec[CompressionMethod] = mappedEnum(uint8,
+  implicit val codec: Codec[CompressionMethod] = "CompressionMethod" | mappedEnum(uint8,
     `null` -> 0,
     DEFLATE -> 1)
 
@@ -99,7 +102,7 @@ trait MACAlgorithm {
 
 object MACAlgorithm {
 
-  implicit val codec: Codec[MACAlgorithm] = mappedEnum(uint8,
+  implicit val codec: Codec[MACAlgorithm] = "MACAlgorithm" | mappedEnum(uint8,
     `null` -> 0,
     hmac_md5 -> 1,
     hmac_sha1 -> 2,

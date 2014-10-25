@@ -89,7 +89,7 @@ object CipherSuite {
    authentication.)
    */
 
-  implicit val codec: Codec[CipherSuite] = mappedEnum(bytes(2),
+  implicit val codec: Codec[CipherSuite] = "CipherSuite" | mappedEnum(bytes(2),
     TLS_RSA_WITH_NULL_MD5 -> hex"0001",
     TLS_RSA_WITH_NULL_SHA -> hex"0002",
     TLS_RSA_WITH_NULL_SHA256 -> hex"003B",

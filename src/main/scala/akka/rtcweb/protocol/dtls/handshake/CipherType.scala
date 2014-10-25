@@ -17,7 +17,7 @@ object CipherType {
    */
   case object aead extends CipherType //(0x02)
 
-  implicit val codec: Codec[CipherType] = mappedEnum(uint8,
+  implicit val codec: Codec[CipherType] = "CipherType" | mappedEnum(uint8,
     stream -> 0x00,
     block -> 0x01)
 

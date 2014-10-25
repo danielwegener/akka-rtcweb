@@ -11,7 +11,7 @@ object ContentType {
   case object handshake extends ContentType
   case object application_data extends ContentType
 
-  implicit val codec: Codec[ContentType] = mappedEnum(uint8,
+  implicit val codec: Codec[ContentType] = "ContentType" | mappedEnum(uint8,
     changeCipherSpec -> 20,
     alert -> 21,
     handshake -> 22,

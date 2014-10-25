@@ -38,12 +38,12 @@ case class DtlsPlaintext(
   opaqueFragment: ByteVector)
 
 object DtlsPlaintext {
-  implicit val codec = {
+  implicit val codec = "DTLSPlaintext" | {
     ("type" | ContentType.codec) ::
       ("version" | ProtocolVersion.codec) ::
       ("epoch" | uint16) ::
       ("sequence_number" | ulong(48)) ::
-      variableSizeBytes(uint16, "opaque fragment" | bytes)
+      variableSizeBytes("length" |uint16, "opaque fragment" | bytes)
   }.as[DtlsPlaintext]
 }
 
@@ -60,7 +60,7 @@ object DtlsCompressed {
       ("version" | ProtocolVersion.codec) ::
       ("epoch" | uint16) ::
       ("sequence_number" | ulong(48)) ::
-      variableSizeBytes(uint16, "opaque fragment" | bytes)
+      variableSizeBytes("length" | uint16, "opaque fragment" | bytes)
   }.as[DtlsCompressed]
 }
 
@@ -78,18 +78,18 @@ object DtlsCompressed {
  * The length MUST NOT exceed  2&#94;14 + 2048.
  */
 case class DtlsCiphertext(
-  typee: ContentType,
+  `type`: ContentType,
   version: ProtocolVersion,
   epoch: Int,
   sequenceNumber: Long,
   fragment: ByteVector)
 
 object DtlsCiphertext {
-  implicit val codec = {
+  implicit val codec = "DtlsCiphertext" | {
     ("type" | ContentType.codec) ::
       ("version" | ProtocolVersion.codec) ::
       ("epoch" | uint16) ::
       ("sequence_number" | ulong(48)) ::
-      variableSizeBytes(uint16, "fragment" | bytes)
+      variableSizeBytes("length" |uint16, "fragment" | bytes)
   }.as[DtlsCompressed]
 }

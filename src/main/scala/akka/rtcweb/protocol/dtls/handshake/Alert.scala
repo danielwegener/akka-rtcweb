@@ -8,7 +8,7 @@ case class Alert(
   description: AlertDescription)
 
 object Alert {
-  implicit val codec = {
+  implicit val codec = "Alert" | {
     ("alert_level" | AlertLevel.codec) ::
       ("alert_description" | AlertDescription.codec)
   }.as[Alert]
@@ -20,7 +20,7 @@ object AlertLevel {
   case object Warning extends AlertLevel // = new AlertLevel(1)
   case object Fatal extends AlertLevel //(2)
 
-  implicit val codec: Codec[AlertLevel] = mappedEnum(uint8, Warning -> 1, Fatal -> 2)
+  implicit val codec: Codec[AlertLevel] = "AlertLevel" | mappedEnum(uint8, Warning -> 1, Fatal -> 2)
 
 }
 
@@ -52,7 +52,7 @@ object AlertDescription {
   case object no_renegotiation extends AlertDescription
   case object unsupported_extension extends AlertDescription
 
-  implicit val codec: Codec[AlertDescription] = mappedEnum(uint8,
+  implicit val codec: Codec[AlertDescription] = "AlertDescription" | mappedEnum(uint8,
     CloseNotify -> 0,
     UnexpectedMessage -> 10,
     bad_record_mac -> 20,
