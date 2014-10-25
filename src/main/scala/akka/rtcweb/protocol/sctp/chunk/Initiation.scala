@@ -2,9 +2,10 @@ package akka.rtcweb.protocol.sctp.chunk
 
 import akka.rtcweb.protocol.sctp.chunk.Initiation.InitiationParameter
 import scodec._
+import scodec.bits.{ ByteVector, BitVector }
 import scodec.codecs._
-import scodec.bits._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
+import concurrent.duration._
 
 object Initiation {
 
@@ -20,17 +21,10 @@ object Initiation {
 
   }
 
-  case class IPv4Address(raw: Int) extends AnyVal
-
-  object IPv4Address {
-    implicit val codec = uint8.as[IPv4Address]
-  }
-
   sealed trait InitiationParameter extends Parameter
 
-  final case class `IPv4 Address Parameter`(address: IPv4Address) extends InitiationParameter
-
-  object `IPv4 Address Parameter` {
+  final case class `IPv4 Address`(raw: ByteVector) extends InitiationParameter
+  object `IPv4 Address` {
     /**
      * {{{
      *   0                   1                   2                   3
@@ -42,11 +36,77 @@ object Initiation {
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * }}}
      */
-    implicit val codec: Codec[`IPv4 Address Parameter`] = {
-      ("Type" | constant(uint8.encodeValid(5))) ~>
+    implicit val codec: Codec[`IPv4 Address`] = {
+      "IPv4 Address" |
+        ("Type" | constant(uint8.encodeValid(5))) ~>
         ("Length" | constant(uint8.encodeValid(8))) ~>
-        ("IPv4 Address" | IPv4Address.codec)
-    }.as[`IPv4 Address Parameter`]
+        ("IPv4 Address" | bytes(4))
+    }.as[`IPv4 Address`]
+  }
+
+  final case class `IPv6 Address`(raw: ByteVector) extends InitiationParameter
+  object `IPv6 Address` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |            Type = 6           |          Length = 20          |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |                                                               |
+     * |                         IPv6 Address                          |
+     * |                                                               |
+     * |                                                               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`IPv6 Address`] = {
+      "IPv6 Address" |
+        ("Type" | constant(uint8.encodeValid(6))) ~>
+        ("Length" | constant(uint8.encodeValid(20))) ~>
+        ("IPv6 Address" | bytes(16))
+    }.as[`IPv6 Address`]
+  }
+
+  final case class `Cookie Preservative`(lifeSpan: FiniteDuration) extends InitiationParameter
+  object `Cookie Preservative` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |          Type = 9             |          Length = 8           |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |         Suggested Cookie Life-Span Increment (msec.)          |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Cookie Preservative`] = {
+      "Cookie Preservative" |
+        ("Type" | constant(uint8.encodeValid(9))) ~>
+        ("Length" | constant(uint8.encodeValid(8))) ~>
+        ("Suggested Cookie Life-Span Increment" | uint32.xmap[FiniteDuration](_ millis, _.toMillis))
+    }.as[`Cookie Preservative`]
+  }
+
+  final case class `Host Name Address`(hostName: String) extends InitiationParameter
+  object `Host Name Address` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |          Type = 11            |          Length               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * /                          Host Name                            /
+     * \                                                               \
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Host Name Address`] = "Host Name Address" | {
+      ("Type" | constant(uint8.encodeValid(11))) ~>
+        variableSizeBytes("Length" | uint8, "Host Name" | ascii, 4)
+    }.as[`Host Name Address`]
   }
 
   val parameterCodec: Codec[InitiationParameter] = Codec.coproduct[InitiationParameter].choice
@@ -79,7 +139,7 @@ object Initiation {
     "Initiation" | {
       constant(uint8.encodeValid(1)) ~>
         ignore(8) ~>
-        ("length" | uint16) >>:~ { length: Int =>
+        ("Length" | uint16) >>:~ { length: Int =>
           ("Initiate Tag" | nonZero(uint32)) ::
             ("Advertised Receiver Window Credit" | uint32) ::
             ("Number of Outbound Streams" | nonZero(uint16)) ::
