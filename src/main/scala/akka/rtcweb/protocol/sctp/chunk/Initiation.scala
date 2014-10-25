@@ -1,11 +1,10 @@
 package akka.rtcweb.protocol.sctp.chunk
 
+import akka.rtcweb.protocol.sctp.chunk.Initiation.InitiationParameter
 import scodec._
 import scodec.codecs._
 import scodec.bits._
-import shapeless.ops.tuple.FlatMapper
 import akka.rtcweb.protocol.scodec.SCodecContrib._
-import akka.rtcweb.protocol.scodec.ShapelessContrib._
 
 object Initiation {
 
@@ -50,6 +49,8 @@ object Initiation {
     }.as[`IPv4 Address Parameter`]
   }
 
+  val parameterCodec: Codec[InitiationParameter] = Codec.coproduct[InitiationParameter].choice
+
   /**
    * This chunk is used to initiate an SCTP association between two
    * endpoints.  The format of the INIT chunk is shown below:
@@ -75,16 +76,6 @@ object Initiation {
    * }}}
    */
   implicit val codec: Codec[Initiation] = {
-    /*constant(uint8.encodeValid(1)) ~>
-      ignore(8) ~>
-      ("length" | variableSizeBytes(uint16, {
-        ("Initiate Tag" | nonZero(uint32) ) ~
-          ("Advertised Receiver Window Credit" | uint32) ~
-          ("Number of Outbound Streams" | nonZero(uint16) ) ~
-          ("Number of Inbound Streams" | nonZero(uint16) ) ~
-          ("Initial TSN" | uint32) ~
-          ("Optional Parameters" | vector(UnrecognizedParameter.codec))
-      }, 4))*/
     "Initiation" | {
       constant(uint8.encodeValid(1)) ~>
         ignore(8) ~>
@@ -94,7 +85,7 @@ object Initiation {
             ("Number of Outbound Streams" | nonZero(uint16)) ::
             ("Number of Inbound Streams" | nonZero(uint16)) ::
             ("Initial TSN" | uint32) ::
-            ("Optional Parameters" | fixedSizeBytes(length, vector(UnrecognizedParameter.codec)))
+            ("Optional Parameters" | fixedSizeBytes(length, vector(parameterCodec)))
         }
     }.as[Initiation]
 
@@ -142,4 +133,4 @@ final case class Initiation(
   numberOfOutboundStreams: Int,
   numberOfInboundStreams: Int,
   initialTsn: Long,
-  optionalParameters: Vector[UnrecognizedParameter]) extends SctpChunk
+  optionalParameters: Vector[InitiationParameter]) extends SctpChunk

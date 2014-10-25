@@ -1,6 +1,6 @@
 package akka.rtcweb.protocol.scodec
 
-import scodec.Codec
+import scodec.{ Err, Codec }
 import scodec.bits.BitVector
 
 import scala.math.Ordering
@@ -11,7 +11,7 @@ import scalaz.{ \/, -\/, \/- }
  */
 object SCodecContrib {
 
-  final def nonZero[A](codec: Codec[A])(implicit ev: Numeric[A]): Codec[A] = codec.validate { case 0 => "The value 0 MUST NOT be used" }
+  final def nonZero[A](codec: Codec[A])(implicit ev: Numeric[A]): Codec[A] = codec.validate { case 0 => Err("The value 0 MUST NOT be used") }
 
   implicit class AwesomeCodecOps[A](codec: Codec[A]) {
 
@@ -20,9 +20,9 @@ object SCodecContrib {
      * @param error a function that can create an error message for a given A.
      * @return
      */
-    final def validate(error: PartialFunction[A, String]): Codec[A] = {
-      def unwrap(a: A): String \/ A = error.lift(a) match {
-        case Some(msg) => \/.left[String, A](msg)
+    final def validate(error: PartialFunction[A, Err]): Codec[A] = {
+      def unwrap(a: A): Err \/ A = error.lift(a) match {
+        case Some(msg) => \/.left[Err, A](msg)
         case None => \/.right(a)
       }
       codec.exmap(unwrap, unwrap)
@@ -65,7 +65,7 @@ object SCodecContrib {
 
 private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingModulo: Int) extends Codec[A] {
 
-  def paddingGap(length:Long, alignSteps:Int):Long = (alignSteps - length % alignSteps) % alignSteps
+  def paddingGap(length: Long, alignSteps: Int): Long = (alignSteps - length % alignSteps) % alignSteps
 
   override def encode(a: A) = for {
     encA <- valueCodec.encode(a)
