@@ -1,20 +1,7 @@
-package akka.rtcweb.protocol.sctp
+package akka.rtcweb.protocol.sctp.chunk
 
 import scodec.Codec
 import scodec.codecs._
-import scodec.bits._
-
-case class SctpChunk(
-  chunkType:ChunkType
-
-                      )
-
-object SctpChunk {
-  implicit val codec = {
-    ( "chunk_type" | ChunkType.codec )
-  }.as[SctpChunk]
-}
-
 
 sealed trait ChunkType
 
@@ -52,9 +39,9 @@ object ChunkType {
   /** Available */
   case object AVAILABLE extends ChunkType
   /** reserved for IETF-defined Chunk Extensions */
-  final val reserved:Set[Int] = Set(63,127,191,255)
+  final val reserved: Set[Int] = Set(63, 127, 191, 255)
 
-  final def isAvailable(raw:Int):Option[AVAILABLE.type] = {
+  final def isAvailable(raw: Int): Option[AVAILABLE.type] = raw match {
     case d if 15 to 62 contains d => Some(AVAILABLE)
     case d if 64 to 128 contains d => Some(AVAILABLE)
     case d if 128 to 190 contains d => Some(AVAILABLE)
@@ -62,9 +49,7 @@ object ChunkType {
     case _ => None
   }
 
-
-
-
+  /** size=1byte */
   implicit val codec: Codec[ChunkType] = mappedEnum(uint8,
     DATA -> 0,
     INIT -> 1,

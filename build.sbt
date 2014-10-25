@@ -28,6 +28,6 @@ libraryDependencies ++= Seq(
 
 scalariformSettings
 
-scalaJSSettings
+//scalaJSSettings
 
 net.virtualvoid.sbt.graph.Plugin.graphSettings

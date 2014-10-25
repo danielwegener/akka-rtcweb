@@ -9,7 +9,7 @@ object SdpRendering extends SdpRenderingLowPriorityImplicits {
 
   def render(ctx: StringRenderingContext, sessionDescription: SessionDescription): Unit = sessionSerializer.append(ctx, sessionDescription)
 
-  def render(sessionDescription:SessionDescription):String = {
+  def render(sessionDescription: SessionDescription): String = {
     val ctx = new StringRenderingContext()
     render(ctx, sessionDescription)
     ctx.result()

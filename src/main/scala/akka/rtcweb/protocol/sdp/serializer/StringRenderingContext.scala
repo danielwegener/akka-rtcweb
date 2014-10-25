@@ -7,7 +7,6 @@ trait RenderingContext[T] {
 
   def append(str: String): Unit
 
-
   def result(): T
 
 }
