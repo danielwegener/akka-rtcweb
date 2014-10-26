@@ -1,7 +1,9 @@
 package akka.rtcweb.protocol.scodec
 
 import scodec.{ Err, Codec }
+import scodec.codecs._
 import scodec.bits.BitVector
+import scodec.bits.BitVector._
 
 import scala.math.Ordering
 import scalaz.{ \/, -\/, \/- }
@@ -13,7 +15,13 @@ object SCodecContrib {
 
   final def nonZero[A](codec: Codec[A])(implicit ev: Numeric[A]): Codec[A] = codec.validate { case 0 => Err("The value 0 MUST NOT be used") }
 
-  implicit class AwesomeCodecOps[A](codec: Codec[A]) {
+    implicit class AwesomeCodecOps[A](codec: Codec[A]) {
+
+      /**
+       * A string terminated by a `null` byte
+       * TODO: really terminate!
+       */
+      final def cstring(implicit ev: A <:< String):Codec[A] = codec <~ constant(lowByte)
 
     /**
      * Adds a validation to this coded that fails when the partial function applies.
@@ -70,7 +78,7 @@ private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingMod
   override def encode(a: A) = for {
     encA <- valueCodec.encode(a)
     gap = paddingGap(encA.length, paddingModulo)
-  } yield encA ++ BitVector.low(gap)
+  } yield encA ++ low(gap)
 
   override def decode(buffer: BitVector) =
     valueCodec.decode(buffer) match {

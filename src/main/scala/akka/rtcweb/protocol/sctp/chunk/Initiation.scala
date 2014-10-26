@@ -2,7 +2,7 @@ package akka.rtcweb.protocol.sctp.chunk
 
 import akka.rtcweb.protocol.sctp.chunk.Initiation.InitiationParameter
 import scodec._
-import scodec.bits.{ ByteVector, BitVector }
+import scodec.bits.{ ByteVector }
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import concurrent.duration._
@@ -104,11 +104,53 @@ object Initiation {
      * }}}
      */
     implicit val codec: Codec[`Host Name Address`] = "Host Name Address" | {
-      ("Type" | constant(uint8.encodeValid(11))) ~>
-        variableSizeBytes("Length" | uint8, "Host Name" | ascii, 4)
+      ("Type" | constant(uint8.encodeValid(11))) :~>:
+        variableSizeBytes("Length" | uint8, "Host Name" | ascii.cstring, 4)
     }.as[`Host Name Address`]
   }
 
+
+  sealed trait `Address Type`
+  object `Address Type` {
+    case object IPv4 extends `Address Type`
+    case object IPv6 extends `Address Type`
+    case object `Host Name` extends `Address Type`
+
+    implicit val codec:Codec[`Address Type`] = "Address Type" | mappedEnum(uint8,
+      IPv4 -> 5,
+      IPv6 -> 6,
+      `Host Name` -> 11
+    )
+  }
+
+  final case class `Supported Address Types`(addressTypes : Vector[`Address Type`]) extends InitiationParameter
+
+  object `Supported Address Types` {
+
+    /**
+     *         0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |          Type = 12            |          Length               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |        Address Type #1        |        Address Type #2        |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                            ......                             |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+
+     */
+    implicit val codec: Codec[`Supported Address Types`] = "Supported Address Types" | {
+      ("Type" | constant(uint8.encodeValid(12))) :~>:
+        variableSizeBytes("Length" | uint8,
+          "Address Type" | vector(`Address Type`.codec),
+          4)
+    }.as[`Supported Address Types`]
+
+  }
+
+
+  /**
+   * Codec that parses all supported optional parameters
+   */
   val parameterCodec: Codec[InitiationParameter] = Codec.coproduct[InitiationParameter].choice
 
   /**
@@ -137,16 +179,17 @@ object Initiation {
    */
   implicit val codec: Codec[Initiation] = {
     "Initiation" | {
-      constant(uint8.encodeValid(1)) ~>
-        ignore(8) ~>
-        ("Length" | uint16) >>:~ { length: Int =>
-          ("Initiate Tag" | nonZero(uint32)) ::
-            ("Advertised Receiver Window Credit" | uint32) ::
-            ("Number of Outbound Streams" | nonZero(uint16)) ::
-            ("Number of Inbound Streams" | nonZero(uint16)) ::
-            ("Initial TSN" | uint32) ::
-            ("Optional Parameters" | fixedSizeBytes(length, vector(parameterCodec)))
-        }
+      constant(uint8.encodeValid(1)) :~>:
+      ignore(8) :~>:
+      variableSizeBytes("Chunk Length" | uint16,
+        ("Initiate Tag" | nonZero(uint32)) ::
+          ("Advertised Receiver Window Credit" | uint32) ::
+          ("Number of Outbound Streams" | nonZero(uint16)) ::
+          ("Number of Inbound Streams" | nonZero(uint16)) ::
+          ("Initial TSN" | uint32) ::
+          ("Optional Parameters" | vector(parameterCodec))
+      , 2)
+
     }.as[Initiation]
 
   }
@@ -187,7 +230,6 @@ object Initiation {
  * the Initiate Tag field.
  */
 final case class Initiation(
-  length: Int,
   initiateTag: Long,
   advertisedReceiverWindowCredit: Long,
   numberOfOutboundStreams: Int,
