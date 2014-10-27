@@ -9,8 +9,7 @@ import akka.rtcweb.protocol.sdp.SessionDescription
 object PeerConnection {
 
   /**
-   * By specifying a policy
-   * from the list below, the application can control how aggressively it
+   * By specifying a policy from the list below, the application can control how aggressively it
    * will try to BUNDLE media streams together.  The set of available
    * policies is as follows:
    */
@@ -58,9 +57,63 @@ object PeerConnection {
     bundlePolicy: BundlePolicy)
 
   /**
-   * Creates a new SessionDescription
+   *  The createOffer method takes as a parameter an RTCOfferOptions
+   * object.  Special processing is performed when generating a SDP
+   * description if the following constraints are present.
+   *
+   * @param OfferToReceiveAudio If the "OfferToReceiveAudio" option is specified, with an integer
+   * value of N, the offer MUST include N non-rejected m= sections with
+   * media type "audio", even if fewer than N audio MediaStreamTracks have
+   * been added to the PeerConnection.  This allows the offerer to receive
+   * audio, including multiple independent streams, even when not sending
+   * it; accordingly, the directional attribute on the audio m= sections
+   * without associated MediaStreamTracks MUST be set to recvonly.  If
+   * this option is specified in the case where at least N audio
+   * MediaStreamTracks have already been added to the PeerConnection, or N
+   * non-rejected m= sections with media type "audio" would otherwise be
+   * generated, it has no effect.  For backwards compatibility, a value of
+   * "true" is interpreted as equivalent to N=1.
+   *
+   * @param OfferToReceiveVideo If the "OfferToReceiveVideo" option is specified, with an integer
+   * value of N, the offer MUST include N non-rejected m= sections with
+   * media type "video", even if fewer than N video MediaStreamTracks have
+   * been added to the PeerConnection.  This allows the offerer to receive
+   * video, including multiple independent streams, even when not sending
+   * it; accordingly, the directional attribute on the video m= sections
+   * without associated MediaStreamTracks MUST be set to recvonly.  If
+   * this option is specified in the case where at least N video
+   * MediaStreamTracks have already been added to the PeerConnection, or N
+   * non-rejected m= sections with media type "video" would otherwise be
+   * generated, it has no effect.  For backwards compatibility, a value of
+   * "true" is interpreted as equivalent to N=1.
+   *
+   * @param VoiceActivityDetection  If the "VoiceActivityDetection" option is specified, with a value of
+   * "true", the offer MUST indicate support for silence suppression in
+   * the audio it receives by including comfort noise ("CN") codecs for
+   * each offered audio codec, as specified in [RFC3389], Section 5.1,
+   * except for codecs that have their own internal silence suppression
+   * support.  For codecs that have their own internal silence suppression
+   * support, the appropriate fmtp parameters for that codec MUST be
+   * specified to indicate that silence suppression for received audio is
+   * desired.  For example, when using the Opus codec, the "usedtx=1"
+   * parameter would be specified in the offer.  This option allows the
+   * endpoint to significantly reduce the amount of audio bandwidth it
+   * receives, at the cost of some fidelity, depending on the quality of
+   * the remote VAD algorithm.
+   *
+   * @param IceRestart  If the "IceRestart" option is specified, with a value of "true", the
+   * offer MUST indicate an ICE restart by generating new ICE ufrag and
+   * pwd attributes, as specified in RFC5245, Section 9.1.1.1.  If this
+   * option is specified on an initial offer, it has no effect (since a
+   * new ICE ufrag and pwd are already generated).  This option is useful
+   * for reestablishing connectivity in cases where failures are detected.
+   *
    */
-  final case class CreateOfferOptions(
+  final case class RTCOfferOptions(
+    OfferToReceiveAudio: Option[Int],
+    OfferToReceiveVideo: Option[Int],
+    VoiceActivityDetection: Boolean = false,
+    IceRestart: Boolean = false,
     DtlsSrtpKeyAgreement: Boolean,
     RtpDataChannels: Boolean)
 
@@ -73,7 +126,7 @@ object PeerConnection {
    * media state should be changed.
    */
   sealed trait RTCSessionDescription
-  sealed trait HasSDPPayload{ def sessionDescription:SessionDescription } extends RTCSessionDescription
+  sealed trait HasSDPPayload extends RTCSessionDescription { def sessionDescription: SessionDescription }
 
   object RTCSessionDescription {
 
@@ -84,7 +137,7 @@ object PeerConnection {
      * PeerConnection is in a stable state, or as an update to a previously
      * supplied but unanswered "offer".
      */
-    final case class offer(sessionDescription:SessionDescription) extends RTCSessionDescription with HasSDPPayload
+    final case class offer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
 
     /**
      * "pranswer" indicates that a description should be parsed as an
@@ -94,7 +147,7 @@ object PeerConnection {
      * direction.  A description used as a "pranswer" may be applied as a
      * response to an "offer", or an update to a previously sent "pranswer".
      */
-    final case class pranswer(sessionDescription:SessionDescription) extends RTCSessionDescription with HasSDPPayload
+    final case class pranswer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
 
     /**
      *  "answer" indicates that a description should be parsed as an answer,
@@ -115,7 +168,7 @@ object PeerConnection {
      * when it receives one that meets its criteria (e.g. a live user
      * instead of voicemail).
      */
-    final case class answer(sessionDescription:SessionDescription) extends RTCSessionDescription with HasSDPPayload
+    final case class answer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
 
     /**
      *  "rollback" is a special session description type implying that the
@@ -125,7 +178,6 @@ object PeerConnection {
     case object rollback extends RTCSessionDescription
 
   }
-
 
   sealed trait PeerConnectionMessage
 
@@ -194,7 +246,7 @@ object PeerConnection {
    * media to start or stop flowing.
    *
    */
-  final case class CreateOffer(options: CreateOfferOptions) extends PeerConnectionMessage
+  final case class CreateOffer(options: RTCOfferOptions) extends PeerConnectionMessage
 
   /**
    * The createAnswer method generates a blob of SDP that contains a
@@ -231,34 +283,33 @@ object PeerConnection {
 
   /**
    *   The setLocalDescription method instructs the PeerConnection to apply
-   the supplied SDP blob as its local configuration.  The type field
-   indicates whether the blob should be processed as an offer,
-   provisional answer, or final answer; offers and answers are checked
-   differently, using the various rules that exist for each SDP line.
-
-   This API changes the local media state; among other things, it sets
-   up local resources for receiving and decoding media.  In order to
-   successfully handle scenarios where the application wants to offer to
-   change from one media format to a different, incompatible format, the
-   PeerConnection must be able to simultaneously support use of both the
-   old and new local descriptions (e.g. support codecs that exist in
-   both descriptions) until a final answer is received, at which point
-   the PeerConnection can fully adopt the new local description, or roll
-   back to the old description if the remote side denied the change.
-
-   This API indirectly controls the candidate gathering process.  When a
-   local description is supplied, and the number of transports currently
-   in use does not match the number of transports needed by the local
-   description, the PeerConnection will create transports as needed and
-   begin gathering candidates for them.
-
-   If setRemoteDescription was previous called with an offer, and
-   setLocalDescription is called with an answer (provisional or final),
-   and the media directions are compatible, and media are available to
-   send, this will result in the starting of media transmission.
+   * the supplied SDP blob as its local configuration.  The type field
+   * indicates whether the blob should be processed as an offer,
+   * provisional answer, or final answer; offers and answers are checked
+   * differently, using the various rules that exist for each SDP line.
+   *
+   * This API changes the local media state; among other things, it sets
+   * up local resources for receiving and decoding media.  In order to
+   * successfully handle scenarios where the application wants to offer to
+   * change from one media format to a different, incompatible format, the
+   * PeerConnection must be able to simultaneously support use of both the
+   * old and new local descriptions (e.g. support codecs that exist in
+   * both descriptions) until a final answer is received, at which point
+   * the PeerConnection can fully adopt the new local description, or roll
+   * back to the old description if the remote side denied the change.
+   *
+   * This API indirectly controls the candidate gathering process.  When a
+   * local description is supplied, and the number of transports currently
+   * in use does not match the number of transports needed by the local
+   * description, the PeerConnection will create transports as needed and
+   * begin gathering candidates for them.
+   *
+   * If setRemoteDescription was previous called with an offer, and
+   * setLocalDescription is called with an answer (provisional or final),
+   * and the media directions are compatible, and media are available to
+   * send, this will result in the starting of media transmission.
    */
-  final case class SetLocalDescription(todo:Nothing = ???)
-
+  final case class SetLocalDescription(todo: Nothing = ???)
 
 }
 
@@ -266,6 +317,7 @@ class PeerConnection(private val config: PeerConnectionConfiguration) extends Ac
 
   override def receive: Receive = {
     case CreateOffer(options) => ??? //new SessionDescription(protocolVersion = ProtocolVersion.`0`)
+
   }
 
 }
