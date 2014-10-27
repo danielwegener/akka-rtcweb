@@ -48,7 +48,7 @@ import scala.collection.immutable.Seq
  * @param sessionAttributes {{{a=*}}} (zero or more session attribute lines)
  */
 final case class SessionDescription(
-    protocolVersion: ProtocolVersion,
+    protocolVersion: ProtocolVersion = ProtocolVersion.`0`,
     origin: Origin,
     sessionName: Option[String] = None,
     sessionInformation: Option[String] = None,

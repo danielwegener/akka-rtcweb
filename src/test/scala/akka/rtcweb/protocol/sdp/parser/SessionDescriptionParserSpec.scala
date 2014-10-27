@@ -103,7 +103,6 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       result.mediaDescriptions(0).mediaAttributes should be(Seq(PropertyAttribute("custom")))
     }
 
-
     "parse and render identical" in {
       val sdtext =
         """v=0
@@ -168,8 +167,8 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |""".stripMargin //
           .replace("\n", "\r\n")
 
-        val sd = new SessionDescriptionParserImpl(input(sdtext)).parseSessionDescription().get
-        SdpRendering.render(sd) should be(sdtext)
+      val sd = new SessionDescriptionParserImpl(input(sdtext)).parseSessionDescription().get
+      SdpRendering.render(sd) should be(sdtext)
 
     }
 

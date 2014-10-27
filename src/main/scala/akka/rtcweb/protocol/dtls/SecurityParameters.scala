@@ -44,7 +44,6 @@ case class SecurityParameters(
   mac_key_length: Int,
   compression_algorithm: CompressionMethod)
 
-
 sealed trait ConnectionEnd
 
 object ConnectionEnd {

@@ -55,7 +55,7 @@ object RtcwebServer extends App {
               val result = Await.result(r, Duration.Inf)
               log.info("received and parsed: " + result.toString)
               val response = SdpRendering.render(result)
-              log.info("returning: "+response)
+              log.info("returning: " + response)
               complete(HttpResponse(entity = response))
             }
           }

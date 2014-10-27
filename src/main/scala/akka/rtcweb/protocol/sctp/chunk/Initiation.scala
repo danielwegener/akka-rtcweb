@@ -109,34 +109,33 @@ object Initiation {
     }.as[`Host Name Address`]
   }
 
-
   sealed trait `Address Type`
   object `Address Type` {
     case object IPv4 extends `Address Type`
     case object IPv6 extends `Address Type`
     case object `Host Name` extends `Address Type`
 
-    implicit val codec:Codec[`Address Type`] = "Address Type" | mappedEnum(uint8,
+    implicit val codec: Codec[`Address Type`] = "Address Type" | mappedEnum(uint8,
       IPv4 -> 5,
       IPv6 -> 6,
       `Host Name` -> 11
     )
   }
 
-  final case class `Supported Address Types`(addressTypes : Vector[`Address Type`]) extends InitiationParameter
+  final case class `Supported Address Types`(addressTypes: Vector[`Address Type`]) extends InitiationParameter
 
   object `Supported Address Types` {
 
     /**
      *         0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |          Type = 12            |          Length               |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |        Address Type #1        |        Address Type #2        |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |                            ......                             |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |          Type = 12            |          Length               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |        Address Type #1        |        Address Type #2        |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |                            ......                             |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+
      */
     implicit val codec: Codec[`Supported Address Types`] = "Supported Address Types" | {
       ("Type" | constant(uint8.encodeValid(12))) :~>:
@@ -146,7 +145,6 @@ object Initiation {
     }.as[`Supported Address Types`]
 
   }
-
 
   /**
    * Codec that parses all supported optional parameters
@@ -180,15 +178,14 @@ object Initiation {
   implicit val codec: Codec[Initiation] = {
     "Initiation" | {
       constant(uint8.encodeValid(1)) :~>:
-      ignore(8) :~>:
-      variableSizeBytes("Chunk Length" | uint16,
-        ("Initiate Tag" | nonZero(uint32)) ::
-          ("Advertised Receiver Window Credit" | uint32) ::
-          ("Number of Outbound Streams" | nonZero(uint16)) ::
-          ("Number of Inbound Streams" | nonZero(uint16)) ::
-          ("Initial TSN" | uint32) ::
-          ("Optional Parameters" | vector(parameterCodec))
-      , 2)
+        ignore(8) :~>:
+        variableSizeBytes("Chunk Length" | uint16,
+          ("Initiate Tag" | nonZero(uint32)) ::
+            ("Advertised Receiver Window Credit" | uint32) ::
+            ("Number of Outbound Streams" | nonZero(uint16)) ::
+            ("Number of Inbound Streams" | nonZero(uint16)) ::
+            ("Initial TSN" | uint32) ::
+            ("Optional Parameters" | vector(parameterCodec)), 2)
 
     }.as[Initiation]
 

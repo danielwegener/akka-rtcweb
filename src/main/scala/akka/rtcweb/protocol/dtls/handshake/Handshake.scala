@@ -8,7 +8,6 @@ import scodec._
 import scodec.bits._
 import codecs._
 
-
 /**
  * 4 byte
  */
@@ -295,11 +294,11 @@ object HandshakeFinished {
 }
 
 object ServerHelloDone extends HandshakeBody {
-  implicit val codec:Codec[ServerHelloDone.type] = "ServerHelloDone" | provide(ServerHelloDone)
+  implicit val codec: Codec[ServerHelloDone.type] = "ServerHelloDone" | provide(ServerHelloDone)
 }
 
 object ClientHelloDone extends HandshakeBody {
-  implicit val codec:Codec[ClientHelloDone.type] = "ClientHelloDone" | provide(ClientHelloDone)
+  implicit val codec: Codec[ClientHelloDone.type] = "ClientHelloDone" | provide(ClientHelloDone)
 }
 
 /**
@@ -325,7 +324,7 @@ object ClientHelloDone extends HandshakeBody {
  * connection with a fatal alert.
  */
 object HelloRequest extends HandshakeBody {
-  implicit val codec:Codec[HelloRequest.type ] = "HelloRequest" | provide(HelloRequest)
+  implicit val codec: Codec[HelloRequest.type] = "HelloRequest" | provide(HelloRequest)
 }
 
 /**

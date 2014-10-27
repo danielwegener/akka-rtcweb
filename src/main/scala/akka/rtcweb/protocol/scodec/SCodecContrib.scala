@@ -15,13 +15,13 @@ object SCodecContrib {
 
   final def nonZero[A](codec: Codec[A])(implicit ev: Numeric[A]): Codec[A] = codec.validate { case 0 => Err("The value 0 MUST NOT be used") }
 
-    implicit class AwesomeCodecOps[A](codec: Codec[A]) {
+  implicit class AwesomeCodecOps[A](codec: Codec[A]) {
 
-      /**
-       * A string terminated by a `null` byte
-       * TODO: really terminate!
-       */
-      final def cstring(implicit ev: A <:< String):Codec[A] = codec <~ constant(lowByte)
+    /**
+     * A string terminated by a `null` byte
+     * TODO: really terminate!
+     */
+    final def cstring(implicit ev: A <:< String): Codec[A] = codec <~ constant(lowByte)
 
     /**
      * Adds a validation to this coded that fails when the partial function applies.

@@ -43,7 +43,7 @@ object DtlsPlaintext {
       ("version" | ProtocolVersion.codec) ::
       ("epoch" | uint16) ::
       ("sequence_number" | ulong(48)) ::
-      variableSizeBytes("length" |uint16, "opaque fragment" | bytes)
+      variableSizeBytes("length" | uint16, "opaque fragment" | bytes)
   }.as[DtlsPlaintext]
 }
 
@@ -90,6 +90,6 @@ object DtlsCiphertext {
       ("version" | ProtocolVersion.codec) ::
       ("epoch" | uint16) ::
       ("sequence_number" | ulong(48)) ::
-      variableSizeBytes("length" |uint16, "fragment" | bytes)
+      variableSizeBytes("length" | uint16, "fragment" | bytes)
   }.as[DtlsCompressed]
 }
