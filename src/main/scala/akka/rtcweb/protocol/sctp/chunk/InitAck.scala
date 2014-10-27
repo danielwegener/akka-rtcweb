@@ -2,7 +2,7 @@ package akka.rtcweb.protocol.sctp.chunk
 
 //case class InitAck()
 
-object InitAck {
+private[sctp] object InitAck {
 
   /**
    * The INIT ACK chunk is used to acknowledge the initiation of an SCTP

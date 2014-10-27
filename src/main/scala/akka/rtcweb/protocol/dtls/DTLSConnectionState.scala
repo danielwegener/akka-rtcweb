@@ -20,6 +20,6 @@ package akka.rtcweb.protocol.dtls
  * specifies that no encryption, compression, or MAC will be used.
  *
  */
-case class DTLSConnectionState(
+private[dtls] case class DTLSConnectionState(
   securityParameters: SecurityParameters //todo continue
   )

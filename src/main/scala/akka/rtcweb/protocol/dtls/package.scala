@@ -1,7 +1,9 @@
 package akka.rtcweb.protocol
 
 /**
- * see RFC6347 http://tools.ietf.org/html/rfc6347
+ * [[https://tools.ietf.org/html/rfc4347 rfc4347 rfc4347: Datagram Transport Layer Security 1.0]]
+ *
+ *
  */
 package object dtls {
 

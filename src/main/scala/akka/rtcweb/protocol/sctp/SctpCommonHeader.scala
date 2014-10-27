@@ -4,20 +4,20 @@ import scodec._
 import scodec.bits._
 import codecs._
 
-final case class Port(number: Int) extends AnyVal
-case object Port {
+private[sctp] final case class Port(number: Int) extends AnyVal
+private[sctp] case object Port {
   implicit val codec = {
     "number" | uint16
   }.as[Port]
 }
 
-case class SctpCommonHeader(
+private[sctp] final case class SctpCommonHeader(
   sourcePort: Port,
   destinationPort: Port,
   verificationTag: Long,
   checksum: Long)
 
-object SctpCommonHeader {
+private[sctp] object SctpCommonHeader {
   implicit val codec = {
     ("source_port" | Port.codec) ::
       ("destination_port" | Port.codec) ::

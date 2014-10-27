@@ -4,7 +4,7 @@ import scodec.Codec
 import scodec.bits.ByteVector
 import scodec.codecs._
 
-object PayloadData {
+private[sctp] object PayloadData {
 
   /**
    * The following format MUST be used for the DATA chunk:
@@ -86,7 +86,7 @@ object PayloadData {
  * padding MUST NOT be included in the Length field.  A sender MUST
  * never add more than 3 bytes of padding.
  */
-final case class PayloadData(
+private[sctp] final case class PayloadData(
   unordered: Boolean,
   beginning: Boolean,
   ending: Boolean,

@@ -15,7 +15,9 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
 * [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
 * [draft-ietf-rtcweb-data-protocol-08: DCEP - WebRTC Data Channel Establishment Protocol](https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08)
 * [rfc4960: SCTP - Stream Control Transmission Protocol](https://tools.ietf.org/html/rfc4960) with [rfc4960: Stream Control Transmission Protocol (SCTP) Partial Reliability Extension](https://tools.ietf.org/html/rfc3758)
-* [rfc6347: Datagram Transport Layer Security Version 1.2](https://tools.ietf.org/html/rfc6347) with [draft-ietf-tsvwg-sctp-dtls-encaps-05: DTLS Encapsulation of SCTP Packets](https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-dtls-encaps-05)
+    * [Padding Chunk and Parameter for the Stream Control Transmission Protocol (SCTP)](https://tools.ietf.org/html/rfc4820)
+* [rfc4347: Datagram Transport Layer Security Version](https://tools.ietf.org/html/rfc4347)
+    * [draft-ietf-tsvwg-sctp-dtls-encaps-05: DTLS Encapsulation of SCTP Packets](https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-dtls-encaps-05)
 
 Just yet many many thanks to [scodec](https://github.com/scodec/scodec) and [parboiled2](https://github.com/sirthias/parboiled2) which makes encoding and parsing a breeze!
 

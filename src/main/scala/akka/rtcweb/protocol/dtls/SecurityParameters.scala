@@ -9,7 +9,7 @@ import javax.crypto.{ Mac, Cipher }
 
 import akka.rtcweb.protocol.dtls.handshake._
 
-case object SecurityParameters
+private[dtls] case object SecurityParameters
 
 /**
  * struct {
@@ -30,7 +30,7 @@ case object SecurityParameters
  * opaque                 server_random[32];
  * } SecurityParameters;
  */
-case class SecurityParameters(
+private[dtls] case class SecurityParameters(
   entity: ConnectionEnd,
   prf_algorithm: PRFAlgorithm,
   bulk_cipher_algorithm: BulkCipherAlgorithm,
@@ -44,9 +44,9 @@ case class SecurityParameters(
   mac_key_length: Int,
   compression_algorithm: CompressionMethod)
 
-sealed trait ConnectionEnd
+private[dtls] sealed trait ConnectionEnd
 
-object ConnectionEnd {
+private[dtls] object ConnectionEnd {
   implicit val codec = "ConnectionEnd" | mappedEnum(uint8,
     ServerConnectionEnd -> 0,
     ClientConnectionEnd -> 1)
@@ -55,17 +55,17 @@ object ConnectionEnd {
   case object ClientConnectionEnd extends ConnectionEnd
 }
 
-sealed trait PRFAlgorithm
+private[dtls] sealed trait PRFAlgorithm
 
-object PRFAlgorithm {
+private[dtls] object PRFAlgorithm {
   implicit val codec = { "PRFAlgorithm" | mappedEnum(uint8, tls_prf_sha256 -> 0) }
 
   case object tls_prf_sha256 extends PRFAlgorithm
 }
 
-sealed trait BulkCipherAlgorithm { def cipher(): Cipher }
+private[dtls] sealed trait BulkCipherAlgorithm { def cipher(): Cipher }
 
-object BulkCipherAlgorithm {
+private[dtls] object BulkCipherAlgorithm {
 
   case object `null` extends BulkCipherAlgorithm { def cipher() = ??? }
   case object rc4 extends BulkCipherAlgorithm { def cipher() = ??? }
@@ -83,7 +83,7 @@ object BulkCipherAlgorithm {
 /**
  * see rfc3749
  */
-sealed trait CompressionMethod
+private[dtls] sealed trait CompressionMethod
 
 object CompressionMethod {
 
@@ -95,11 +95,11 @@ object CompressionMethod {
   case object DEFLATE extends CompressionMethod //(0x01)
 }
 
-trait MACAlgorithm {
+private[dtls] sealed trait MACAlgorithm {
   def instance: Mac
 }
 
-object MACAlgorithm {
+private[dtls] object MACAlgorithm {
 
   implicit val codec: Codec[MACAlgorithm] = "MACAlgorithm" | mappedEnum(uint8,
     `null` -> 0,

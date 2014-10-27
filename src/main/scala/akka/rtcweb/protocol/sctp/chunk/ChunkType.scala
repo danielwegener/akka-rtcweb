@@ -3,9 +3,9 @@ package akka.rtcweb.protocol.sctp.chunk
 import scodec.Codec
 import scodec.codecs._
 
-sealed trait ChunkType
+private[sctp] sealed trait ChunkType
 
-object ChunkType {
+private[sctp] object ChunkType {
   /** Payload Data */
   case object DATA extends ChunkType
   /** Initiation */

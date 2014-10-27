@@ -1,13 +1,14 @@
 package akka.rtcweb.protocol.sctp.chunk
 
 import akka.rtcweb.protocol.sctp.chunk.Initiation.InitiationParameter
+import akka.rtcweb.protocol.sdp.TimeUnit
 import scodec._
 import scodec.bits.{ ByteVector }
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import concurrent.duration._
 
-object Initiation {
+private[sctp] object Initiation {
 
   sealed trait InitiationParameterType
 
@@ -85,7 +86,7 @@ object Initiation {
       "Cookie Preservative" |
         ("Type" | constant(uint8.encodeValid(9))) ~>
         ("Length" | constant(uint8.encodeValid(8))) ~>
-        ("Suggested Cookie Life-Span Increment" | uint32.xmap[FiniteDuration](_ millis, _.toMillis))
+        ("Suggested Cookie Life-Span Increment" | duration(uint32, MILLISECONDS))
     }.as[`Cookie Preservative`]
   }
 
@@ -226,7 +227,7 @@ object Initiation {
  * is from 0 to 4294967295.  This field MAY be set to the value of
  * the Initiate Tag field.
  */
-final case class Initiation(
+private[sctp] final case class Initiation(
   initiateTag: Long,
   advertisedReceiverWindowCredit: Long,
   numberOfOutboundStreams: Int,

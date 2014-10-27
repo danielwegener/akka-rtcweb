@@ -4,9 +4,9 @@ import scodec._
 import scodec.bits._
 import codecs._
 
-sealed trait ProtocolVersion //(major: UInt8, minor: UInt8)
+private[dtls] sealed trait ProtocolVersion //(major: UInt8, minor: UInt8)
 
-object ProtocolVersion {
+private[dtls] object ProtocolVersion {
 
   /** "This Version is not supported by dtls" */
   case object `TLS v1.0` extends ProtocolVersion

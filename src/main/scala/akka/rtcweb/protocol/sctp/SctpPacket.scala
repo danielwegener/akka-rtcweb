@@ -5,9 +5,9 @@ import scodec._
 import scodec.bits._
 import codecs._
 
-case class SctpPacket(header: SctpCommonHeader, chunks: Vector[UnrecognizedSctpChunk])
+private[sctp] final case class SctpPacket(header: SctpCommonHeader, chunks: Vector[UnrecognizedSctpChunk])
 
-case object SctpPacket {
+private[sctp] case object SctpPacket {
 
   implicit val codec = {
     ("common_header" | SctpCommonHeader.codec) ::

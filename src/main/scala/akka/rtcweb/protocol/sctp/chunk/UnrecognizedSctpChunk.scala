@@ -25,12 +25,12 @@ import scodec.codecs._
  * transferred in the chunk.  The usage and format of this field is
  * dependent on the Chunk Type.
  */
-final case class UnrecognizedSctpChunk(
+private[sctp] final case class UnrecognizedSctpChunk(
   chunkType: ChunkType,
   chunkFlags: BitVector,
   chunkValue: ByteVector) extends SctpChunk
 
-object UnrecognizedSctpChunk {
+private[sctp] object UnrecognizedSctpChunk {
   /**
    * The figure below illustrates the field format for the chunks to be
    * transmitted in the SCTP packet.  Each chunk is formatted with a Chunk
