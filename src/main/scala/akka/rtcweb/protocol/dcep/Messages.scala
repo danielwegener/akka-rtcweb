@@ -165,14 +165,15 @@ private[dcep] object DATA_CHANNEL_OPEN {
    * /                                                               \
    * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    * }}}
-   * todo: label + protocol
    */
   implicit val codec = "DATA_CHANNEL_OPEN" | {
     ("Message Type" | constantValue(`Message Type`.DATA_CHANNEL_OPEN)) :~>:
       ("Channel Type" | `Channel Type`.codec) ::
       ("Priority" | Priority.codec) ::
-      ("Reliability" | uint32)
-
+      ("Reliability" | uint32) :: variableSizeBytes2(
+        "Label Length" | uint8, "Protocl Length" | uint8,
+        "Label" | ascii, "Protocol" | ascii
+      )
   }.as[DATA_CHANNEL_OPEN]
 }
 

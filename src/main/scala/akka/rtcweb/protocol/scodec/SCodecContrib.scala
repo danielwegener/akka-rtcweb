@@ -3,6 +3,8 @@ package akka.rtcweb.protocol.scodec
 import scodec.{ Encoder, Err, Codec }
 import scodec.bits.BitVector
 import scodec.bits.BitVector._
+import scodec.codecs._
+import shapeless._
 
 import scala.concurrent.duration.{ FiniteDuration, TimeUnit }
 import scala.math.Ordering
@@ -14,6 +16,8 @@ import scalaz.{ \/, -\/, \/- }
 object SCodecContrib {
 
   final def nonZero[A](codec: Codec[A])(implicit ev: Numeric[A]): Codec[A] = codec.validate { case 0 => Err("The value 0 MUST NOT be used") }
+
+
 
   /**
    * Codec that encodes the length of a given FiniteDuration with a given numeric codec and decodes
@@ -31,6 +35,21 @@ object SCodecContrib {
    * @group combinators
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encodeValid(constantValue))
+
+  final def variableSizeBytes2[A<:{def size:Int},B<:{def size:Int}](length1:Codec[Int], length2:Codec[Int], value1:Codec[A], value2:Codec[B] ):Codec[A :: B :: HNil] = {
+    val x:Codec[Int :: Int :: A :: B :: HNil] =
+      length1.flatPrepend { len1 =>
+        length2 flatPrepend { len2 =>
+          fixedSizeBytes(len1, value1) :: fixedSizeBytes(len2, value2)
+        }
+      }
+
+    val y = x.xmap[A :: B :: HNil](
+      { case l1 :: l2 :: v1 :: v2 :: HNil => v1 :: v2 :: HNil },
+      { case v1 :: v2 :: HNil => v1.size :: v2.size :: v1 :: v2 :: HNil }
+    )
+    y
+  }
 
   implicit class AwesomeCodecOps[A](codec: Codec[A]) {
 

@@ -3,6 +3,7 @@ package akka.rtcweb.protocol.scodec
 import org.scalatest.{ Inside, Matchers, WordSpec }
 import scodec.bits.BitVector.{ empty => emptyVector }
 import scodec.bits.BitVector._
+import scodec.bits._
 import scodec.codecs._
 import shapeless.HNil
 import scala.language.postfixOps
@@ -65,6 +66,16 @@ class SCodecContribTest extends WordSpec with Matchers with Inside {
         case \/-((_, result)) => result should be(42 minutes)
       }
     }
+  }
+
+  "variableSizeBytes2" should {
+
+    "decode" in {
+      val x = variableSizeBytes2(uint8, uint8, ascii, ascii).decodeValidValue(hex"0141024142".bits)
+      x(0) should be("A")
+      x(1) should be("AB")
+    }
+
   }
 
 }
