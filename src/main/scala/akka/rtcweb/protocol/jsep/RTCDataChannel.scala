@@ -1,7 +1,8 @@
 package akka.rtcweb.protocol.jsep
 
-import akka.actor.{ ActorRef, Actor }
+import akka.actor._
 import akka.rtcweb.protocol.jsep.RTCDataChannel.OnStateChange
+import akka.rtcweb.protocol.jsep.RTCPeerConnection.RTCDataChannelInit
 
 sealed trait RTCDataChannelState
 object RTCDataChannelState {
@@ -32,13 +33,20 @@ object RTCDataChannel {
   sealed trait RTCDataChannelMessage
   final case class OnStateChange(newState: RTCDataChannelState)
 
+  def props(dataChannelListener:ActorRef, config:RTCDataChannelInit) = Props(new RTCDataChannel(dataChannelListener,config))
+
 }
 
-final class RTCDataChannel(peerConnectionRef: ActorRef, listener: ActorRef) extends Actor {
+final class RTCDataChannel private[jsep](val listener: ActorRef, config:RTCDataChannelInit) extends Actor with ActorLogging {
 
+  val peerConnection = context.parent
   var channelState: RTCDataChannelState = RTCDataChannelState.connecting
 
-  override def receive: Receive = ???
+  context.watch(listener)
+
+  override def receive: Receive = {
+    case Terminated(`listener`) => log.info("listener stopped. stopping self."); context.stop(self)
+  }
 
   /** Tell the listener that we went south  */
   override def postStop() = {

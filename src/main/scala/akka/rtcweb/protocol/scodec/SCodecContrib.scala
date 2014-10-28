@@ -36,7 +36,7 @@ object SCodecContrib {
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encodeValid(constantValue))
 
-  final def variableSizeBytes2[A<:{def size:Int},B<:{def size:Int}](length1:Codec[Int], length2:Codec[Int], value1:Codec[A], value2:Codec[B] ):Codec[A :: B :: HNil] = {
+  final def variableSizeBytes2[A<:{def length():Int},B<:{def length():Int}](length1:Codec[Int], length2:Codec[Int], value1:Codec[A], value2:Codec[B] ):Codec[A :: B :: HNil] = {
     val x:Codec[Int :: Int :: A :: B :: HNil] =
       length1.flatPrepend { len1 =>
         length2 flatPrepend { len2 =>
@@ -46,7 +46,7 @@ object SCodecContrib {
 
     val y = x.xmap[A :: B :: HNil](
       { case l1 :: l2 :: v1 :: v2 :: HNil => v1 :: v2 :: HNil },
-      { case v1 :: v2 :: HNil => v1.size :: v2.size :: v1 :: v2 :: HNil }
+      { case v1 :: v2 :: HNil => v1.length :: v2.length :: v1 :: v2 :: HNil }
     )
     y
   }
