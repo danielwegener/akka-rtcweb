@@ -110,6 +110,37 @@ private[sctp] object Initiation {
     }.as[`Host Name Address`]
   }
 
+  /**
+   * This parameter is used to pad an INIT chunk.  A PAD parameter can be
+   * used to enlarge the INIT chunk by 4 bytes as the minimum to the
+   * maximum size of the INIT chunk in steps of 4 bytes.  An INIT chunk
+   * MAY contain multiple PAD parameters.
+   * @see [[https://tools.ietf.org/html/rfc4820#section-4 RFC4820: Padding Parameter (PAD)]]
+   * @param length This value holds the length of the Padding Data plus 4.
+   */
+  final case class `Padding Parameter`(length: Int) extends InitiationParameter
+  object `Padding Parameter` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |     Parameter Type = 0x8005   |       Parameter Length        |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * /                                                               /
+     * \                          Padding Data                         \
+     * /                                                               /
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Padding Parameter`] = "Padding Parameter" | {
+      ("Type" | constant(uint8.encodeValid(0x8005))) ~>
+        ("Parameter Length" | uint8) >>:~ { length =>
+          ignore(length).hlist
+        }
+    }.dropUnits.as[`Padding Parameter`]
+  }
+
   sealed trait `Address Type`
   object `Address Type` {
     case object IPv4 extends `Address Type`
