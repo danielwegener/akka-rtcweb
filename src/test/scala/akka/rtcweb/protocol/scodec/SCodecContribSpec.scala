@@ -11,7 +11,7 @@ import scala.language.postfixOps
 import scala.concurrent.duration._
 import scalaz.{ \/-, -\/ }
 
-class SCodecContribTest extends WordSpec with Matchers with Inside {
+class SCodecContribSpec extends WordSpec with Matchers with Inside {
 
   import SCodecContrib._
 

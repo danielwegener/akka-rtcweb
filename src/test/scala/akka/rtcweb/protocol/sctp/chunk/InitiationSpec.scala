@@ -5,7 +5,7 @@ import org.scalatest.{ Matchers, Inside, WordSpec }
 import scodec.bits.ByteVector
 import scalaz.\/-
 
-class InitiationTest extends WordSpec with Matchers with Inside {
+class InitiationSpec extends WordSpec with Matchers with Inside {
 
   "Initiation" should {
     "be encodable" ignore {

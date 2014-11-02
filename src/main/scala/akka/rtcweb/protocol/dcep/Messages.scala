@@ -105,7 +105,7 @@ private[dcep] object Priority {
   case object `extra high` extends Priority
   final case class Ordinal(value: Int) extends Priority
 
-  implicit val codec:Codec[Priority] = "Priority" | choice(mappedEnum[Priority, Int](uint16,
+  implicit val codec: Codec[Priority] = "Priority" | choice(mappedEnum[Priority, Int](uint16,
     `below normal` -> 128,
     `normal` -> 256,
     `high` -> 256,
@@ -142,9 +142,8 @@ private[dcep] final case class DATA_CHANNEL_OPEN(
   channelType: `Channel Type`,
   priority: Priority,
   reliability: Long,
-  label:String,
-  protocol:String
-                                                  )
+  label: String,
+  protocol: String)
 
 private[dcep] object DATA_CHANNEL_OPEN {
 
@@ -173,7 +172,7 @@ private[dcep] object DATA_CHANNEL_OPEN {
     ("Message Type" | constantValue(`Message Type`.DATA_CHANNEL_OPEN)) :~>:
       ("Channel Type" | `Channel Type`.codec) ::
       ("Priority" | Priority.codec) ::
-      ("Reliability" | uint32) :: variableSizeBytes2[String,String](
+      ("Reliability" | uint32) :: variableSizeBytes2[String, String](
         "Label Length" | uint8, "Protocl Length" | uint8,
         "Label" | ascii, "Protocol" | ascii
       )

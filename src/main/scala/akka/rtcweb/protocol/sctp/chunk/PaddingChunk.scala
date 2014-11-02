@@ -1,7 +1,5 @@
 package akka.rtcweb.protocol.sctp.chunk
 
-import akka.shapeless.HNil
-import scodec.Codec
 import scodec.codecs._
 
 /**
@@ -11,7 +9,7 @@ import scodec.codecs._
  * @see [[https://tools.ietf.org/html/rfc4820#section-3 RFC Padding Chunk (PAD)]]
  * @param length This value holds the length of the Padding Data plus 4.
  */
-case class PaddingChunk(length: Int)
+case class PaddingChunk(length: Int) extends SctpChunk
 
 object PaddingChunk {
 

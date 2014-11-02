@@ -33,11 +33,11 @@ object RTCDataChannel {
   sealed trait RTCDataChannelMessage
   final case class OnStateChange(newState: RTCDataChannelState)
 
-  def props(dataChannelListener:ActorRef, config:RTCDataChannelInit) = Props(new RTCDataChannel(dataChannelListener,config))
+  def props(dataChannelListener: ActorRef, config: RTCDataChannelInit) = Props(new RTCDataChannel(dataChannelListener, config))
 
 }
 
-final class RTCDataChannel private[jsep](val listener: ActorRef, config:RTCDataChannelInit) extends Actor with ActorLogging {
+final class RTCDataChannel private[jsep] (val listener: ActorRef, config: RTCDataChannelInit) extends Actor with ActorLogging {
 
   val peerConnection = context.parent
   var channelState: RTCDataChannelState = RTCDataChannelState.connecting

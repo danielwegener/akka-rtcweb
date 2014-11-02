@@ -1,8 +1,11 @@
 package akka.rtcweb.protocol.sctp.chunk
 
+import akka.rtcweb.protocol.sctp.chunk.PayloadData.PayloadProtocolIdentifier
 import scodec.Codec
 import scodec.bits.ByteVector
+import scodec.Err
 import scodec.codecs._
+import scalaz.{\/-, -\/}
 
 private[sctp] object PayloadData {
 
@@ -27,18 +30,48 @@ private[sctp] object PayloadData {
    * }}}
    */
   implicit val codec: Codec[PayloadData] = {
-    constant(uint8.encodeValid(0)) ~>
+    constant(ChunkType.codec.encodeValid(ChunkType.DATA)) ~>
       ignore(5) ~>
       ("U bit" | bool) ::
       ("B bit" | bool) ::
       ("E bit" | bool) ::
-      ("length" | uint16) ::
-      ("TSN" | uint32) ::
-      ("Stream Identifier S" | uint16) ::
-      ("Stream Sequence Number n" | uint16) ::
-      ("Payload Protocol Identifier" | uint32) ::
-      ("User Data" | bytes(???))
+      variableSizeBytes("length" | uint16,
+        ("TSN" | uint32) ::
+        ("Stream Identifier S" | uint16) ::
+        ("Stream Sequence Number n" | uint16) ::
+        ("Payload Protocol Identifier" | PayloadProtocolIdentifier.codec) ::
+        ("User Data" | bytes)
+      , 4)
   }.as[PayloadData]
+
+  sealed trait PayloadProtocolIdentifier
+
+  object PayloadProtocolIdentifier {
+
+    final case class Unspecified(raw: Int) extends PayloadProtocolIdentifier
+    case object `WebRTC String` extends PayloadProtocolIdentifier
+    case object `WebRTC Binary` extends PayloadProtocolIdentifier
+    case object `WebRTC String Empty` extends PayloadProtocolIdentifier
+    case object `WebRTC Binary Empty` extends PayloadProtocolIdentifier
+
+
+    /** @see [[https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08#section-8.1 draft-ietf-rtcweb-data-protocol-08: SCTP Payload Protocol Identifier]] */
+    case object `WebRTC DCEP` extends PayloadProtocolIdentifier
+
+    implicit val codec: Codec[PayloadProtocolIdentifier] = choice(mappedEnum(uint8,
+      `WebRTC DCEP` -> 50,
+      `WebRTC String` -> 51,
+      `WebRTC Binary` -> 53,
+      `WebRTC String Empty` -> 56,
+      `WebRTC Binary Empty` -> 57
+    ), uint8.as[Unspecified].widen(identity, {
+      case b:Unspecified => \/-(b)
+      case b => -\/(Err(s"$b is not Unspecified"))
+    })
+    )
+
+  }
+
 }
 
 /**
@@ -55,13 +88,6 @@ private[sctp] object PayloadData {
  * of a user message.
  * @param ending The (E)nding fragment bit, if set, indicates the last fragment of
  * a user message.
- * @param length This field indicates the length of the DATA chunk in bytes from
- * the beginning of the type field to the end of the User Data field
- * excluding any padding.  A DATA chunk with one byte of user data
- * will have Length set to 17 (indicating 17 bytes).<br />
- * A DATA chunk with a User Data field of length L will have the
- * Length field set to (16 + L) (indicating 16+L bytes) where L MUST
- * be greater than 0.
  * @param tsn  This value represents the TSN for this DATA chunk.  The valid
  * range of TSN is from 0 to 4294967295 (2**32 - 1).  TSN wraps back
  * to 0 after reaching 4294967295.
@@ -90,9 +116,8 @@ private[sctp] final case class PayloadData(
   unordered: Boolean,
   beginning: Boolean,
   ending: Boolean,
-  length: Int,
   tsn: Long,
   streamIdentifier: Int,
   streamSequenceNumber: Int,
-  payloadProtocolIdentifier: Long,
+  payloadProtocolIdentifier: PayloadProtocolIdentifier,
   userData: ByteVector) extends SctpChunk

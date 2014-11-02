@@ -136,10 +136,35 @@ private[sctp] object Initiation {
     implicit val codec: Codec[`Padding Parameter`] = "Padding Parameter" | {
       ("Type" | constant(uint8.encodeValid(0x8005))) ~>
         ("Parameter Length" | uint8) >>:~ { length =>
-          ignore(length).hlist
+          ignore(length * 8 - 4*8).hlist
         }
     }.dropUnits.as[`Padding Parameter`]
   }
+
+  /**
+   * At the initialization of the association, the sender of the INIT or
+   * INIT ACK chunk MAY include this OPTIONAL parameter to inform its peer
+   * that it is able to support the Forward TSN chunk (see Section 3.3 for
+   * further details).
+   * @see [[https://tools.ietf.org/html/rfc3758#section-3.1 rfc3758 Protocol Changes to support PR-SCTP]]
+   */
+  case object `Forward-TSN-Supported` extends InitiationParameter {
+
+    /**
+     * {{{
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |    Parameter Type = 49152     |  Parameter Length = 4         |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Forward-TSN-Supported`.type] = "Forward-TSN-Supported Parameter" | {
+      ("Type" | constant(uint8.encodeValid(0xC000))) ~>
+        ("Parameter Length" | constant(uint8.encodeValid(4))) ~>
+        provide(`Forward-TSN-Supported`)
+    }
+  }
+
 
   sealed trait `Address Type`
   object `Address Type` {
@@ -209,7 +234,7 @@ private[sctp] object Initiation {
    */
   implicit val codec: Codec[Initiation] = {
     "Initiation" | {
-      constant(uint8.encodeValid(1)) :~>:
+      constant(ChunkType.codec.encodeValid(ChunkType.INIT)) :~>:
         ignore(8) :~>:
         variableSizeBytes("Chunk Length" | uint16,
           ("Initiate Tag" | nonZero(uint32)) ::

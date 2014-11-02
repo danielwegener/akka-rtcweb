@@ -11,15 +11,58 @@ This is just a just for fun private project and aims to implement a minimal work
 
 The following protocols and RFCs are (partially) covered (you need to love network protocols):
 
-* [draft-ietf-rtcweb-jsep-07: Javascript Session Establishment Protocol](http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-07) aka [WebRTC 1.0: Real-time Communication Between Browsers](http://www.w3.org/TR/webrtc/)
-* [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
-* [draft-ietf-rtcweb-data-protocol-08: DCEP - WebRTC Data Channel Establishment Protocol](https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08)
-* [rfc4960: SCTP - Stream Control Transmission Protocol](https://tools.ietf.org/html/rfc4960) with [rfc4960: Stream Control Transmission Protocol (SCTP) Partial Reliability Extension](https://tools.ietf.org/html/rfc3758)
-    * [Padding Chunk and Parameter for the Stream Control Transmission Protocol (SCTP)](https://tools.ietf.org/html/rfc4820)
-* [rfc4347: Datagram Transport Layer Security Version](https://tools.ietf.org/html/rfc4347)
-    * [draft-ietf-tsvwg-sctp-dtls-encaps-05: DTLS Encapsulation of SCTP Packets](https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-dtls-encaps-05)
+## User Api
 
-Just yet many many thanks to [scodec](https://github.com/scodec/scodec) and [parboiled2](https://github.com/sirthias/parboiled2) which makes encoding and parsing a breeze!
+* [draft-ietf-rtcweb-jsep-07: Javascript Session Establishment Protocol](http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-07) aka [WebRTC 1.0: Real-time Communication Between Browsers](http://www.w3.org/TR/webrtc/)
+    * [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
+
+## Network Protocols
+
+
+## [draft-ietf-rtcweb-data-channel-12: WebRTC Data Channels](https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-12)
+
+
+                  +------+------+------+
+                  | DCEP | UTF-8|Binary|
+                  |      | data | data |
+                  +------+------+------+
+                  |        SCTP        |
+    +----------------------------------+
+    | STUN | SRTP |        DTLS        |
+    +----------------------------------+
+    |                ICE               |
+    +----------------------------------+
+    | UDP1 | UDP2 | UDP3 | ...         |
+    +----------------------------------+
+
+Since we are only interested in the Data channels at the moment, we can ignore out SRTP
+
+
+####[rfc4347: Datagram Transport Layer Security Version](https://tools.ietf.org/html/rfc4347)
+
+Describes how TLS is projected on UDP.
+
+####[draft-ietf-tsvwg-sctp-dtls-encaps-05: DTLS Encapsulation of SCTP Packets](https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-dtls-encaps-05)
+
+
+Describes how DTLS runs on top of DTLS
+
+####[rfc4960: SCTP - Stream Control Transmission Protocol](https://tools.ietf.org/html/rfc4960) with [rfc4960: Stream Control Transmission Protocol (SCTP) Partial Reliability Extension](https://tools.ietf.org/html/rfc3758)
+
+- [rfc4820: Padding Chunk and Parameter for the Stream Control Transmission Protocol (SCTP)](https://tools.ietf.org/html/rfc4820)<br>Defines Padding Messages for SCTP to support MTU Discovery
+- [rfc6525: Stream Control Transmission Protocol (SCTP) Stream Reconfiguration](https://tools.ietf.org/html/rfc6525) <br> Defines Reconfiguration of multiplexed application data channels over a single SCTP association
+
+
+
+####[draft-ietf-rtcweb-data-protocol-08: DCEP - WebRTC Data Channel Establishment Protocol](https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08)
+
+Describes how DataChannels lifecycle can be controlled on a SCTP connection.
+
+
+
+## Acknowledgment
+
+Just yet many many thanks to [scodec](https://github.com/scodec/scodec) and [parboiled2](https://github.com/sirthias/parboiled2). They make encoding/decoding and parsing a breeze!
 
 ## Build it!
 

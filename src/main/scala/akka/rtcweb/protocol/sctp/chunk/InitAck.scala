@@ -32,6 +32,7 @@ private[sctp] object InitAck {
    * \                                                               \
    * /              Optional/Variable-Length Parameters              /
    * \                                                               \
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    * }}}
    */
   implicit val codec = ???

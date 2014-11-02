@@ -17,8 +17,6 @@ object SCodecContrib {
 
   final def nonZero[A](codec: Codec[A])(implicit ev: Numeric[A]): Codec[A] = codec.validate { case 0 => Err("The value 0 MUST NOT be used") }
 
-
-
   /**
    * Codec that encodes the length of a given FiniteDuration with a given numeric codec and decodes
    * @param discriminatorCodec a codec for the underlying numeric type
@@ -36,8 +34,8 @@ object SCodecContrib {
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encodeValid(constantValue))
 
-  final def variableSizeBytes2[A<:{def length():Int},B<:{def length():Int}](length1:Codec[Int], length2:Codec[Int], value1:Codec[A], value2:Codec[B] ):Codec[A :: B :: HNil] = {
-    val x:Codec[Int :: Int :: A :: B :: HNil] =
+  final def variableSizeBytes2[A <: { def length(): Int }, B <: { def length(): Int }](length1: Codec[Int], length2: Codec[Int], value1: Codec[A], value2: Codec[B]): Codec[A :: B :: HNil] = {
+    val x: Codec[Int :: Int :: A :: B :: HNil] =
       length1.flatPrepend { len1 =>
         length2 flatPrepend { len2 =>
           fixedSizeBytes(len1, value1) :: fixedSizeBytes(len2, value2)

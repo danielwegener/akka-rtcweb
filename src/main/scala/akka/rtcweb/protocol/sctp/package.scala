@@ -7,8 +7,8 @@ package akka.rtcweb.protocol
  * for End-Host to End-Host Communication
  *
  * With support for
- * [[https://tools.ietf.org/html/rfc4820 Padding Chunk and Parameter for the Stream Control Transmission Protocol (SCTP)]]
- *
+ * - [[https://tools.ietf.org/html/rfc4820 Padding Chunk and Parameter for the Stream Control Transmission Protocol (SCTP)]]
+ * - [[https://tools.ietf.org/html/rfc6525 rfc6525: Stream Control Transmission Protocol (SCTP) Stream Reconfiguration]]
  */
 package object sctp {
 

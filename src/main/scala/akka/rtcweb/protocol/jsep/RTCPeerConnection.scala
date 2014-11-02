@@ -2,8 +2,8 @@ package akka.rtcweb.protocol.jsep
 
 import java.net.InetAddress
 
-import akka.actor.{Props, ActorRef, Actor}
-import akka.rtcweb.protocol.jsep.RTCPeerConnection.{RTCDataChannelInit, CreateDataChannel, CreateOffer, PeerConnectionConfiguration}
+import akka.actor.{ Props, ActorRef, Actor }
+import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ RTCDataChannelInit, CreateDataChannel, CreateOffer, PeerConnectionConfiguration }
 import akka.rtcweb.protocol.sdp.SessionDescription
 import collection.immutable.Seq
 import scala.concurrent.duration._
@@ -66,7 +66,7 @@ object RTCPeerConnection {
    * @return a Props for creating this actor, which can then be further configured
    *         (e.g. calling `.withDispatcher()` on it)
    */
-  def props(config:PeerConnectionConfiguration) = Props(new RTCPeerConnection(config))
+  def props(config: PeerConnectionConfiguration) = Props(new RTCPeerConnection(config))
 
   /**
    *  The createOffer method takes as a parameter an RTCOfferOptions
@@ -374,14 +374,12 @@ object RTCPeerConnection {
 
 }
 
-
-
-final class RTCPeerConnection private[jsep](private val config: PeerConnectionConfiguration) extends Actor {
+final class RTCPeerConnection private[jsep] (private val config: PeerConnectionConfiguration) extends Actor {
 
   import RTCPeerConnection._
 
-  private var channelIdCounter:Int = 0
-  private def nextChannelId:Int = {channelIdCounter += 1; channelIdCounter}
+  private var channelIdCounter: Int = 0
+  private def nextChannelId: Int = { channelIdCounter += 1; channelIdCounter }
 
   /** known dataChannels, id to ActorRef */
   private var dataChannels: Map[Int, (RTCDataChannelInit, Label, ActorRef)] = Map.empty
@@ -391,7 +389,7 @@ final class RTCPeerConnection private[jsep](private val config: PeerConnectionCo
     case CreateOffer(options) => ??? //new SessionDescription(protocolVersion = ProtocolVersion.`0`)
     case CreateDataChannel(listener, label, dataChannelInit) =>
       val validChannelId = if (dataChannels.contains(dataChannelInit.id) || dataChannelInit.id == 0) nextChannelId else dataChannelInit.id
-      val config = dataChannelInit.copy(id=validChannelId)
+      val config = dataChannelInit.copy(id = validChannelId)
       val dataChannelActorProps = RTCDataChannel.props(listener, config)
       val dataChannelActor = context.actorOf(dataChannelActorProps)
       dataChannels += validChannelId -> (config, label, dataChannelActor)
