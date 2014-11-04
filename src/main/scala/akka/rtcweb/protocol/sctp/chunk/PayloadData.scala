@@ -5,7 +5,7 @@ import scodec.Codec
 import scodec.bits.ByteVector
 import scodec.Err
 import scodec.codecs._
-import scalaz.{\/-, -\/}
+import scalaz.{ \/-, -\/ }
 
 private[sctp] object PayloadData {
 
@@ -37,26 +37,15 @@ private[sctp] object PayloadData {
       ("E bit" | bool) ::
       variableSizeBytes("length" | uint16,
         ("TSN" | uint32) ::
-        ("Stream Identifier S" | uint16) ::
-        ("Stream Sequence Number n" | uint16) ::
-        ("Payload Protocol Identifier" | PayloadProtocolIdentifier.codec) ::
-        ("User Data" | bytes)
-      , 4)
+          ("Stream Identifier S" | uint16) ::
+          ("Stream Sequence Number n" | uint16) ::
+          ("Payload Protocol Identifier" | PayloadProtocolIdentifier.codec) ::
+          ("User Data" | bytes), 4)
   }.as[PayloadData]
 
   sealed trait PayloadProtocolIdentifier
 
   object PayloadProtocolIdentifier {
-
-    final case class Unspecified(raw: Int) extends PayloadProtocolIdentifier
-    case object `WebRTC String` extends PayloadProtocolIdentifier
-    case object `WebRTC Binary` extends PayloadProtocolIdentifier
-    case object `WebRTC String Empty` extends PayloadProtocolIdentifier
-    case object `WebRTC Binary Empty` extends PayloadProtocolIdentifier
-
-
-    /** @see [[https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08#section-8.1 draft-ietf-rtcweb-data-protocol-08: SCTP Payload Protocol Identifier]] */
-    case object `WebRTC DCEP` extends PayloadProtocolIdentifier
 
     implicit val codec: Codec[PayloadProtocolIdentifier] = choice(mappedEnum(uint8,
       `WebRTC DCEP` -> 50,
@@ -65,10 +54,20 @@ private[sctp] object PayloadData {
       `WebRTC String Empty` -> 56,
       `WebRTC Binary Empty` -> 57
     ), uint8.as[Unspecified].widen(identity, {
-      case b:Unspecified => \/-(b)
+      case b: Unspecified => \/-(b)
       case b => -\/(Err(s"$b is not Unspecified"))
     })
     )
+
+    final case class Unspecified(raw: Int) extends PayloadProtocolIdentifier
+    case object `WebRTC String` extends PayloadProtocolIdentifier
+    case object `WebRTC Binary` extends PayloadProtocolIdentifier
+    case object `WebRTC String Empty` extends PayloadProtocolIdentifier
+
+    case object `WebRTC Binary Empty` extends PayloadProtocolIdentifier
+
+    /** @see [[https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08#section-8.1 draft-ietf-rtcweb-data-protocol-08: SCTP Payload Protocol Identifier]] */
+    case object `WebRTC DCEP` extends PayloadProtocolIdentifier
 
   }
 

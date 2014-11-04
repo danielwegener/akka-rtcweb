@@ -10,204 +10,10 @@ import concurrent.duration._
 
 private[sctp] object Initiation {
 
-  sealed trait InitiationParameterType
-
-  object InitiationParameterType {
-
-    case object `IPv4 Address Parameter` extends InitiationParameterType
-
-    implicit val codec = mappedEnum(uint8,
-      `IPv4 Address Parameter` -> 5
-    )
-
-  }
-
-  sealed trait InitiationParameter extends Parameter
-
-  final case class `IPv4 Address`(raw: ByteVector) extends InitiationParameter
-  object `IPv4 Address` {
-    /**
-     * {{{
-     *   0                   1                   2                   3
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |        Type = 5               |      Length = 8               |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |                        IPv4 Address                           |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * }}}
-     */
-    implicit val codec: Codec[`IPv4 Address`] = {
-      "IPv4 Address" |
-        ("Type" | constant(uint8.encodeValid(5))) ~>
-        ("Length" | constant(uint8.encodeValid(8))) ~>
-        ("IPv4 Address" | bytes(4))
-    }.as[`IPv4 Address`]
-  }
-
-  final case class `IPv6 Address`(raw: ByteVector) extends InitiationParameter
-  object `IPv6 Address` {
-    /**
-     * {{{
-     * 0                   1                   2                   3
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |            Type = 6           |          Length = 20          |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |                                                               |
-     * |                         IPv6 Address                          |
-     * |                                                               |
-     * |                                                               |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * }}}
-     */
-    implicit val codec: Codec[`IPv6 Address`] = {
-      "IPv6 Address" |
-        ("Type" | constant(uint8.encodeValid(6))) ~>
-        ("Length" | constant(uint8.encodeValid(20))) ~>
-        ("IPv6 Address" | bytes(16))
-    }.as[`IPv6 Address`]
-  }
-
-  final case class `Cookie Preservative`(lifeSpan: FiniteDuration) extends InitiationParameter
-  object `Cookie Preservative` {
-    /**
-     * {{{
-     * 0                   1                   2                   3
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |          Type = 9             |          Length = 8           |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |         Suggested Cookie Life-Span Increment (msec.)          |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * }}}
-     */
-    implicit val codec: Codec[`Cookie Preservative`] = {
-      "Cookie Preservative" |
-        ("Type" | constant(uint8.encodeValid(9))) ~>
-        ("Length" | constant(uint8.encodeValid(8))) ~>
-        ("Suggested Cookie Life-Span Increment" | duration(uint32, MILLISECONDS))
-    }.as[`Cookie Preservative`]
-  }
-
-  final case class `Host Name Address`(hostName: String) extends InitiationParameter
-  object `Host Name Address` {
-    /**
-     * {{{
-     * 0                   1                   2                   3
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |          Type = 11            |          Length               |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * /                          Host Name                            /
-     * \                                                               \
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * }}}
-     */
-    implicit val codec: Codec[`Host Name Address`] = "Host Name Address" | {
-      ("Type" | constant(uint8.encodeValid(11))) :~>:
-        variableSizeBytes("Length" | uint8, "Host Name" | ascii.cstring, 4)
-    }.as[`Host Name Address`]
-  }
-
-  /**
-   * This parameter is used to pad an INIT chunk.  A PAD parameter can be
-   * used to enlarge the INIT chunk by 4 bytes as the minimum to the
-   * maximum size of the INIT chunk in steps of 4 bytes.  An INIT chunk
-   * MAY contain multiple PAD parameters.
-   * @see [[https://tools.ietf.org/html/rfc4820#section-4 RFC4820: Padding Parameter (PAD)]]
-   * @param length This value holds the length of the Padding Data plus 4.
-   */
-  final case class `Padding Parameter`(length: Int) extends InitiationParameter
-  object `Padding Parameter` {
-    /**
-     * {{{
-     * 0                   1                   2                   3
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |     Parameter Type = 0x8005   |       Parameter Length        |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * /                                                               /
-     * \                          Padding Data                         \
-     * /                                                               /
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * }}}
-     */
-    implicit val codec: Codec[`Padding Parameter`] = "Padding Parameter" | {
-      ("Type" | constant(uint8.encodeValid(0x8005))) ~>
-        ("Parameter Length" | uint8) >>:~ { length =>
-          ignore(length * 8 - 4*8).hlist
-        }
-    }.dropUnits.as[`Padding Parameter`]
-  }
-
-  /**
-   * At the initialization of the association, the sender of the INIT or
-   * INIT ACK chunk MAY include this OPTIONAL parameter to inform its peer
-   * that it is able to support the Forward TSN chunk (see Section 3.3 for
-   * further details).
-   * @see [[https://tools.ietf.org/html/rfc3758#section-3.1 rfc3758 Protocol Changes to support PR-SCTP]]
-   */
-  case object `Forward-TSN-Supported` extends InitiationParameter {
-
-    /**
-     * {{{
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |    Parameter Type = 49152     |  Parameter Length = 4         |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * }}}
-     */
-    implicit val codec: Codec[`Forward-TSN-Supported`.type] = "Forward-TSN-Supported Parameter" | {
-      ("Type" | constant(uint8.encodeValid(0xC000))) ~>
-        ("Parameter Length" | constant(uint8.encodeValid(4))) ~>
-        provide(`Forward-TSN-Supported`)
-    }
-  }
-
-
-  sealed trait `Address Type`
-  object `Address Type` {
-    case object IPv4 extends `Address Type`
-    case object IPv6 extends `Address Type`
-    case object `Host Name` extends `Address Type`
-
-    implicit val codec: Codec[`Address Type`] = "Address Type" | mappedEnum(uint8,
-      IPv4 -> 5,
-      IPv6 -> 6,
-      `Host Name` -> 11
-    )
-  }
-
-  final case class `Supported Address Types`(addressTypes: Vector[`Address Type`]) extends InitiationParameter
-
-  object `Supported Address Types` {
-
-    /**
-     *         0                   1                   2                   3
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |          Type = 12            |          Length               |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |        Address Type #1        |        Address Type #2        |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |                            ......                             |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+
-     */
-    implicit val codec: Codec[`Supported Address Types`] = "Supported Address Types" | {
-      ("Type" | constant(uint8.encodeValid(12))) :~>:
-        variableSizeBytes("Length" | uint8,
-          "Address Type" | vector(`Address Type`.codec),
-          4)
-    }.as[`Supported Address Types`]
-
-  }
-
   /**
    * Codec that parses all supported optional parameters
    */
   val parameterCodec: Codec[InitiationParameter] = Codec.coproduct[InitiationParameter].choice
-
   /**
    * This chunk is used to initiate an SCTP association between two
    * endpoints.  The format of the INIT chunk is shown below:
@@ -245,6 +51,202 @@ private[sctp] object Initiation {
             ("Optional Parameters" | vector(parameterCodec)), 2)
 
     }.as[Initiation]
+
+  }
+
+  sealed trait InitiationParameterType
+
+  sealed trait InitiationParameter extends Parameter
+
+  sealed trait `Address Type`
+
+  final case class `IPv4 Address`(raw: ByteVector) extends InitiationParameter
+
+  final case class `IPv6 Address`(raw: ByteVector) extends InitiationParameter
+
+  final case class `Cookie Preservative`(lifeSpan: FiniteDuration) extends InitiationParameter
+
+  final case class `Host Name Address`(hostName: String) extends InitiationParameter
+
+  /**
+   * This parameter is used to pad an INIT chunk.  A PAD parameter can be
+   * used to enlarge the INIT chunk by 4 bytes as the minimum to the
+   * maximum size of the INIT chunk in steps of 4 bytes.  An INIT chunk
+   * MAY contain multiple PAD parameters.
+   * @see [[https://tools.ietf.org/html/rfc4820#section-4 RFC4820: Padding Parameter (PAD)]]
+   * @param length This value holds the length of the Padding Data plus 4.
+   */
+  final case class `Padding Parameter`(length: Int) extends InitiationParameter
+
+  final case class `Supported Address Types`(addressTypes: Vector[`Address Type`]) extends InitiationParameter
+
+  object InitiationParameterType {
+
+    implicit val codec = mappedEnum(uint8,
+      `IPv4 Address Parameter` -> 5
+    )
+
+    case object `IPv4 Address Parameter` extends InitiationParameterType
+
+  }
+  object `IPv4 Address` {
+    /**
+     * {{{
+     *   0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |        Type = 5               |      Length = 8               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |                        IPv4 Address                           |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`IPv4 Address`] = {
+      "IPv4 Address" |
+        ("Type" | constant(uint8.encodeValid(5))) ~>
+        ("Length" | constant(uint8.encodeValid(8))) ~>
+        ("IPv4 Address" | bytes(4))
+    }.as[`IPv4 Address`]
+  }
+
+  object `IPv6 Address` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |            Type = 6           |          Length = 20          |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |                                                               |
+     * |                         IPv6 Address                          |
+     * |                                                               |
+     * |                                                               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`IPv6 Address`] = {
+      "IPv6 Address" |
+        ("Type" | constant(uint8.encodeValid(6))) ~>
+        ("Length" | constant(uint8.encodeValid(20))) ~>
+        ("IPv6 Address" | bytes(16))
+    }.as[`IPv6 Address`]
+  }
+
+  object `Cookie Preservative` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |          Type = 9             |          Length = 8           |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |         Suggested Cookie Life-Span Increment (msec.)          |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Cookie Preservative`] = {
+      "Cookie Preservative" |
+        ("Type" | constant(uint8.encodeValid(9))) ~>
+        ("Length" | constant(uint8.encodeValid(8))) ~>
+        ("Suggested Cookie Life-Span Increment" | duration(uint32, MILLISECONDS))
+    }.as[`Cookie Preservative`]
+  }
+  object `Host Name Address` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |          Type = 11            |          Length               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * /                          Host Name                            /
+     * \                                                               \
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Host Name Address`] = "Host Name Address" | {
+      ("Type" | constant(uint8.encodeValid(11))) :~>:
+        variableSizeBytes("Length" | uint8, "Host Name" | ascii.cstring, 4)
+    }.as[`Host Name Address`]
+  }
+
+  object `Padding Parameter` {
+    /**
+     * {{{
+     * 0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |     Parameter Type = 0x8005   |       Parameter Length        |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * /                                                               /
+     * \                          Padding Data                         \
+     * /                                                               /
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Padding Parameter`] = "Padding Parameter" | {
+      ("Type" | constant(uint8.encodeValid(0x8005))) ~>
+        ("Parameter Length" | uint8) >>:~ { length =>
+          ignore(length * 8 - 4 * 8).hlist
+        }
+    }.dropUnits.as[`Padding Parameter`]
+  }
+
+  /**
+   * At the initialization of the association, the sender of the INIT or
+   * INIT ACK chunk MAY include this OPTIONAL parameter to inform its peer
+   * that it is able to support the Forward TSN chunk (see Section 3.3 for
+   * further details).
+   * @see [[https://tools.ietf.org/html/rfc3758#section-3.1 rfc3758 Protocol Changes to support PR-SCTP]]
+   */
+  case object `Forward-TSN-Supported` extends InitiationParameter {
+
+    /**
+     * {{{
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |    Parameter Type = 49152     |  Parameter Length = 4         |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * }}}
+     */
+    implicit val codec: Codec[`Forward-TSN-Supported`.type] = "Forward-TSN-Supported Parameter" | {
+      ("Type" | constant(uint8.encodeValid(0xC000))) ~>
+        ("Parameter Length" | constant(uint8.encodeValid(4))) ~>
+        provide(`Forward-TSN-Supported`)
+    }
+  }
+
+  object `Address Type` {
+    implicit val codec: Codec[`Address Type`] = "Address Type" | mappedEnum(uint8,
+      IPv4 -> 5,
+      IPv6 -> 6,
+      `Host Name` -> 11
+    )
+    case object IPv4 extends `Address Type`
+    case object IPv6 extends `Address Type`
+
+    case object `Host Name` extends `Address Type`
+  }
+
+  object `Supported Address Types` {
+
+    /**
+     *         0                   1                   2                   3
+     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |          Type = 12            |          Length               |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |        Address Type #1        |        Address Type #2        |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     * |                            ......                             |
+     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+
+     */
+    implicit val codec: Codec[`Supported Address Types`] = "Supported Address Types" | {
+      ("Type" | constant(uint8.encodeValid(12))) :~>:
+        variableSizeBytes("Length" | uint8,
+          "Address Type" | vector(`Address Type`.codec),
+          4)
+    }.as[`Supported Address Types`]
 
   }
 
