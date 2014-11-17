@@ -1,8 +1,8 @@
 package akka.rtcweb.protocol.jsep
 
-import akka.actor.{Terminated, ActorSystem}
-import akka.testkit.{TestProbe, DefaultTimeout, TestKit, TestActorRef}
-import org.scalatest.{BeforeAndAfterAll, WordSpecLike, Matchers}
+import akka.actor.{ Terminated, ActorSystem }
+import akka.testkit.{ TestProbe, DefaultTimeout, TestKit, TestActorRef }
+import org.scalatest.{ BeforeAndAfterAll, WordSpecLike, Matchers }
 
 class RTCDataChannelTest extends TestKit(ActorSystem("RTCDataChannelTest")) with DefaultTimeout with WordSpecLike with Matchers with BeforeAndAfterAll {
 
@@ -16,7 +16,6 @@ class RTCDataChannelTest extends TestKit(ActorSystem("RTCDataChannelTest")) with
     "do!" in {
       unit.receive("foo")
     }
-
 
   }
 

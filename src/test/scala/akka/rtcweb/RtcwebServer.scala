@@ -8,9 +8,9 @@ import akka.io.IO
 import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.rtcweb.protocol.sdp.serializer.SdpRendering
-import akka.stream.scaladsl2.FlowMaterializer
+import akka.stream.FlowMaterializer
 import akka.util.Timeout
-import scala.concurrent.{ Future, Await }
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import akka.pattern.ask
 
@@ -37,7 +37,7 @@ object RtcwebServer extends App {
   val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
   val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
 
-  implicit val toSessionDescriptionUnmarshaller = Unmarshaller.strict[String, SessionDescription](SessionDescriptionParser.parse)
+  implicit val toSessionDescriptionUnmarshaller = Unmarshaller((SessionDescriptionParser.parse _).andThen(a=>Future.apply(a)))
 
   import akka.http.server.ScalaRoutingDSL._
 

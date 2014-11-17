@@ -1,19 +1,24 @@
 package akka.rtcweb.protocol.sctp.chunk
 
 import akka.rtcweb.protocol.sctp.chunk.Initiation.InitiationParameter
-import akka.rtcweb.protocol.sdp.TimeUnit
 import scodec._
 import scodec.bits.{ ByteVector }
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
+import shapeless.CNil
+import shapeless.:+:
 import concurrent.duration._
 
 private[sctp] object Initiation {
 
+  type InitiationParamGroup = (`IPv4 Address` :+: `IPv6 Address` :+: `Cookie Preservative` :+: `Host Name Address` :+: `Supported Address Types` :+: CNil)
+  
   /**
    * Codec that parses all supported optional parameters
    */
-  val parameterCodec: Codec[InitiationParameter] = Codec.coproduct[InitiationParameter].choice
+  implicit val parameterCodec: Codec[InitiationParamGroup] = Codec.coproduct[InitiationParamGroup].choice
+  //val parameterCodec: ImplicitCodec[InitiationParameter] = ???
+
   /**
    * This chunk is used to initiate an SCTP association between two
    * endpoints.  The format of the INIT chunk is shown below:
@@ -199,22 +204,22 @@ private[sctp] object Initiation {
    * further details).
    * @see [[https://tools.ietf.org/html/rfc3758#section-3.1 rfc3758 Protocol Changes to support PR-SCTP]]
    */
-  case object `Forward-TSN-Supported` extends InitiationParameter {
+  //case object `Forward-TSN-Supported` extends InitiationParameter {
 
-    /**
-     * {{{
-     * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * |    Parameter Type = 49152     |  Parameter Length = 4         |
-     * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     * }}}
-     */
-    implicit val codec: Codec[`Forward-TSN-Supported`.type] = "Forward-TSN-Supported Parameter" | {
-      ("Type" | constant(uint8.encodeValid(0xC000))) ~>
-        ("Parameter Length" | constant(uint8.encodeValid(4))) ~>
-        provide(`Forward-TSN-Supported`)
-    }
-  }
+  /**
+   * {{{
+   * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * |    Parameter Type = 49152     |  Parameter Length = 4         |
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * }}}
+   */
+  //implicit val codec: Codec[`Forward-TSN-Supported`.type] = "Forward-TSN-Supported Parameter" | {
+  // ("Type" | constant(uint8.encodeValid(0xC000))) ~>
+  //   ("Parameter Length" | constant(uint8.encodeValid(4))) ~>
+  //    provide(`Forward-TSN-Supported`)
+  //}
+  //}
 
   object `Address Type` {
     implicit val codec: Codec[`Address Type`] = "Address Type" | mappedEnum(uint8,

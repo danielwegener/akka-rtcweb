@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 import akka.io.IO
 import akka.stream.io2.StreamUdp
 import akka.stream.scaladsl.Flow
-import akka.stream.{ FlowMaterializer, MaterializerSettings }
+import akka.stream.{StreamSubscriptionTimeoutTerminationMode, StreamSubscriptionTimeoutSettings, FlowMaterializer, MaterializerSettings}
 import akka.testkit.TestProbe
 import akka.util.ByteString
 
@@ -25,10 +25,13 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
     maxInputBufferSize = 4,
     initialFanOutBufferSize = 2,
     maxFanOutBufferSize = 2,
-    dispatcher = "akka.test.stream-dispatcher")
+    dispatcher = "akka.test.stream-dispatcher",
+    subscriptionTimeoutSettings = StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.WarnTermination, 10 seconds),
+  fileIODispatcher = "akka.test.fileio-dispatcher")
+
 
   implicit val actorSystem = ActorSystem("dtls-flow-spec")
-  implicit val materializer = FlowMaterializer(settings)
+  implicit val materializer = FlowMaterializer(None)
 
   def temporaryServerAddress: InetSocketAddress = {
     val serverSocket = DatagramChannel.open().socket()
@@ -67,6 +70,9 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
       // send 20 but just read 10 as UDP is unreliable
       //todo: does not compile
       //Flow(testInput).toPublisher(materializer).subscribe(conn.outputStream)
+
+
+      conn.inputStream.
       val resultFuture: Future[ByteString] = Flow(conn.inputStream).take(10).
         fold(ByteString.empty)((acc, in) ⇒ acc ++ in).toFuture()
 
