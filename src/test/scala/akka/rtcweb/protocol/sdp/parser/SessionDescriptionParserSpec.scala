@@ -17,12 +17,46 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
 
       val parser = new SessionDescriptionParserImpl(input(
         """v=0
-          |o=- 5817373415835868156 2 IN IP4 127.0.0.1
-          |s=-
-          |t=0 0
-          |i=foo
-          |a=group:BUNDLE audio data
-          |a=msid-semantic: WMS
+          |o=jdoe 5817373415835868156 2 IN IP4 127.0.0.1
+          |s=SDP Seminar
+          |i=A Seminar on the session description protocol
+          |u=http://www.example.com/seminars/sdp.pdf
+          |e=j.doe@example.com (Jane Doe)
+          |p=+4917624822132
+          |c=IN IP4 224.2.17.12/127
+          |b=AS:1024
+          |t=2873397496 2873404696
+          |r=604800d 3600 0 90000m
+          |z=0 0d
+          |k=prompt
+          |a=recvonly
+          |a=foo:bar
+          |m=audio 49170 RTP/AVP 0
+          |a=allowed_here_because_chrome_misplaces_it
+          |b=AS:1024
+          |a=custom
+          |m=application 40678 RTP/SAVPF 101
+          |a=rtcp:40678 IN IP4 192.168.43.1
+          |a=candidate:1738249477 1 udp 2122260223 192.168.43.1 40678 typ host generation 0
+          |b=AS:30
+          |a=candidate:1738249477 2 udp 2122260223 192.168.43.1 40678 typ host generation 0
+          |a=candidate:211962667 1 udp 2122194687 10.0.4.1 36181 typ host generation 0
+          |a=candidate:211962667 2 udp 2122194687 10.0.4.1 36181 typ host generation 0
+          |a=candidate:2441410931 1 udp 2122129151 172.17.43.1 34456 typ host generation 0
+          |a=candidate:2441410931 2 udp 2122129151 172.17.43.1 34456 typ host generation 0
+          |a=ice-ufrag:wAYPGvXiff8UghxF8
+          |a=ice-pwd:KAo7HueRkuhnYvI3xhT5uVCTc
+          |a=ice-options:google-ice
+          |a=fingerprint:sha-256 C5:CA:A0:C5:DA:59:2E:79:6D:EF:F3:7F:51:B5:E7:93:95:B0:82:66:3C:8B:34:7B:88:0C:B0:DD:F2:7E:EA:77
+          |a=setup:actpass
+          |a=mid:data
+          |a=sendrecv
+          |a=rtcp-mux
+          |a=rtpmap:101 google-data/90000
+          |a=ssrc:2730398394 cname:GcDTPaBCsTWYVR7S
+          |a=ssrc:2730398394 msid:myDataChannel myDataChannel
+          |a=ssrc:2730398394 mslabel:myDataChannel
+          |a=ssrc:2730398394 label:myDataChannel
           |m=audio 40678 RTP/SAVPF 111 103 104 0 8 106 105 13 126
           |c=IN IP4 192.168.43.47
           |a=rtcp:40678 IN IP4 192.168.0.1
@@ -49,35 +83,12 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |a=rtpmap:13 CN/8000
           |a=rtpmap:126 telephone-event/8000
           |a=maxptime:60
-          |m=application 40678 RTP/SAVPF 101
-          |c=IN IP4 192.168.43.1
-          |a=rtcp:40678 IN IP4 192.168.43.1
-          |a=candidate:1738249477 1 udp 2122260223 192.168.43.1 40678 typ host generation 0
-          |b=AS:30
-          |a=candidate:1738249477 2 udp 2122260223 192.168.43.1 40678 typ host generation 0
-          |a=candidate:211962667 1 udp 2122194687 10.0.4.1 36181 typ host generation 0
-          |a=candidate:211962667 2 udp 2122194687 10.0.4.1 36181 typ host generation 0
-          |a=candidate:2441410931 1 udp 2122129151 172.17.43.1 34456 typ host generation 0
-          |a=candidate:2441410931 2 udp 2122129151 172.17.43.1 34456 typ host generation 0
-          |a=ice-ufrag:wAYPGvXiff8UghxF8
-          |a=ice-pwd:KAo7HueRkuhnYvI3xhT5uVCTc
-          |a=ice-options:google-ice
-          |a=fingerprint:sha-256 C5:CA:A0:C5:DA:59:2E:79:6D:EF:F3:7F:51:B5:E7:93:95:B0:82:66:3C:8B:34:7B:88:0C:B0:DD:F2:7E:EA:77
-          |a=setup:actpass
-          |a=mid:data
-          |a=sendrecv
-          |a=rtcp-mux
-          |a=rtpmap:101 google-data/90000
-          |a=ssrc:2730398394 cname:GcDTPaBCsTWYVR7S
-          |a=ssrc:2730398394 msid:myDataChannel myDataChannel
-          |a=ssrc:2730398394 mslabel:myDataChannel
-          |a=ssrc:2730398394 label:myDataChannel
         |""".stripMargin //
           .replace("\n", "\r\n")))
 
       val result = parser.parseSessionDescription().recover { case e @ ParseError(position, traces) => fail(s"\n${parser.formatErrorProblem(e)}: ${parser.formatErrorLine(e)}: ${e.formatTraces}", e) }.get
 
-      result.origin should be(Origin(Some("jdoe"), "2890844526", 2890842807L, NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("10.47.16.5", 0)))
+      result.origin should be(Origin(Some("jdoe"), "5817373415835868156", 2L, NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("127.0.0.1", 0)))
       result.protocolVersion should be(ProtocolVersion.`0`)
       result.sessionName should be(Some("SDP Seminar"))
       result.sessionInformation should be(Some("A Seminar on the session description protocol"))
@@ -97,7 +108,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       result.mediaDescriptions(0).connectionInformation should be(Nil)
       result.mediaDescriptions(0).portRange should be(PortRange(49170))
       result.mediaDescriptions(0).protocol should be(MediaTransportProtocol.`RTP/AVP`)
-      result.mediaDescriptions(0).mediaAttributes should be(Seq(PropertyAttribute("custom")))
+      result.mediaDescriptions(0).mediaAttributes should be(Seq(PropertyAttribute("allowed_here_because_chrome_misplaces_it"), PropertyAttribute("custom")))
     }
 
     "parse and render identical" in {
@@ -176,7 +187,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           .replace("\n", "\r\n")
 
       val sd = new SessionDescriptionParserImpl(input(sdtext)).parseSessionDescription().get
-      SdpRendering.render(sd) should be(sdtext.replace("b=AS:1337\r\n",""))
+      SdpRendering.render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
 
     }
 

@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 import akka.io.IO
 import akka.stream.io2.StreamUdp
 import akka.stream.scaladsl.Flow
-import akka.stream.{StreamSubscriptionTimeoutTerminationMode, StreamSubscriptionTimeoutSettings, FlowMaterializer, MaterializerSettings}
+import akka.stream.{ StreamSubscriptionTimeoutTerminationMode, StreamSubscriptionTimeoutSettings, FlowMaterializer, MaterializerSettings }
 import akka.testkit.TestProbe
 import akka.util.ByteString
 
@@ -27,8 +27,7 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
     maxFanOutBufferSize = 2,
     dispatcher = "akka.test.stream-dispatcher",
     subscriptionTimeoutSettings = StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.WarnTermination, 10 seconds),
-  fileIODispatcher = "akka.test.fileio-dispatcher")
-
+    fileIODispatcher = "akka.test.fileio-dispatcher")
 
   implicit val actorSystem = ActorSystem("dtls-flow-spec")
   implicit val materializer = FlowMaterializer(None)
@@ -70,7 +69,6 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
       // send 20 but just read 10 as UDP is unreliable
       //todo: does not compile
       //Flow(testInput).toPublisher(materializer).subscribe(conn.outputStream)
-
 
       //conn.inputStream.
       //val resultFuture: Future[ByteString] = Flow(conn.inputStream).take(10).
