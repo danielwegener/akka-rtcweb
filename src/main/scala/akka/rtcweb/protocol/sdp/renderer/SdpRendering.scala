@@ -1,4 +1,4 @@
-package akka.rtcweb.protocol.sdp.serializer
+package akka.rtcweb.protocol.sdp.renderer
 
 import java.net.InetSocketAddress
 

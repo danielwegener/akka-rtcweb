@@ -7,7 +7,7 @@ import akka.http.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.io.IO
 import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
-import akka.rtcweb.protocol.sdp.serializer.SdpRendering
+import akka.rtcweb.protocol.sdp.renderer.SdpRendering
 import akka.stream.FlowMaterializer
 import akka.util.Timeout
 import scala.concurrent.{Await, Future}

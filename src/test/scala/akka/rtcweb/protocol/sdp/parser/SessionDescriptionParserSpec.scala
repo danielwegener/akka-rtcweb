@@ -5,7 +5,7 @@ import java.net.InetSocketAddress
 import akka.parboiled2.ParseError
 import akka.parboiled2.ParserInput.StringBasedParserInput
 import akka.rtcweb.protocol.sdp._
-import akka.rtcweb.protocol.sdp.serializer.SdpRendering
+import akka.rtcweb.protocol.sdp.renderer.SdpRendering
 import scala.collection.immutable.Seq
 import org.scalatest.{ Matchers, WordSpecLike }
 
