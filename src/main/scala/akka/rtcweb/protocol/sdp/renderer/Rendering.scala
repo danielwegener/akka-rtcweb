@@ -1,11 +1,44 @@
 package akka.rtcweb.protocol.sdp.renderer
 
+import akka.http.util.{Rendering, Renderable, Renderer}
 import akka.parboiled2.CharPredicate
-import akka.util.{ByteString}
-
+import akka.util.ByteString
 import scala.annotation.tailrec
 import scala.collection.LinearSeq
 
+
+/**
+ * INTERNAL API
+ *
+ * An entity that can render itself
+ */
+private[renderer] trait Renderable {
+  def render[R <: Rendering](r: R): r.type
+}
+
+/**
+ * INTERNAL API
+ *
+ * An entity that can render itself and implements toString in terms of its rendering
+ */
+private[renderer] trait ToStringRenderable extends Renderable {
+  override def toString = render(new StringRendering).get
+}
+
+/**
+ * INTERNAL API
+ *
+ * An entity that has a rendered value (like an HttpHeader)
+ */
+private[renderer] trait ValueRenderable extends ToStringRenderable {
+  def value: String = toString
+}
+
+private[renderer] trait SingletonValueRenderable extends Product with Renderable {
+  private[this] val valueBytes = value.getBytes
+  def value = productPrefix
+  def render[R <: Rendering](r: R): r.type = r ~ valueBytes
+}
 
 
 trait Renderer[-T] {
@@ -14,18 +47,29 @@ trait Renderer[-T] {
 
 object Renderer {
   implicit object CharRenderer extends Renderer[Char] {
-    def render[R <: Rendering](r: R, value: Char): r.type = r ~~ value
+    def render[R <: Rendering](r: R, value: Char): r.type = r ~ value
   }
   implicit object StringRenderer extends Renderer[String] {
-    def render[R <: Rendering](r: R, value: String): r.type = r ~~ value
+    def render[R <: Rendering](r: R, value: String): r.type = r ~ value
   }
   implicit object CharsRenderer extends Renderer[Array[Char]] {
-    def render[R <: Rendering](r: R, value: Array[Char]): r.type = r ~~ value
+    def render[R <: Rendering](r: R, value: Array[Char]): r.type = r ~ value
   }
+
+  def caseObjectNameRenderer[T<:Product] : Renderer[T] = new Renderer[T] {
+    override def render[R <: Rendering](r: R, value: T) : r.type = r ~ value.productPrefix
+  }
+
+
+  def stringRenderer[T](f:T=>String):Renderer[T] = new Renderer[T] {
+    override def render[R <: Rendering](r: R, value: T): r.type = r ~ f(value)
+  }
+
   object RenderableRenderer extends Renderer[Renderable] {
     def render[R <: Rendering](r: R, value: Renderable): r.type = value.render(r)
   }
   implicit def renderableRenderer[T <: Renderable]: Renderer[T] = RenderableRenderer
+
 
   def optionRenderer[D, T](defaultValue: D)(implicit sRenderer: Renderer[D], tRenderer: Renderer[T]) =
     new Renderer[Option[T]] {
@@ -33,7 +77,6 @@ object Renderer {
         if (value.isEmpty) sRenderer.render(r, defaultValue) else tRenderer.render(r, value.get)
     }
 
-  def defaultSeqRenderer[T: Renderer] = genericSeqRenderer[Renderable, T](Rendering.`, `, Rendering.Empty)
   def seqRenderer[T: Renderer](separator: String = ", ", empty: String = "") = genericSeqRenderer[String, T](separator, empty)
   def genericSeqRenderer[S, T](separator: S, empty: S)(implicit sRenderer: Renderer[S], tRenderer: Renderer[T]) =
     new Renderer[Seq[T]] {
@@ -53,7 +96,7 @@ object Renderer {
           } else r
 
         value match {
-          case Nil              ⇒ r ~~ empty
+          case Nil              ⇒ r ~ empty
           case x: IndexedSeq[T] ⇒ recI(x)
           case x: LinearSeq[T]  ⇒ recL(x)
           case x                ⇒ sys.error("Unsupported Seq type: " + x)
@@ -63,35 +106,36 @@ object Renderer {
 }
 
 trait Rendering {
-  def ~~(char: Char): this.type
-  def ~~(bytes: Array[Byte]): this.type
+  def ~(char: Char): this.type
+  def ~(bytes: Array[Byte]): this.type
 
-  def ~~(f: Float): this.type = this ~~ f.toString
-  def ~~(d: Double): this.type = this ~~ d.toString
+  def ~(f: Float): this.type = this ~ f.toString
+  def ~(d: Double): this.type = this ~ d.toString
 
-  def ~~(int: Int): this.type = this ~~ int.toLong
+  def ~(int: Int): this.type = this ~ int.toLong
 
-  def ~~(long: Long): this.type =
+  def ~(long: Long): this.type =
     if (long != 0) {
-      val value = if (long < 0) { this ~~ '-'; -long } else long
+      val value = if (long < 0) { this ~ '-'; -long } else long
       @tailrec def magnitude(m: Long = 1): Long = if ((value / m) < 10) m else magnitude(m * 10)
       @tailrec def putNextChar(v: Long, m: Long): this.type =
         if (m > 0) {
-          this ~~ ('0' + (v / m)).toChar
+          this ~ ('0' + (v / m)).toChar
           putNextChar(v % m, m / 10)
         } else this
       putNextChar(value, magnitude())
-    } else this ~~ '0'
+    } else this ~ '0'
 
 
-  def ~~(string: String): this.type = {
+  def ~(string: String): this.type = {
     @tailrec def rec(ix: Int = 0): this.type =
-      if (ix < string.length) { this ~~ string.charAt(ix); rec(ix + 1) } else this
+      if (ix < string.length) { this ~ string.charAt(ix); rec(ix + 1) } else this
     rec()
   }
 
 
-  def ~~[T](value: T)(implicit ev: Renderer[T]): this.type = ev.render(this, value)
+
+  def ~[T](value: T)(implicit ev: Renderer[T]): this.type = ev.render(this, value)
 
 
 }
@@ -99,19 +143,24 @@ trait Rendering {
 object Rendering {
   val `\"` = CharPredicate('\\', '"')
   case object `, ` extends SingletonValueRenderable // default separator
+
   case object Empty extends Renderable {
     def render[R <: Rendering](r: R): r.type = r
   }
-  case object CrLf extends Renderable {
-    def render[R <: Rendering](r: R): r.type = r ~~ '\r' ~~ '\n'
+  case object CRLF extends Renderable {
+    def render[R <: Rendering](r: R): r.type = r ~ '\r' ~ '\n'
   }
+  case object SP extends Renderable {
+    def render[R <: Rendering](r: R): r.type = r ~ ' '
+  }
+
 }
 class StringRendering extends Rendering {
   private[this] val sb = new java.lang.StringBuilder
-  def ~~(char: Char): this.type = { sb.append(char); this }
-  def ~~(bytes: Array[Byte]): this.type = {
+  def ~(char: Char): this.type = { sb.append(char); this }
+  def ~(bytes: Array[Byte]): this.type = {
     @tailrec def rec(ix: Int = 0): this.type =
-      if (ix < bytes.length) { this ~~ bytes(ix).asInstanceOf[Char]; rec(ix + 1) } else this
+      if (ix < bytes.length) { this ~ bytes(ix).asInstanceOf[Char]; rec(ix + 1) } else this
     rec()
   }
   def get: String = sb.toString
@@ -119,12 +168,12 @@ class StringRendering extends Rendering {
 abstract class ByteArrayBasedRendering(sizeHint: Int) extends Rendering {
   protected var array = new Array[Byte](sizeHint)
   protected var size = 0
-  def ~~(char: Char): this.type = {
+  def ~(char: Char): this.type = {
     val oldSize = growBy(1)
     array(oldSize) = char.toByte
     this
   }
-  def ~~(bytes: Array[Byte]): this.type = {
+  def ~(bytes: Array[Byte]): this.type = {
     if (bytes.length > 0) {
       val oldSize = growBy(bytes.length)
       System.arraycopy(bytes, 0, array, oldSize, bytes.length)
@@ -151,5 +200,5 @@ class ByteArrayRendering(sizeHint: Int) extends ByteArrayBasedRendering(sizeHint
     else java.util.Arrays.copyOfRange(array, 0, size)
 }
 class ByteStringRendering(sizeHint: Int) extends ByteArrayBasedRendering(sizeHint) {
-  def get: ByteString = ByteString(array, 0, size)
+  def get: ByteString = ByteString.fromArray(array, 0, size)
 }

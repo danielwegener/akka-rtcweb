@@ -16,8 +16,9 @@ private[sctp] object Initiation {
   /**
    * Codec that parses all supported optional parameters
    */
-  implicit val parameterCodec: Codec[InitiationParamGroup] = Codec.coproduct[InitiationParamGroup].choice
-  //val parameterCodec: ImplicitCodec[InitiationParameter] = ???
+  //implicit val parameterCodec: Codec[InitiationParamGroup] = Codec.coproduct[InitiationParamGroup].choice
+  //fixme this worked in scodec 1.3 :(
+  val parameterCodec: ImplicitCodec[InitiationParameter] = ???
 
   /**
    * This chunk is used to initiate an SCTP association between two

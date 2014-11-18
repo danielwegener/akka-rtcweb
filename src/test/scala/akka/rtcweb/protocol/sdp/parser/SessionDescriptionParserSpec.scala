@@ -20,15 +20,12 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |o=- 5817373415835868156 2 IN IP4 127.0.0.1
           |s=-
           |t=0 0
+          |i=foo
           |a=group:BUNDLE audio data
           |a=msid-semantic: WMS
           |m=audio 40678 RTP/SAVPF 111 103 104 0 8 106 105 13 126
           |c=IN IP4 192.168.43.47
           |a=rtcp:40678 IN IP4 192.168.0.1
-          |a=candidate:1738249477 1 udp 2122260223 192.168.43.47 40678 typ host generation 0
-          |a=candidate:1738249477 2 udp 2122260223 192.168.43.47 40678 typ host generation 0
-          |a=candidate:211962667 1 udp 2122194687 10.0.4.1 36181 typ host generation 0
-          |a=candidate:211962667 2 udp 2122194687 10.0.4.1 36181 typ host generation 0
           |a=candidate:2441410931 1 udp 2122129151 172.17.43.1 34456 typ host generation 0
           |a=candidate:2441410931 2 udp 2122129151 172.17.43.1 34456 typ host generation 0
           |a=ice-ufrag:wAYPGvXic8UghxF8
@@ -108,11 +105,22 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
         """v=0
           |o=- 5817373415835868156 2 IN IP4 127.0.0.1
           |s=-
+          |i=information field
+          |u=http://session.description/url
+          |e=me@me.me
+          |e=you@me.you
+          |p=+49 190 123456
+          |p=+49 800 5678111
+          |c=IN IP4 192.168.43.47
+          |b=AS:30
           |t=0 0
+          |k=prompt
           |a=group:BUNDLE audio data
           |a=msid-semantic: WMS
           |m=audio 40678 RTP/SAVPF 111 103 104 0 8 106 105 13 126
+          |i=mediaInformation
           |c=IN IP4 192.168.43.47
+          |b=AS:30
           |a=rtcp:40678 IN IP4 192.168.0.1
           |a=candidate:1738249477 1 udp 2122260223 192.168.43.47 40678 typ host generation 0
           |a=candidate:1738249477 2 udp 2122260223 192.168.43.47 40678 typ host generation 0
@@ -145,7 +153,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |c=IN IP4 192.168.43.1
           |a=rtcp:40678 IN IP4 192.168.43.1
           |a=candidate:1738249477 1 udp 2122260223 192.168.43.1 40678 typ host generation 0
-          |b=AS:30
+          |b=AS:1337
           |a=candidate:1738249477 2 udp 2122260223 192.168.43.1 40678 typ host generation 0
           |a=candidate:211962667 1 udp 2122194687 10.0.4.1 36181 typ host generation 0
           |a=candidate:211962667 2 udp 2122194687 10.0.4.1 36181 typ host generation 0
@@ -168,7 +176,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           .replace("\n", "\r\n")
 
       val sd = new SessionDescriptionParserImpl(input(sdtext)).parseSessionDescription().get
-      SdpRendering.render(sd) should be(sdtext)
+      SdpRendering.render(sd) should be(sdtext.replace("b=AS:1337\r\n",""))
 
     }
 

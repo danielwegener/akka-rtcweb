@@ -45,26 +45,6 @@ trait SessionDescriptionParser {
 
   import CharacterClasses._
 
-  private def part1 = rule {
-    (`proto-version` ~
-      `origin-field` ~
-      `session-name-field` ~
-      optional(`information-field`) ~
-      optional(`uri-field`)) ~> ((v, o, s, i, u) ⇒ (v, o, s, i, u))
-  }
-
-  private def part2 = rule {
-    (zeroOrMore(`email-field`) ~
-      zeroOrMore(`phone-field`) ~
-      optional(`connection-field`) ~
-      optional(`bandwidth-field`) ~
-      zeroOrMore(`time-field`) ~
-
-      //todo: zone corrections
-      optional(`key-field`) ~
-      zeroOrMore(`attribute-field`)) ~> ((e, p, c, b, t, k, a) ⇒ (e, p, c, b, t, k, a))
-  }
-
   def `session-description` = rule {
     part1 ~ part2 ~ zeroOrMore(`media-description`) ~ EOI ~>
       ((p1, p2, mds) ⇒ SessionDescription(p1._1, p1._2, p1._3, p1._4, p1._5, p2._1, p2._2, p2._3, p2._4, p2._5, p2._6, p2._7, mds))
@@ -242,7 +222,7 @@ trait SessionDescriptionParser {
       zeroOrMore(`connection-field`) ~
       zeroOrMore(`bandwidth-field`) ~
       optional(`key-field`) ~ // the ignored zeroOrMore(`bandwidth-field`) is a workaround for chromes missplaced sdp bandwidth rendering
-      zeroOrMore(`attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, bf) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, key))
+      zeroOrMore(`attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, ignore) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, bw, key))
   }
 
   /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */
@@ -276,6 +256,26 @@ trait SessionDescriptionParser {
       str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
       str("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
       str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
+  }
+
+  private def part1 = rule {
+    (`proto-version` ~
+      `origin-field` ~
+      `session-name-field` ~
+      optional(`information-field`) ~
+      optional(`uri-field`)) ~> ((v, o, s, i, u) ⇒ (v, o, s, i, u))
+  }
+
+  private def part2 = rule {
+    (zeroOrMore(`email-field`) ~
+      zeroOrMore(`phone-field`) ~
+      optional(`connection-field`) ~
+      optional(`bandwidth-field`) ~
+      zeroOrMore(`time-field`) ~
+
+      //todo: zone corrections
+      optional(`key-field`) ~
+      zeroOrMore(`attribute-field`)) ~> ((e, p, c, b, t, k, a) ⇒ (e, p, c, b, t, k, a))
   }
 
 }

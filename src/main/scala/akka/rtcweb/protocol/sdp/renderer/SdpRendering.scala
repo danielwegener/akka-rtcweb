@@ -3,111 +3,173 @@ package akka.rtcweb.protocol.sdp.renderer
 import java.net.InetSocketAddress
 
 import akka.parboiled2.util.Base64
+import akka.rtcweb.protocol.sdp.MediaTransportProtocol._
 import akka.rtcweb.protocol.sdp._
+import akka.util.ByteString
 
 object SdpRendering extends SdpRenderingLowPriorityImplicits {
 
-  def render(ctx: StringRenderingContext, sessionDescription: SessionDescription): Unit = sessionSerializer.append(ctx, sessionDescription)
 
   def render(sessionDescription: SessionDescription): String = {
-    val ctx = new StringRenderingContext()
-    render(ctx, sessionDescription)
-    ctx.result()
+    val renderingContext = new StringRendering
+    sessionDescriptionRenderer.render(renderingContext, sessionDescription)
+    renderingContext.get
+  }
+
+  def renderByteString(sessionDescription: SessionDescription): ByteString = {
+    val renderingContext = new ByteStringRendering(1024)
+    sessionDescriptionRenderer.render(renderingContext, sessionDescription)
+    renderingContext.get
   }
 
 }
 
 trait SdpRenderingLowPriorityImplicits {
 
-  implicit def mediaDescriptionSerializer(implicit mediaSerializer: StringRenderable[Media],
-    portRangeSerializer: StringRenderable[PortRange],
-    mtpSerializer: StringRenderable[MediaTransportProtocol],
-    connectionDataSerializer: StringRenderable[ConnectionData],
-    encryptionKeySerializer: StringRenderable[EncryptionKey]): StringRenderable[MediaDescription] = SimpleStringRenderable[MediaDescription] {
-    case MediaDescription(media, mediaTitle, portRange, protocol, mediaAttributes, fmts, connectionInformation, encryptionKey) =>
-      ???
+  import Renderer._
+  import Rendering._
 
+  implicit val optionRenderer = Renderer.optionRenderer[String,String]("-")
+
+  implicit val protocolVersionRenderer = new Renderer[ProtocolVersion] {
+    override def render[R <: Rendering](r: R, value: ProtocolVersion): r.type =
+      r ~ s"v=${value.value}" ~ CRLF
   }
 
-  implicit val protocolVersionSerializer: StringRenderable[ProtocolVersion] = SimpleStringRenderable(t => s"v=${t.value}")
-  implicit val mediaSerializer: StringRenderable[Media] = SimpleStringRenderable {
-    case Media.application => "application"
-    case Media.audio => "audio"
-    case Media.video => "video"
-    case Media.text => "text"
-    case Media.message => "message"
-    case CustomMedia(name) => name
+  implicit val mediaRenderer = new Renderer[Media] {
+    override def render[R <: Rendering](r: R, value: Media): r.type = r ~ (value match {
+      case Media.application => "application"
+      case Media.audio => "audio"
+      case Media.video => "video"
+      case Media.text => "text"
+      case Media.message => "message"
+      case CustomMedia(name) => name
+    })
   }
 
-  implicit val portRangeSerializer = SimpleStringRenderable[PortRange] {
-    case PortRange(port, Some(range)) => s"$port/$range"
-    case PortRange(port, None) => s"$port"
+  implicit val portRangeRenderer  = new Renderer[PortRange]  {
+    override def render[R <: Rendering](r: R, value: PortRange): r.type = r ~ (value match {
+      case PortRange(port, Some(range)) => s"$port/$range"
+      case PortRange(port, None) => s"$port"
+    })
   }
 
-  implicit val mtpSerializer = SimpleStringRenderable[MediaTransportProtocol] {
+  implicit val mtpRenderer = Renderer.stringRenderer[MediaTransportProtocol] {
     case MediaTransportProtocol.udp => "udp"
-    case MediaTransportProtocol.`RTP/AVP` => "RTP/AVP"
-    case MediaTransportProtocol.`RTP/SAVP` => "RTP/SAVP"
-    case MediaTransportProtocol.`RTP/SAVPF` => "RTP/SAVPF"
+    case `RTP/AVP` => "RTP/AVP"
+    case `RTP/SAVP` => "RTP/SAVP"
+    case `RTP/SAVPF` => "RTP/SAVPF"
   }
 
-  implicit def connectionDataSerializer(implicit nettypeSerializer: StringRenderable[NetworkType],
-    addrtypeSerializer: StringRenderable[AddressType],
-    connectionAddressSerializer: StringRenderable[InetSocketAddress]) = SimpleStringRenderable[ConnectionData] {
-    case ConnectionData(networkType, addrType, connectionAddress) => ???
-  }
-
-  implicit val nettypeSerializer = SimpleStringRenderable[NetworkType] {
+  implicit val nettypeRenderer = Renderer.stringRenderer[NetworkType] {
     case NetworkType.IN => "IN"
   }
 
-  implicit val addressTypeSerializer = SimpleStringRenderable[AddressType] {
+  implicit val addressTypeRenderer = Renderer.stringRenderer[AddressType] {
     case AddressType.IP4 => "IP4"
     case AddressType.IP6 => "IP6"
   }
 
-  implicit val inetSocketAddressSerializer = SimpleStringRenderable[InetSocketAddress](_.getAddress.toString)
+  implicit val inetSocketAddressRenderer = Renderer.stringRenderer[InetSocketAddress](_.getHostName)
 
-  implicit val encryptionKeySerializer = SimpleStringRenderable[EncryptionKey] {
+  implicit val encryptionKeyRenderer = Renderer.stringRenderer[EncryptionKey] {
     case ClearEncryptionKey(key) => s"k=clear:$key"
     case Base64EncryptionKey(bytes) => "k=base64:" + Base64.rfc2045().encodeToString(bytes, false)
     case UriEncryptionKey(uri) => s"k=uri:$uri"
     case PromptEncryptionKey => "k=prompt"
   }
 
-  implicit val bandwidthInformationSerializer = SimpleStringRenderable[BandwidthInformation] {
-    case BandwidthInformation(bwtype, bw) => "" + ???
-  }
-
-  implicit val originSerializer = originSerializerMaker
-
-  private def originSerializerMaker(implicit nettypeSerializer: StringRenderable[NetworkType],
-    addrtypeSerializer: StringRenderable[AddressType],
-    connectionAddressSerializer: StringRenderable[InetSocketAddress]): StringRenderable[Origin] = {
-    new StringRenderable[Origin] {
-      override def append(context: StringRenderingContext, t: Origin): Unit = ???
+  implicit val  connectionDataRenderer: Renderer[ConnectionData]  = new Renderer[ConnectionData] {
+    override def render[R <: Rendering](r: R, value: ConnectionData): r.type = value match {
+      case ConnectionData(networkType, addrType, connectionAddress) =>
+        r ~ "c=" ~ networkType ~ SP ~ addrType ~ SP ~ connectionAddress ~ CRLF
     }
   }
 
-  implicit val sessionSerializer = sessionSerializerMaker
-
-  implicit val timingSerializer: StringRenderable[Timing] = SimpleStringRenderable {
-    case Timing(startTime, stopTime, repeatings, zoneAdjustments) => "" + ???
+  implicit val bandwidthTypeRenderer = stringRenderer[BandwidthType] {
+    case BandwidthType.AS => "AS"
+    case BandwidthType.CT => "CT"
+    case BandwidthType.Experimental(name) => name
   }
 
-  implicit val attributeSerializer: StringRenderable[Attribute] = SimpleStringRenderable {
-    case PropertyAttribute(key) => s"a=$key"
-    case ValueAttribute(key, value) => s"a=$key:$value"
+
+
+  implicit val bandwidthInformationRenderer = new Renderer[BandwidthInformation] {
+    override def render[R <: Rendering](r: R, value: BandwidthInformation): r.type = value match {
+      case BandwidthInformation(bwtype, bw) =>
+        r ~ "b=" ~ bwtype ~ ':' ~ bw ~ CRLF
+    }
+  }
+  implicit val originRenderer = originRendererMaker
+  implicit val repeatTimesRenderer : Renderer[RepeatTimes] = new Renderer[RepeatTimes] {
+    override def render[R <: Rendering](r: R, value: RepeatTimes): r.type =
+      r ~ "r=" ~ /* FIXME */ CRLF
+  }
+  implicit val timeZoneAdjustmentRenderer : Renderer[TimeZoneAdjustment] = new Renderer[TimeZoneAdjustment] {
+    override def render[R <: Rendering](r: R, value: TimeZoneAdjustment): r.type =
+      r ~ "t=" ~ /* FIXME */ CRLF
+  }
+  implicit val timingRenderer = new Renderer[Timing] {
+    override def render[R <: Rendering](r: R, value: Timing): r.type = value match {
+        case (Timing(startTime, stopTime, repeatings, zoneAdjustments)) =>
+          r ~ "t=" ~ startTime.getOrElse(0L) ~ SP ~ stopTime.getOrElse(0L) ~ CRLF
+          if (repeatings.isDefined) r ~ repeatings.get
+          zoneAdjustments.foreach(r ~ _)
+          r
+      }
+    }
+  implicit val attributeRenderer = new Renderer[Attribute] {
+    override def render[R <: Rendering](r: R, value: Attribute): r.type = value match {
+      case PropertyAttribute(key) => r~ s"a=$key" ~ CRLF
+      case ValueAttribute(key, value) => r ~ s"a=$key:$value" ~ CRLF
+    }
+  }
+  implicit val mediaDescriptionRenderer = makeMediaDescriptionRenderer
+  implicit val sessionDescriptionRenderer = new Renderer[SessionDescription] {
+
+      override def render[R <: Rendering](r: R, s: SessionDescription): r.type = {
+        r ~ s.protocolVersion ~ s.origin
+        r ~ "s=" ~ s.sessionName ~ CRLF
+        s.sessionInformation.foreach(r ~ "i=" ~ _ ~ CRLF)
+        s.descriptionUri.foreach(r ~ "u=" ~ _ ~ CRLF)
+        s.emailAddresses.foreach(r ~ "e=" ~ _ ~ CRLF)
+        s.phoneNumbers.foreach(r ~ "p=" ~ _ ~ CRLF)
+        s.connectionInformation.foreach(r ~ _)
+        s.bandwidthInformation.foreach(r ~ _)
+        s.timings.foreach(r ~ _)
+        s.encryptionKey.foreach(r ~ _ ~ CRLF)
+        s.sessionAttributes.foreach(r ~ _)
+        s.mediaDescriptions.foreach(r ~ _)
+        r
+      }
   }
 
-  private def sessionSerializerMaker(
-    implicit pvSerializer: StringRenderable[ProtocolVersion],
-    originSerializer: StringRenderable[Origin],
-    connectionDataSerializer: StringRenderable[ConnectionData],
-    bandwidthInformationSerializer: StringRenderable[BandwidthInformation],
-    timingSerializer: StringRenderable[Timing],
-    encryptionKey: StringRenderable[EncryptionKey],
-    sessionAttributesSerializer: StringRenderable[Attribute],
-    mediaDescriptionSerializer: StringRenderable[MediaDescription]): StringRenderable[SessionDescription] = ???
+  private def originRendererMaker(implicit nettypeRenderer: Renderer[NetworkType]): Renderer[Origin] = {
+    new Renderer[Origin] {
+      override def render[R <: Rendering](r: R, o: Origin): r.type = {
+        r ~ "o=" ~ o.username ~ SP
+        r ~ o.`sess-id` ~ SP ~ o.`sess-version` ~ SP ~ o.nettype ~ SP ~ o.addrtype ~ SP ~ o.`unicast-address` ~ CRLF
+      }
+    }
+  }
+
+  private def makeMediaDescriptionRenderer(implicit mediaRenderer: Renderer[Media],
+                                           portRangeRenderer: Renderer[PortRange],
+                                           mtpRenderer: Renderer[MediaTransportProtocol],
+                                           connectionDataRenderer: Renderer[ConnectionData],
+                                           encryptionKeyRenderer: Renderer[EncryptionKey]): Renderer[MediaDescription] = new Renderer[MediaDescription] {
+    override def render[R <: Rendering](r: R, value: MediaDescription): r.type = value match {
+      case MediaDescription(media, mediaTitle, portRange, protocol, mediaAttributes, fmts, connectionInformation, bandwidthInformation , encryptionKey) =>
+        r ~ "m=" ~ media ~ SP ~ portRange ~ SP ~ protocol
+        fmts.foreach(r ~ SP ~ _)
+        r ~ CRLF
+        mediaTitle.foreach(r ~ "i=" ~ _ ~ CRLF)
+        connectionInformation.foreach(r ~ _)
+        bandwidthInformation.foreach(r ~ _)
+        mediaAttributes.foreach(r ~ _)
+        r
+    }
+  }
+
 
 }
