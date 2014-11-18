@@ -24,7 +24,7 @@ final case class MediaDescription(
   mediaAttributes: Seq[Attribute],
   fmt: Seq[String],
   connectionInformation: Seq[ConnectionData],
-  bandwidthInformation:Seq[BandwidthInformation],
+  bandwidthInformation: Seq[BandwidthInformation],
   encryptionKey: Option[EncryptionKey])
 
 /**

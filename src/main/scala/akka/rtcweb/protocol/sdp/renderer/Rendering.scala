@@ -1,11 +1,10 @@
 package akka.rtcweb.protocol.sdp.renderer
 
-import akka.http.util.{Rendering, Renderable, Renderer}
+import akka.http.util.{ Rendering, Renderable, Renderer }
 import akka.parboiled2.CharPredicate
 import akka.util.ByteString
 import scala.annotation.tailrec
 import scala.collection.LinearSeq
-
 
 /**
  * INTERNAL API
@@ -40,7 +39,6 @@ private[renderer] trait SingletonValueRenderable extends Product with Renderable
   def render[R <: Rendering](r: R): r.type = r ~ valueBytes
 }
 
-
 trait Renderer[-T] {
   def render[R <: Rendering](r: R, value: T): r.type
 }
@@ -56,12 +54,11 @@ object Renderer {
     def render[R <: Rendering](r: R, value: Array[Char]): r.type = r ~ value
   }
 
-  def caseObjectNameRenderer[T<:Product] : Renderer[T] = new Renderer[T] {
-    override def render[R <: Rendering](r: R, value: T) : r.type = r ~ value.productPrefix
+  def caseObjectNameRenderer[T <: Product]: Renderer[T] = new Renderer[T] {
+    override def render[R <: Rendering](r: R, value: T): r.type = r ~ value.productPrefix
   }
 
-
-  def stringRenderer[T](f:T=>String):Renderer[T] = new Renderer[T] {
+  def stringRenderer[T](f: T => String): Renderer[T] = new Renderer[T] {
     override def render[R <: Rendering](r: R, value: T): r.type = r ~ f(value)
   }
 
@@ -69,7 +66,6 @@ object Renderer {
     def render[R <: Rendering](r: R, value: Renderable): r.type = value.render(r)
   }
   implicit def renderableRenderer[T <: Renderable]: Renderer[T] = RenderableRenderer
-
 
   def optionRenderer[D, T](defaultValue: D)(implicit sRenderer: Renderer[D], tRenderer: Renderer[T]) =
     new Renderer[Option[T]] {
@@ -96,10 +92,10 @@ object Renderer {
           } else r
 
         value match {
-          case Nil              ⇒ r ~ empty
+          case Nil ⇒ r ~ empty
           case x: IndexedSeq[T] ⇒ recI(x)
-          case x: LinearSeq[T]  ⇒ recL(x)
-          case x                ⇒ sys.error("Unsupported Seq type: " + x)
+          case x: LinearSeq[T] ⇒ recL(x)
+          case x ⇒ sys.error("Unsupported Seq type: " + x)
         }
       }
     }
@@ -126,17 +122,13 @@ trait Rendering {
       putNextChar(value, magnitude())
     } else this ~ '0'
 
-
   def ~(string: String): this.type = {
     @tailrec def rec(ix: Int = 0): this.type =
       if (ix < string.length) { this ~ string.charAt(ix); rec(ix + 1) } else this
     rec()
   }
 
-
-
   def ~[T](value: T)(implicit ev: Renderer[T]): this.type = ev.render(this, value)
-
 
 }
 

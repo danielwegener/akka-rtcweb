@@ -12,7 +12,7 @@ import concurrent.duration._
 private[sctp] object Initiation {
 
   type InitiationParamGroup = (`IPv4 Address` :+: `IPv6 Address` :+: `Cookie Preservative` :+: `Host Name Address` :+: `Supported Address Types` :+: CNil)
-  
+
   /**
    * Codec that parses all supported optional parameters
    */

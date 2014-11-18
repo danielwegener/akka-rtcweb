@@ -9,7 +9,6 @@ import akka.util.ByteString
 
 object SdpRendering extends SdpRenderingLowPriorityImplicits {
 
-
   def render(sessionDescription: SessionDescription): String = {
     val renderingContext = new StringRendering
     sessionDescriptionRenderer.render(renderingContext, sessionDescription)
@@ -29,7 +28,7 @@ trait SdpRenderingLowPriorityImplicits {
   import Renderer._
   import Rendering._
 
-  implicit val optionRenderer = Renderer.optionRenderer[String,String]("-")
+  implicit val optionRenderer = Renderer.optionRenderer[String, String]("-")
 
   implicit val protocolVersionRenderer = new Renderer[ProtocolVersion] {
     override def render[R <: Rendering](r: R, value: ProtocolVersion): r.type =
@@ -47,7 +46,7 @@ trait SdpRenderingLowPriorityImplicits {
     })
   }
 
-  implicit val portRangeRenderer  = new Renderer[PortRange]  {
+  implicit val portRangeRenderer = new Renderer[PortRange] {
     override def render[R <: Rendering](r: R, value: PortRange): r.type = r ~ (value match {
       case PortRange(port, Some(range)) => s"$port/$range"
       case PortRange(port, None) => s"$port"
@@ -79,7 +78,7 @@ trait SdpRenderingLowPriorityImplicits {
     case PromptEncryptionKey => "k=prompt"
   }
 
-  implicit val  connectionDataRenderer: Renderer[ConnectionData]  = new Renderer[ConnectionData] {
+  implicit val connectionDataRenderer: Renderer[ConnectionData] = new Renderer[ConnectionData] {
     override def render[R <: Rendering](r: R, value: ConnectionData): r.type = value match {
       case ConnectionData(networkType, addrType, connectionAddress) =>
         r ~ "c=" ~ networkType ~ SP ~ addrType ~ SP ~ connectionAddress ~ CRLF
@@ -92,8 +91,6 @@ trait SdpRenderingLowPriorityImplicits {
     case BandwidthType.Experimental(name) => name
   }
 
-
-
   implicit val bandwidthInformationRenderer = new Renderer[BandwidthInformation] {
     override def render[R <: Rendering](r: R, value: BandwidthInformation): r.type = value match {
       case BandwidthInformation(bwtype, bw) =>
@@ -101,47 +98,47 @@ trait SdpRenderingLowPriorityImplicits {
     }
   }
   implicit val originRenderer = originRendererMaker
-  implicit val repeatTimesRenderer : Renderer[RepeatTimes] = new Renderer[RepeatTimes] {
+  implicit val repeatTimesRenderer: Renderer[RepeatTimes] = new Renderer[RepeatTimes] {
     override def render[R <: Rendering](r: R, value: RepeatTimes): r.type =
       r ~ "r=" ~ /* FIXME */ CRLF
   }
-  implicit val timeZoneAdjustmentRenderer : Renderer[TimeZoneAdjustment] = new Renderer[TimeZoneAdjustment] {
+  implicit val timeZoneAdjustmentRenderer: Renderer[TimeZoneAdjustment] = new Renderer[TimeZoneAdjustment] {
     override def render[R <: Rendering](r: R, value: TimeZoneAdjustment): r.type =
       r ~ "t=" ~ /* FIXME */ CRLF
   }
   implicit val timingRenderer = new Renderer[Timing] {
     override def render[R <: Rendering](r: R, value: Timing): r.type = value match {
-        case (Timing(startTime, stopTime, repeatings, zoneAdjustments)) =>
-          r ~ "t=" ~ startTime.getOrElse(0L) ~ SP ~ stopTime.getOrElse(0L) ~ CRLF
-          if (repeatings.isDefined) r ~ repeatings.get
-          zoneAdjustments.foreach(r ~ _)
-          r
-      }
+      case (Timing(startTime, stopTime, repeatings, zoneAdjustments)) =>
+        r ~ "t=" ~ startTime.getOrElse(0L) ~ SP ~ stopTime.getOrElse(0L) ~ CRLF
+        if (repeatings.isDefined) r ~ repeatings.get
+        zoneAdjustments.foreach(r ~ _)
+        r
     }
+  }
   implicit val attributeRenderer = new Renderer[Attribute] {
     override def render[R <: Rendering](r: R, value: Attribute): r.type = value match {
-      case PropertyAttribute(key) => r~ s"a=$key" ~ CRLF
+      case PropertyAttribute(key) => r ~ s"a=$key" ~ CRLF
       case ValueAttribute(key, value) => r ~ s"a=$key:$value" ~ CRLF
     }
   }
   implicit val mediaDescriptionRenderer = makeMediaDescriptionRenderer
   implicit val sessionDescriptionRenderer = new Renderer[SessionDescription] {
 
-      override def render[R <: Rendering](r: R, s: SessionDescription): r.type = {
-        r ~ s.protocolVersion ~ s.origin
-        r ~ "s=" ~ s.sessionName ~ CRLF
-        s.sessionInformation.foreach(r ~ "i=" ~ _ ~ CRLF)
-        s.descriptionUri.foreach(r ~ "u=" ~ _ ~ CRLF)
-        s.emailAddresses.foreach(r ~ "e=" ~ _ ~ CRLF)
-        s.phoneNumbers.foreach(r ~ "p=" ~ _ ~ CRLF)
-        s.connectionInformation.foreach(r ~ _)
-        s.bandwidthInformation.foreach(r ~ _)
-        s.timings.foreach(r ~ _)
-        s.encryptionKey.foreach(r ~ _ ~ CRLF)
-        s.sessionAttributes.foreach(r ~ _)
-        s.mediaDescriptions.foreach(r ~ _)
-        r
-      }
+    override def render[R <: Rendering](r: R, s: SessionDescription): r.type = {
+      r ~ s.protocolVersion ~ s.origin
+      r ~ "s=" ~ s.sessionName ~ CRLF
+      s.sessionInformation.foreach(r ~ "i=" ~ _ ~ CRLF)
+      s.descriptionUri.foreach(r ~ "u=" ~ _ ~ CRLF)
+      s.emailAddresses.foreach(r ~ "e=" ~ _ ~ CRLF)
+      s.phoneNumbers.foreach(r ~ "p=" ~ _ ~ CRLF)
+      s.connectionInformation.foreach(r ~ _)
+      s.bandwidthInformation.foreach(r ~ _)
+      s.timings.foreach(r ~ _)
+      s.encryptionKey.foreach(r ~ _ ~ CRLF)
+      s.sessionAttributes.foreach(r ~ _)
+      s.mediaDescriptions.foreach(r ~ _)
+      r
+    }
   }
 
   private def originRendererMaker(implicit nettypeRenderer: Renderer[NetworkType]): Renderer[Origin] = {
@@ -154,12 +151,12 @@ trait SdpRenderingLowPriorityImplicits {
   }
 
   private def makeMediaDescriptionRenderer(implicit mediaRenderer: Renderer[Media],
-                                           portRangeRenderer: Renderer[PortRange],
-                                           mtpRenderer: Renderer[MediaTransportProtocol],
-                                           connectionDataRenderer: Renderer[ConnectionData],
-                                           encryptionKeyRenderer: Renderer[EncryptionKey]): Renderer[MediaDescription] = new Renderer[MediaDescription] {
+    portRangeRenderer: Renderer[PortRange],
+    mtpRenderer: Renderer[MediaTransportProtocol],
+    connectionDataRenderer: Renderer[ConnectionData],
+    encryptionKeyRenderer: Renderer[EncryptionKey]): Renderer[MediaDescription] = new Renderer[MediaDescription] {
     override def render[R <: Rendering](r: R, value: MediaDescription): r.type = value match {
-      case MediaDescription(media, mediaTitle, portRange, protocol, mediaAttributes, fmts, connectionInformation, bandwidthInformation , encryptionKey) =>
+      case MediaDescription(media, mediaTitle, portRange, protocol, mediaAttributes, fmts, connectionInformation, bandwidthInformation, encryptionKey) =>
         r ~ "m=" ~ media ~ SP ~ portRange ~ SP ~ protocol
         fmts.foreach(r ~ SP ~ _)
         r ~ CRLF
@@ -170,6 +167,5 @@ trait SdpRenderingLowPriorityImplicits {
         r
     }
   }
-
 
 }
