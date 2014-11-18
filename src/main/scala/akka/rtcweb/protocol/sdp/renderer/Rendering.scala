@@ -1,6 +1,5 @@
 package akka.rtcweb.protocol.sdp.renderer
 
-import akka.http.util.{ Rendering, Renderable, Renderer }
 import akka.parboiled2.CharPredicate
 import akka.util.ByteString
 import scala.annotation.tailrec
