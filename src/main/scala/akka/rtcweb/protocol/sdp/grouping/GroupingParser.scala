@@ -1,43 +1,33 @@
 package akka.rtcweb.protocol.sdp.grouping
 
 import akka.parboiled2._
-import akka.rtcweb.protocol.sdp.parser.{CharacterClasses, StringBuilding, Base64Parsing, CommonRules}
+import akka.rtcweb.protocol.sdp.ExtensionAttribute
+import akka.rtcweb.protocol.sdp.parser._
 
-trait GroupingParser {
+trait GroupingParser extends SessionAttributeExtensionRule with MediaAttributeExtensionRule {
 
-  this: Parser with CommonRules with Base64Parsing with StringBuilding ⇒
+  this: Parser with CommonRules ⇒
 
   import CharacterClasses._
 
-  /**
-   * {{{
-   * mid-attribute      = "a=mid:" identification-tag
-   * identification-tag = token
-   * ; token is defined in RFC 4566
-   * }}}
-   */
-  def `mid-attribute`:Rule1[MediaStreamIdentification] = rule {
-    str("mid:") ~ token ~> (t=>MediaStreamIdentification(t))
-  }
+  override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { `group-attribute` }
 
   /**
    * {{{
-   * group-attribute     = "a=group:" semantics
+   * group-attribute = "a=group:" semantics
    * (SP identification-tag)
-   * semantics           = "LS" / "FID" / semantics-extension
-
    * }}}
    */
-  def `group-attribute`:Rule1[Group] = rule {
+  def `group-attribute`: Rule1[Group] = rule {
     str("group:") ~ semantics ~ oneOrMore(SP ~ `identification-tag` ~>
-      (ident=>MediaStreamIdentification(ident))) ~> ((a:Semantics,b:Seq[MediaStreamIdentification]) => Group(a,b))
+      (ident => MediaStreamIdentifier(ident))) ~> ((a, b) => Group(a, b))
   }
 
-
-  def semantics:Rule1[Semantics] = rule {
+  /** {{{semantics = "LS" / "FID" / semantics-extension}}}   */
+  def semantics: Rule1[Semantics] = rule {
     (str("LS") ~ push(Semantics.LS)) |
-    (str("FID") ~ push(Semantics.FID)) |
-    `semantics-extension` ~> (ext => Semantics.UnknownSemanticsExtension(ext))
+      (str("FID") ~ push(Semantics.FID)) |
+      `semantics-extension` ~> (ext => Semantics.UnknownSemanticsExtension(ext))
   }
 
   /**
@@ -46,9 +36,21 @@ trait GroupingParser {
    * ; token is defined in RFC 4566
    * }}}
    */
-  def `semantics-extension` = rule{ token }
+  def `semantics-extension` = rule { token }
 
   def `identification-tag` = rule { token }
 
+  override def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { `mid-attribute` }
+
+  /**
+   * {{{
+   * mid-attribute      = "a=mid:" identification-tag
+   * identification-tag = token
+   * ; token is defined in RFC 4566
+   * }}}
+   */
+  def `mid-attribute`: Rule1[MediaStreamIdentifier] = rule {
+    str("mid:") ~ token ~> (t => MediaStreamIdentifier(t))
+  }
 
 }

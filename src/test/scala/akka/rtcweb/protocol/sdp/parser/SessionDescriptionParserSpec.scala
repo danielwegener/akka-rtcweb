@@ -2,20 +2,25 @@ package akka.rtcweb.protocol.sdp.parser
 
 import java.net.InetSocketAddress
 
-import akka.parboiled2.ParseError
+import akka.parboiled2.{Parser, ParseError}
 import akka.parboiled2.ParserInput.StringBasedParserInput
 import akka.rtcweb.protocol.sdp._
+import akka.rtcweb.protocol.sdp.grouping.{MediaStreamIdentifier, GroupingParser}
 import akka.rtcweb.protocol.sdp.renderer.SdpRendering
 import scala.collection.immutable.Seq
 import org.scalatest.{ Matchers, WordSpecLike }
 
+import scala.util.Try
+
 class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
+
+  def input(str: String) = new StringBasedParserInput(str)
 
   "A SessionDescriptorParser" should {
 
     "parse the rfc example" in {
 
-      val parser = new SessionDescriptionParserImpl(input(
+      val parser = new TestParser(input(
         """v=0
           |o=jdoe 5817373415835868156 2 IN IP4 127.0.0.1
           |s=SDP Seminar
@@ -33,6 +38,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |a=foo:bar
           |m=audio 49170 RTP/AVP 0
           |a=allowed_here_because_chrome_misplaces_it
+          |a=mid:foo
           |b=AS:1024
           |a=custom
           |m=application 40678 RTP/SAVPF 101
@@ -108,7 +114,10 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
       result.mediaDescriptions(0).connectionInformation should be(Nil)
       result.mediaDescriptions(0).portRange should be(PortRange(49170))
       result.mediaDescriptions(0).protocol should be(MediaTransportProtocol.`RTP/AVP`)
-      result.mediaDescriptions(0).mediaAttributes should be(Seq(PropertyAttribute("allowed_here_because_chrome_misplaces_it"), PropertyAttribute("custom")))
+      result.mediaDescriptions(0).mediaAttributes should be(Seq(
+        PropertyAttribute("allowed_here_because_chrome_misplaces_it"),
+        MediaStreamIdentifier("foo"),
+        PropertyAttribute("custom")))
     }
 
     "parse and render identical" in {
@@ -186,13 +195,15 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |""".stripMargin //
           .replace("\n", "\r\n")
 
-      val sd = new SessionDescriptionParserImpl(input(sdtext)).parseSessionDescription().get
+      val sd = new TestParser(input(sdtext)).parseSessionDescription().get
       SdpRendering.render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
 
     }
 
   }
 
-  def input(str: String) = new StringBasedParserInput(str)
+  class TestParser(val input:StringBasedParserInput) extends Parser with SessionDescriptionParser with MediaParser with CommonSdpParser with CommonRules with Base64Parsing with StringBuilding with GroupingParser {
+    def parseSessionDescription(): Try[SessionDescription] = `session-description`.run()
+  }
 
 }

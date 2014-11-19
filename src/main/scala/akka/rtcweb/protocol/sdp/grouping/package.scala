@@ -5,16 +5,14 @@ package akka.rtcweb.protocol.sdp
  */
 package object grouping {
 
+  implicit class SessionDescriptionGroupingOps(private val s: SessionDescription) extends AnyVal {
 
-  implicit class SessionDescriptionGroupingOps(private val s:SessionDescription) extends AnyVal {
-
-    def groupedMediaDescriptions:Map[String,MediaDescription] = {
+    def groupedMediaDescriptions: Map[String, MediaDescription] = {
       //s.mediaDescriptions.groupBy( _.mediaAttributes. )
       ???
     }
 
   }
-
 
 }
 

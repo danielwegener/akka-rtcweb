@@ -115,12 +115,14 @@ trait SdpRenderingLowPriorityImplicits {
         r
     }
   }
+
   implicit val attributeRenderer = new Renderer[Attribute] {
     override def render[R <: Rendering](r: R, value: Attribute): r.type = value match {
       case PropertyAttribute(key) => r ~ s"a=$key" ~ CRLF
       case ValueAttribute(key, value) => r ~ s"a=$key:$value" ~ CRLF
     }
   }
+
   implicit val mediaDescriptionRenderer = makeMediaDescriptionRenderer
   implicit val sessionDescriptionRenderer = new Renderer[SessionDescription] {
 

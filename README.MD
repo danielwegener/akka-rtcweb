@@ -14,8 +14,9 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
 ## User Api
 
 * [draft-ietf-rtcweb-jsep-07: Javascript Session Establishment Protocol](http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-07) aka [WebRTC 1.0: Real-time Communication Between Browsers](http://www.w3.org/TR/webrtc/)
-    * [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
-    * [rfc5888: The Session Description Protocol (SDP) Grouping Framework](https://tools.ietf.org/html/rfc5888)
+    * [An Offer/Answer Model with the Session Description Protocol (SDP)](https://tools.ietf.org/html/rfc3264)
+        * [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
+        * [rfc5888: The Session Description Protocol (SDP) Grouping Framework](https://tools.ietf.org/html/rfc5888)
 
 ## Network Protocols
 
@@ -37,6 +38,8 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
     +----------------------------------+
 
 Since we are only interested in the Data channels at the moment, we can ignore out SRTP
+
+####[rfc5245: Interactive Connectivity Establishment (ICE): A Protocol for Network Address Translator (NAT) Traversal for Offer/Answer Protocols](https://tools.ietf.org/html/rfc5245#section-4.3)
 
 
 ####[rfc4347: Datagram Transport Layer Security Version](https://tools.ietf.org/html/rfc4347)

@@ -4,26 +4,173 @@ import java.net.{ InetSocketAddress }
 
 import akka.parboiled2._
 import akka.rtcweb.protocol.sdp._
+import akka.rtcweb.protocol.sdp.parser.CharacterClasses._
 import akka.shapeless.{ HNil, :: }
 import scala.collection.immutable.Seq
 
 import scala.util.{ Try, Failure, Success }
 
-private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends Parser with CommonRules with Base64Parsing
+/** Plain SDP parser **/
+private[sdp] class PlainSessionDescriptionParserImpl(val input: ParserInput) extends Parser with CommonRules with Base64Parsing with NoSessionAttributeExtension with NoMediaAttributeExtension
     with StringBuilding
-    with SessionDescriptionParser {
+    with SessionDescriptionParser with CommonSdpParser with MediaParser {
 
   def parseSessionDescription(): Try[SessionDescription] =
     `session-description`.run()
 
-  override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
-
-  override def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
 }
 
 object SessionDescriptionParser {
 
-  def parse(payload: String): SessionDescription = new SessionDescriptionParserImpl(ParserInput(payload)).parseSessionDescription().get
+  def parse(payload: String): SessionDescription = new PlainSessionDescriptionParserImpl(ParserInput(payload)).parseSessionDescription().get
+}
+
+private[protocol] trait SessionAttributeExtensionRule {
+  def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute]
+}
+
+  trait NoSessionAttributeExtension extends SessionAttributeExtensionRule {
+    this: Parser =>
+    override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
+  }
+
+private[protocol] trait MediaAttributeExtensionRule {
+  def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute]
+}
+
+trait NoMediaAttributeExtension extends MediaAttributeExtensionRule {
+  this: Parser =>
+  override def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
+}
+
+private[protocol] trait CommonSdpParser {
+  this: Parser with CommonRules with Base64Parsing ⇒
+
+  /** information-field =   [%x69 "=" text CRLF] */
+  def `information-field`: Rule1[String] = rule {
+    str("i=") ~ text ~ CRLF
+  }
+
+  /** key-field = [%x6b "=" key-type CRLF] */
+  def `key-field`: Rule1[EncryptionKey] = rule {
+    str("k=") ~ `key-type` ~ CRLF
+  }
+
+  /**
+   * {{{key-type = %x70 %x72 %x6f %x6d %x70 %x74 /     ; "prompt"
+   * %x63 %x6c %x65 %x61 %x72 ":" text           / ; "clear:"
+   * %x62 %x61 %x73 %x65 "64:" base64            /  ; "base64:"
+   * %x75 %x72 %x69 ":" uri              ; "uri:"}}}
+   */
+  def `key-type`: Rule1[EncryptionKey] = rule {
+    (str("prompt") ~ push(PromptEncryptionKey)) |
+      (str("clear:") ~ `byte-string` ~> ((s) => ClearEncryptionKey(s))) |
+      (str("base64:") ~ rfc2045String ~> ((bytes) => Base64EncryptionKey(bytes))) |
+      (str("uri:") ~ `non-ws-string` ~> ((s) => UriEncryptionKey(s)))
+  }
+
+  /**
+   * attribute =  (att-field ":" att-value) / att-field
+   * att-field =           token
+   * att-value =           byte-string
+   */
+  def attribute: Rule1[Attribute] = rule {
+    (token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
+      (token ~> ((t: String) => PropertyAttribute(t)))
+  }
+
+  def port: Rule1[Int] = rule { number ~> ((l:Long) => l.toInt) }
+
+  /**connection-field =    [%x63 "=" nettype SP addrtype SP connection-address CRLF] */
+  def `connection-field`: Rule1[ConnectionData] = rule {
+    str("c=") ~ nettype ~ SP ~ addrtype ~ SP ~ `connection-address` ~ CRLF ~> ((a, b, c) ⇒ ConnectionData(a, b, c))
+  }
+
+  def nettype: Rule1[NetworkType] = rule {
+    str("IN") ~ push(NetworkType.IN)
+  }
+
+  def addrtype: Rule1[AddressType] = rule {
+    str("IP4") ~ push(AddressType.IP4) | str("IP6") ~ push(AddressType.IP6)
+  }
+
+  /** connection-address =  multicast-address / unicast-address */
+  //simplified: all adresses are treated as unicast addresses
+  def `connection-address`: Rule1[InetSocketAddress] = rule { `unicast-address` }
+
+  /** unicast-address =     IP4-address / IP6-address / FQDN / extn-addr */
+  // simplified
+  def `unicast-address`: Rule1[InetSocketAddress] = rule {
+    text ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
+  }
+
+  def `bandwidth-field`: Rule1[BandwidthInformation] = rule {
+    str("b=") ~ `bandwidth-type` ~ ch(':') ~ number ~ CRLF ~> ((t: BandwidthType, n: Long) ⇒ BandwidthInformation(t, n.toInt))
+  }
+
+  def `bandwidth-type`: Rule1[BandwidthType] = rule {
+    (str("CT") ~ push(BandwidthType.CT)) |
+      (str("AS") ~ push(BandwidthType.AS)) |
+      (capture(str("X-") ~ oneOrMore(ALPHANUM)) ~> (s ⇒ BandwidthType.Experimental(s)))
+  }
+
+}
+
+private[protocol] trait MediaParser {
+  this: Parser with CommonSdpParser with CommonRules with Base64Parsing with StringBuilding with MediaAttributeExtensionRule ⇒
+
+  /**
+   * media-descriptions =
+   * media-field
+   * information-field
+   * connection-field
+   * bandwidth-fields
+   * key-field
+   * attribute-fields
+   */
+  def `media-description` = rule {
+    `media-field` ~
+      optional(`information-field`) ~
+      zeroOrMore(`connection-field`) ~
+      zeroOrMore(`bandwidth-field`) ~
+      optional(`key-field`) ~ // the ignored zeroOrMore(`bandwidth-field`) is a workaround for chromes missplaced sdp bandwidth rendering
+      zeroOrMore(`media-attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, ignore) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, bw, key))
+  }
+
+  /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */
+  def `media-field`: Rule1[(Media, PortRange, MediaTransportProtocol, Seq[String])] = rule {
+    str("m=") ~ media ~ SP ~ port ~ optional(ch('/') ~ integer) ~ SP ~ proto ~ zeroOrMore(SP ~ fmt) ~ CRLF ~>
+      ((m: Media, port: Int, portRange: Option[Long], proto: MediaTransportProtocol, fmts: Seq[String]) => (m, PortRange(port, portRange.map(_.toInt)), proto, fmts))
+  }
+
+  /** fmt = token ; typically an RTP payload type for audio and video media */
+  def fmt = rule {
+    token
+  }
+
+  /** media = token  ;typically "audio", "video", "text", "application" */
+  def media: Rule1[Media] = rule {
+    str("audio") ~ push(Media.audio) |
+      str("video") ~ push(Media.video) |
+      str("text") ~ push(Media.text) |
+      str("application") ~ push(Media.application) |
+      token ~> ((t) => CustomMedia(t))
+  }
+
+  /** proto = token *("/" token) ;typically "RTP/AVP" or "udp" */
+  // simplified
+  def proto: Rule1[MediaTransportProtocol] = rule {
+    str("udp") ~ push(MediaTransportProtocol.udp) |
+      str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
+      str("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
+      str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
+  }
+
+  /** attribute-fields =    *(%x61 "=" attribute CRLF) */
+  def `media-attribute-field`: Rule1[Attribute] = rule {
+    str("a=") ~ (mediaAttributesExtensionsRule | attribute) ~ CRLF
+  }
+
 }
 
 /**
@@ -43,8 +190,8 @@ object SessionDescriptionParser {
  *   attribute-fields
  *   media-descriptions
  */
-trait SessionDescriptionParser {
-  this: Parser with CommonRules with Base64Parsing with StringBuilding ⇒
+private[protocol] trait SessionDescriptionParser {
+  this: Parser with CommonSdpParser with MediaParser with CommonRules with Base64Parsing with StringBuilding with SessionAttributeExtensionRule with MediaAttributeExtensionRule ⇒
 
   import CharacterClasses._
 
@@ -74,28 +221,9 @@ trait SessionDescriptionParser {
   /** sess-version =        1*DIGIT */
   def `sess-version` = number
 
-  def nettype: Rule1[NetworkType] = rule {
-    str("IN") ~ push(NetworkType.IN)
-  }
-
-  def addrtype: Rule1[AddressType] = rule {
-    str("IP4") ~ push(AddressType.IP4) | str("IP6") ~ push(AddressType.IP6)
-  }
-
-  /** unicast-address =     IP4-address / IP6-address / FQDN / extn-addr */
-  // simplified
-  def `unicast-address`: Rule1[InetSocketAddress] = rule {
-    text ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
-  }
-
   /** session-name-field =  %x73 "=" text CRLF */
   def `session-name-field`: Rule1[Option[String]] = rule {
     str("s=") ~ ((SP ~ push(None)) | (text ~> (s ⇒ Some(s)))) ~ CRLF
-  }
-
-  /** information-field =   [%x69 "=" text CRLF] */
-  def `information-field`: Rule1[String] = rule {
-    str("i=") ~ text ~ CRLF
   }
 
   /** uri-field =           [%x75 "=" uri CRLF] */
@@ -114,25 +242,6 @@ trait SessionDescriptionParser {
   //TODO: simplified
   def `phone-field`: Rule1[String] = rule {
     str("p=") ~ text ~ CRLF
-  }
-
-  /**connection-field =    [%x63 "=" nettype SP addrtype SP connection-address CRLF] */
-  def `connection-field`: Rule1[ConnectionData] = rule {
-    str("c=") ~ nettype ~ SP ~ addrtype ~ SP ~ `connection-address` ~ CRLF ~> ((a, b, c) ⇒ ConnectionData(a, b, c))
-  }
-
-  /** connection-address =  multicast-address / unicast-address */
-  //simplified: all adresses are treated as unicast addresses
-  def `connection-address` = rule { `unicast-address` }
-
-  def `bandwidth-field` = rule {
-    str("b=") ~ `bandwidth-type` ~ ch(':') ~ number ~ CRLF ~> ((t: BandwidthType, n: Long) ⇒ BandwidthInformation(t, n.toInt))
-  }
-
-  def `bandwidth-type`: Rule1[BandwidthType] = rule {
-    (str("CT") ~ push(BandwidthType.CT)) |
-      (str("AS") ~ push(BandwidthType.AS)) |
-      (capture(str("X-") ~ oneOrMore(ALPHANUM)) ~> (s ⇒ BandwidthType.Experimental(s)))
   }
 
   /**  time-fields =         1*( %x74 "=" start-time SP stop-time (CRLF repeat-fields) CRLF) [zone-adjustments CRLF] **/
@@ -179,95 +288,7 @@ trait SessionDescriptionParser {
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */
   def `session-attribute-field`: Rule1[Attribute] = rule {
-    str("a=") ~ (sessionAttributesExtensionsRule | attributeRule) ~ CRLF
-  }
-
-  /** attribute-fields =    *(%x61 "=" attribute CRLF) */
-  def `media-attribute-field`: Rule1[Attribute] = rule {
-    str("a=") ~ (mediaAttributesExtensionsRule | attributeRule) ~ CRLF
-  }
-
-
-  /**
-   * attribute =  (att-field ":" att-value) / att-field
-   * att-field =           token
-   * att-value =           byte-string
-   */
-  def attribute: Rule1[Attribute] = rule {
-    (token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
-    (token ~> ((t: String) => PropertyAttribute(t)))
-  }
-
-  def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute]
-  def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute]
-
-  /** key-field = [%x6b "=" key-type CRLF] */
-  def `key-field`: Rule1[EncryptionKey] = rule {
-    str("k=") ~ `key-type` ~ CRLF
-  }
-
-  /**
-   * key-type = %x70 %x72 %x6f %x6d %x70 %x74 /     ; "prompt"
-   * %x63 %x6c %x65 %x61 %x72 ":" text / ; "clear:"
-   * %x62 %x61 %x73 %x65 "64:" base64 /  ; "base64:"
-   * %x75 %x72 %x69 ":" uri              ; "uri:"
-   */
-  def `key-type`: Rule1[EncryptionKey] = rule {
-    (str("prompt") ~ push(PromptEncryptionKey)) |
-      (str("clear:") ~ `byte-string` ~> ((s) => ClearEncryptionKey(s))) |
-      (str("base64:") ~ rfc2045String ~> ((bytes) => Base64EncryptionKey(bytes))) |
-      (str("uri:") ~ `non-ws-string` ~> ((s) => UriEncryptionKey(s)))
-  }
-
-  /**
-   * media-descriptions =
-   * media-field
-   * information-field
-   * connection-field
-   * bandwidth-fields
-   * key-field
-   * attribute-fields
-   */
-  def `media-description` = rule {
-    `media-field` ~
-      optional(`information-field`) ~
-      zeroOrMore(`connection-field`) ~
-      zeroOrMore(`bandwidth-field`) ~
-      optional(`key-field`) ~ // the ignored zeroOrMore(`bandwidth-field`) is a workaround for chromes missplaced sdp bandwidth rendering
-      zeroOrMore(`media-attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, ignore) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, bw, key))
-  }
-
-  /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */
-  def `media-field`: Rule1[(Media, PortRange, MediaTransportProtocol, Seq[String])] = rule {
-    str("m=") ~ media ~ SP ~ port ~ optional(ch('/') ~ integer) ~ SP ~ proto ~ zeroOrMore(SP ~ fmt) ~ CRLF ~>
-      ((m: Media, port: Long, portRange: Option[Long], proto: MediaTransportProtocol, fmts: Seq[String]) => (m, PortRange(port.toInt, portRange.map(_.toInt)), proto, fmts))
-  }
-
-  /** fmt = token ; typically an RTP payload type for audio and video media */
-  def fmt = rule {
-    token
-  }
-
-  /** media = token  ;typically "audio", "video", "text", "application" */
-  def media: Rule1[Media] = rule {
-    str("audio") ~ push(Media.audio) |
-      str("video") ~ push(Media.video) |
-      str("text") ~ push(Media.text) |
-      str("application") ~ push(Media.application) |
-      token ~> ((t) => CustomMedia(t))
-  }
-
-  def port: Rule1[Long] = rule {
-    number
-  }
-
-  /** proto = token *("/" token) ;typically "RTP/AVP" or "udp" */
-  // simplified
-  def proto: Rule1[MediaTransportProtocol] = rule {
-    str("udp") ~ push(MediaTransportProtocol.udp) |
-      str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
-      str("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
-      str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
+    str("a=") ~ (sessionAttributesExtensionsRule | attribute) ~ CRLF
   }
 
   private def part1 = rule {
