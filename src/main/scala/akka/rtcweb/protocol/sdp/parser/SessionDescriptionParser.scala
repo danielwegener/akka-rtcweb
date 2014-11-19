@@ -16,8 +16,9 @@ private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends 
   def parseSessionDescription(): Try[SessionDescription] =
     `session-description`.run()
 
-  override def attributeSubParser = MISMATCH
+  override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
 
+  override def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
 }
 
 object SessionDescriptionParser {
@@ -177,9 +178,15 @@ trait SessionDescriptionParser {
   }
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */
-  def `attribute-field`: Rule1[Attribute] = rule {
-    str("a=") ~ attribute ~ CRLF
+  def `session-attribute-field`: Rule1[Attribute] = rule {
+    str("a=") ~ (sessionAttributesExtensionsRule | attributeRule) ~ CRLF
   }
+
+  /** attribute-fields =    *(%x61 "=" attribute CRLF) */
+  def `media-attribute-field`: Rule1[Attribute] = rule {
+    str("a=") ~ (mediaAttributesExtensionsRule | attributeRule) ~ CRLF
+  }
+
 
   /**
    * attribute =  (att-field ":" att-value) / att-field
@@ -187,12 +194,12 @@ trait SessionDescriptionParser {
    * att-value =           byte-string
    */
   def attribute: Rule1[Attribute] = rule {
-    attributeSubParser  |
     (token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
-      (token ~> ((t: String) => PropertyAttribute(t)))
+    (token ~> ((t: String) => PropertyAttribute(t)))
   }
 
-  def attributeSubParser: Rule1[ExtensionAttribute]
+  def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute]
+  def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute]
 
   /** key-field = [%x6b "=" key-type CRLF] */
   def `key-field`: Rule1[EncryptionKey] = rule {
@@ -227,7 +234,7 @@ trait SessionDescriptionParser {
       zeroOrMore(`connection-field`) ~
       zeroOrMore(`bandwidth-field`) ~
       optional(`key-field`) ~ // the ignored zeroOrMore(`bandwidth-field`) is a workaround for chromes missplaced sdp bandwidth rendering
-      zeroOrMore(`attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, ignore) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, bw, key))
+      zeroOrMore(`media-attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, ignore) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, bw, key))
   }
 
   /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */
@@ -280,7 +287,7 @@ trait SessionDescriptionParser {
 
       //todo: zone corrections
       optional(`key-field`) ~
-      zeroOrMore(`attribute-field`)) ~> ((e, p, c, b, t, k, a) ⇒ (e, p, c, b, t, k, a))
+      zeroOrMore(`session-attribute-field`)) ~> ((e, p, c, b, t, k, a) ⇒ (e, p, c, b, t, k, a))
   }
 
 }

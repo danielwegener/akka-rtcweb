@@ -8,7 +8,7 @@ import scala.collection.immutable.Seq
 import akka.parboiled2._
 import akka.shapeless._
 
-private[parser] trait CommonRules { this: Parser with StringBuilding ⇒
+private[sdp] trait CommonRules { this: Parser with StringBuilding ⇒
   import CharacterClasses._
 
   def CRLF = rule { CR ~ LF }
