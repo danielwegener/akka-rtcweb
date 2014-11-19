@@ -16,6 +16,8 @@ private[sdp] class SessionDescriptionParserImpl(val input: ParserInput) extends 
   def parseSessionDescription(): Try[SessionDescription] =
     `session-description`.run()
 
+  override def attributeSubParser = MISMATCH
+
 }
 
 object SessionDescriptionParser {
@@ -185,9 +187,12 @@ trait SessionDescriptionParser {
    * att-value =           byte-string
    */
   def attribute: Rule1[Attribute] = rule {
+    attributeSubParser  |
     (token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
       (token ~> ((t: String) => PropertyAttribute(t)))
   }
+
+  def attributeSubParser: Rule1[ExtensionAttribute]
 
   /** key-field = [%x6b "=" key-type CRLF] */
   def `key-field`: Rule1[EncryptionKey] = rule {

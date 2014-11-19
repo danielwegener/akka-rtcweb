@@ -408,6 +408,7 @@ sealed trait Attribute { def key: String }
 
 final case class PropertyAttribute(key: String) extends Attribute
 final case class ValueAttribute(key: String, value: String) extends Attribute
+trait ExtensionAttribute extends Attribute
 
 /**
  * {{{c=<nettype> <addrtype> <connection-address>}}}
