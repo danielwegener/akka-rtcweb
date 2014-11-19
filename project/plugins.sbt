@@ -1,5 +1,5 @@
 
-resolvers += Classpaths.typesafeResolver
+resolvers += Classpaths.typesafeReleases
 
 // these comment markers are for including code into the docs
 //#sbt-multi-jvm
