@@ -15,6 +15,7 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
 
 * [draft-ietf-rtcweb-jsep-07: Javascript Session Establishment Protocol](http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-07) aka [WebRTC 1.0: Real-time Communication Between Browsers](http://www.w3.org/TR/webrtc/)
     * [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
+    * [rfc5888: The Session Description Protocol (SDP) Grouping Framework](https://tools.ietf.org/html/rfc5888)
 
 ## Network Protocols
 
