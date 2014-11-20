@@ -6,7 +6,7 @@ import akka.parboiled2.{Parser, ParseError}
 import akka.parboiled2.ParserInput.StringBasedParserInput
 import akka.rtcweb.protocol.RtcWebSDPParser
 import akka.rtcweb.protocol.sdp._
-import akka.rtcweb.protocol.sdp.grouping.{MediaStreamIdentifier, GroupingParser}
+import akka.rtcweb.protocol.sdp.grouping.{MediaStreamIdentifier, GroupParser}
 import akka.rtcweb.protocol.sdp.renderer.SdpRendering
 import scala.collection.immutable.Seq
 import org.scalatest.{ Matchers, WordSpecLike }

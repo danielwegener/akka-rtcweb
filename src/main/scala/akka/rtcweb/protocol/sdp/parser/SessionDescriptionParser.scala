@@ -79,8 +79,6 @@ private[protocol] trait CommonSdpParser {
       (token ~> ((t: String) => PropertyAttribute(t)))
   }
 
-  def port: Rule1[Int] = rule { number ~> ((l: Long) => l.toInt) }
-
   /**connection-field =    [%x63 "=" nettype SP addrtype SP connection-address CRLF] */
   def `connection-field`: Rule1[ConnectionData] = rule {
     str("c=") ~ nettype ~ SP ~ addrtype ~ SP ~ `connection-address` ~ CRLF ~> ((a, b, c) ⇒ ConnectionData(a, b, c))
@@ -103,6 +101,10 @@ private[protocol] trait CommonSdpParser {
   def `unicast-address`: Rule1[InetSocketAddress] = rule {
     text ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
   }
+
+  def `connection-address SP port`: Rule1[InetSocketAddress] = rule { text ~ SP ~ port ~> ((a:String,p:Int) => InetSocketAddress.createUnresolved(a, p)) }
+
+  def port: Rule1[Int] = rule { number ~> ((l: Long) => l.toInt) }
 
   def `bandwidth-field`: Rule1[BandwidthInformation] = rule {
     str("b=") ~ `bandwidth-type` ~ ch(':') ~ number ~ CRLF ~> ((t: BandwidthType, n: Long) ⇒ BandwidthInformation(t, n.toInt))
