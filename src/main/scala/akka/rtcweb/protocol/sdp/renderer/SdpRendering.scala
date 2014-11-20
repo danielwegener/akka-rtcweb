@@ -7,25 +7,7 @@ import akka.rtcweb.protocol.sdp.MediaTransportProtocol._
 import akka.rtcweb.protocol.sdp._
 import akka.util.ByteString
 
-object SdpRendering extends SdpRenderingLowPriorityImplicits {
-
-  def render(sessionDescription: SessionDescription): String = {
-    val renderingContext = new StringRendering
-    sessionDescriptionRenderer.render(renderingContext, sessionDescription)
-    renderingContext.get
-  }
-
-  def renderByteString(sessionDescription: SessionDescription): ByteString = {
-    val renderingContext = new ByteStringRendering(1024)
-    sessionDescriptionRenderer.render(renderingContext, sessionDescription)
-    renderingContext.get
-  }
-
-}
-
-trait SdpRenderingLowPriorityImplicits {
-
-
+trait SdpRendering {
 
   import Renderer._
   import Rendering._
@@ -119,14 +101,13 @@ trait SdpRenderingLowPriorityImplicits {
         r
     }
   }
-
   implicit val attributeRenderer = new Renderer[Attribute] {
-    override def render[R <: Rendering](r: R, value: Attribute): r.type = value match {
+    override def render[R <: Rendering](r: R, renderee: Attribute): r.type = renderee match {
       case PropertyAttribute(key) => r ~ s"a=$key" ~ CRLF
       case ValueAttribute(key, value) => r ~ s"a=$key:$value" ~ CRLF
+      case ea: ExtensionAttribute => renderAttributeExtensions(r, ea)
     }
   }
-
   implicit val mediaDescriptionRenderer = makeMediaDescriptionRenderer
   implicit val sessionDescriptionRenderer = new Renderer[SessionDescription] {
 
@@ -146,6 +127,8 @@ trait SdpRenderingLowPriorityImplicits {
       r
     }
   }
+
+  def renderAttributeExtensions[R <: Rendering](r: R, renderee: ExtensionAttribute): r.type
 
   private def originRendererMaker(implicit nettypeRenderer: Renderer[NetworkType]): Renderer[Origin] = {
     new Renderer[Origin] {

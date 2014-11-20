@@ -5,6 +5,7 @@ import akka.http.model._
 import akka.http.server.directives.BasicDirectives._
 import akka.http.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.io.IO
+import akka.rtcweb.protocol.RtcWebSDPAttributeRenderer
 import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.rtcweb.protocol.sdp.renderer.SdpRendering
@@ -39,6 +40,8 @@ object RtcwebServer extends App {
 
   implicit val toSessionDescriptionUnmarshaller = Unmarshaller((SessionDescriptionParser.parse _).andThen(a => Future.apply(a)))
 
+  val renderer = new RtcWebSDPAttributeRenderer
+
   import akka.http.server.ScalaRoutingDSL._
 
   handleConnections(httpBindingFuture) withRoute {
@@ -54,7 +57,7 @@ object RtcwebServer extends App {
 
               val result = Await.result(r, Duration.Inf)
               log.info("received and parsed: " + result.toString)
-              val response = SdpRendering.render(result)
+              val response = renderer.render(result)
               log.info("returning: " + response)
               complete(HttpResponse(entity = response))
             }

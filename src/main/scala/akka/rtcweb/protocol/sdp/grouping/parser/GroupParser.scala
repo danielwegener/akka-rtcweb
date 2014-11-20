@@ -1,28 +1,29 @@
-package akka.rtcweb.protocol.sdp.grouping
+package akka.rtcweb.protocol.sdp.grouping.parser
 
 import akka.parboiled2._
 import akka.rtcweb.protocol.sdp.ExtensionAttribute
+import akka.rtcweb.protocol.sdp.grouping.{ Group, MediaStreamIdentifier, Semantics }
 import akka.rtcweb.protocol.sdp.parser._
 
 /**
  *  This document defines the "group" session-level attribute, which is
-   used for grouping together different media streams.
-
- * @see [[https://tools.ietf.org/html/rfc5888#section-5]] */
-trait GroupParser  {
+ * used for grouping together different media streams.
+ *
+ * @see [[https://tools.ietf.org/html/rfc5888#section-5]]
+ */
+trait GroupParser {
 
   this: Parser with CommonRules ⇒
 
   import CharacterClasses._
 
-
-  def groupMediaAttributeExtensions:Rule1[ExtensionAttribute] = rule { `mid-attribute` }
+  def groupMediaAttributeExtensions: Rule1[ExtensionAttribute] = rule { `mid-attribute` }
 
   /**
    * Media Stream Identification Attribute
    * This document defines the "media stream identification" media
-   attribute, which is used for identifying media streams within a
-   session description.
+   * attribute, which is used for identifying media streams within a
+   * session description.
    * {{{
    * mid-attribute      = "a=mid:" identification-tag
    * identification-tag = token
@@ -33,11 +34,11 @@ trait GroupParser  {
     str("mid:") ~ token ~> (t => MediaStreamIdentifier(t))
   }
 
-  def groupSessionAttributeExtensions:Rule1[ExtensionAttribute] = rule { `group-attribute` }
+  def groupSessionAttributeExtensions: Rule1[ExtensionAttribute] = rule { `group-attribute` }
 
   /**
    * This document defines the "group" session-level attribute, which is
-   used for grouping together different media streams.
+   * used for grouping together different media streams.
    * {{{
    * group-attribute = "a=group:" semantics
    * (SP identification-tag)
@@ -64,7 +65,5 @@ trait GroupParser  {
   private[grouping] def `semantics-extension` = rule { token }
 
   private[grouping] def `identification-tag` = rule { token }
-
-
 
 }

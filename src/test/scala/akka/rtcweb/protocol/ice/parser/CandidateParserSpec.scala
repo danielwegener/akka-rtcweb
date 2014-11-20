@@ -24,7 +24,7 @@ class CandidateParserSpec extends WordSpecLike with Matchers {
         Transport.UDP,
         Priority(1),
         InetSocketAddress.createUnresolved("localhost",1),
-        CandidateType.host, None, None, Nil))
+        CandidateType.host, None, Nil))
 
     }
   }

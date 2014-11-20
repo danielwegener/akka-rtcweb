@@ -19,9 +19,9 @@ private[ice] trait CandidateParser {
 
   /**
    * The candidate attribute is a media-level attribute only.  It contains
-   a transport address for a candidate that can be used for connectivity
-   checks.
-
+   * a transport address for a candidate that can be used for connectivity
+   * checks.
+   *
    * {{{candidate-attribute   = "candidate" ":" foundation SP component-id SP
    * transport SP
    * priority SP
@@ -43,9 +43,11 @@ private[ice] trait CandidateParser {
       optional(SP ~ `rel-addr`) ~
       optional(SP ~ `rel-port`) ~
       zeroOrMore((SP ~ `extension-att-name` ~ SP ~
-        `extension-att-value`) ~> ((k:String,v:String) => (k,v))) ~>
-      ((f: String, c: Int, t: Transport, pri: Priority, ca: InetSocketAddress, ct: CandidateType, rela: Option[InetSocketAddress], relpo: Option[Int], eatt: Seq[(String,String)]) =>
-        Candidate(f, c, t, pri, ca, ct, rela, relpo, eatt)
+        `extension-att-value`) ~> ((k: String, v: String) => (k, v))) ~>
+      ((f: String, c: Int, t: Transport, pri: Priority, ca: InetSocketAddress, ct: CandidateType, rela: Option[InetSocketAddress], relpo: Option[Int], eatt: Seq[(String, String)]) => {
+        val relAddr = for (a <- rela; b <- relpo) yield InetSocketAddress.createUnresolved(a.getHostString, b)
+        Candidate(f, c, t, pri, ca, ct, relAddr, eatt)
+      }
       )
 
   }

@@ -102,7 +102,7 @@ private[protocol] trait CommonSdpParser {
     text ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
   }
 
-  def `connection-address SP port`: Rule1[InetSocketAddress] = rule { text ~ SP ~ port ~> ((a:String,p:Int) => InetSocketAddress.createUnresolved(a, p)) }
+  def `connection-address SP port`: Rule1[InetSocketAddress] = rule { text ~ SP ~ port ~> ((a: String, p: Int) => InetSocketAddress.createUnresolved(a, p)) }
 
   def port: Rule1[Int] = rule { number ~> ((l: Long) => l.toInt) }
 

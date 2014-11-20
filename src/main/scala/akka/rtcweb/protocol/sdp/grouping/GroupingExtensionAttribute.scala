@@ -2,6 +2,12 @@ package akka.rtcweb.protocol.sdp.grouping
 
 import akka.rtcweb.protocol.sdp.ExtensionAttribute
 
+sealed trait GroupingExtensionAttribute extends ExtensionAttribute
+
+final case class MediaStreamIdentifier(tag: String) extends GroupingExtensionAttribute {
+  override def key: String = "mid"
+}
+
 sealed trait Semantics
 trait SemanticsExtension extends Semantics
 
@@ -23,6 +29,6 @@ object Semantics {
   case object FID extends Semantics
 }
 
-final case class Group(semantics: Semantics, streams: Seq[MediaStreamIdentifier]) extends ExtensionAttribute {
+final case class Group(semantics: Semantics, streams: Seq[MediaStreamIdentifier]) extends GroupingExtensionAttribute {
   override def key: String = "group"
 }

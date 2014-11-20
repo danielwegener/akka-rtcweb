@@ -4,9 +4,9 @@ import java.net.InetSocketAddress
 
 import akka.parboiled2.{Parser, ParseError}
 import akka.parboiled2.ParserInput.StringBasedParserInput
-import akka.rtcweb.protocol.RtcWebSDPParser
+import akka.rtcweb.protocol.{RtcWebSDPAttributeRenderer, RtcWebSDPAttributeParser}
 import akka.rtcweb.protocol.sdp._
-import akka.rtcweb.protocol.sdp.grouping.{MediaStreamIdentifier, GroupParser}
+import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
 import akka.rtcweb.protocol.sdp.renderer.SdpRendering
 import scala.collection.immutable.Seq
 import org.scalatest.{ Matchers, WordSpecLike }
@@ -21,7 +21,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
 
     "parse the rfc example" in {
 
-      val parser = new TestParser(input(
+      val parser = new TestAttributeParser(input(
         """v=0
           |o=jdoe 5817373415835868156 2 IN IP4 127.0.0.1
           |s=SDP Seminar
@@ -196,14 +196,14 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |""".stripMargin //
           .replace("\n", "\r\n")
 
-      val sd = new TestParser(input(sdtext)).parseSessionDescription().get
-      SdpRendering.render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
+      val sd = new TestAttributeParser(input(sdtext)).parseSessionDescription().get
+      new RtcWebSDPAttributeRenderer().render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
 
     }
 
   }
 
-  class TestParser(val input:StringBasedParserInput) extends Parser with RtcWebSDPParser {
+  class TestAttributeParser(val input:StringBasedParserInput) extends Parser with RtcWebSDPAttributeParser {
     def parseSessionDescription(): Try[SessionDescription] = `session-description`.run()
   }
 
