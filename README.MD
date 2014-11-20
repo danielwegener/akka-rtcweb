@@ -17,6 +17,7 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
     * [An Offer/Answer Model with the Session Description Protocol (SDP)](https://tools.ietf.org/html/rfc3264)
         * [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
         * [rfc5888: The Session Description Protocol (SDP) Grouping Framework](https://tools.ietf.org/html/rfc5888)
+        * [rfc3556: Session Description Protocol (SDP) Bandwidth Modifiers for RTP Control Protocol (RTCP) Bandwidth](https://tools.ietf.org/html/rfc3556) (specifying )
 
 ## Network Protocols
 
@@ -37,12 +38,10 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
     | UDP1 | UDP2 | UDP3 | ...         |
     +----------------------------------+
 
-Since we are only interested in the Data channels at the moment, we can ignore out SRTP
+Since we are only interested in the Data channels at the moment, we can ignore SRTP
 
-####[rfc5245: Interactive Connectivity Establishment (ICE): A Protocol for Network Address Translator (NAT) Traversal for Offer/Answer Protocols](https://tools.ietf.org/html/rfc5245#section-4.3)
-
-
-####[rfc4347: Datagram Transport Layer Security Version](https://tools.ietf.org/html/rfc4347)
+* [rfc5245: Interactive Connectivity Establishment (ICE): A Protocol for Network Address Translator (NAT) Traversal for Offer/Answer Protocols](https://tools.ietf.org/html/rfc5245#section-4.3)
+* [rfc4347: Datagram Transport Layer Security Version](https://tools.ietf.org/html/rfc4347)
 
 Describes how TLS is projected on UDP.
 

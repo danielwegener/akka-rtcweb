@@ -111,6 +111,8 @@ private[protocol] trait CommonSdpParser {
   def `bandwidth-type`: Rule1[BandwidthType] = rule {
     (str("CT") ~ push(BandwidthType.CT)) |
       (str("AS") ~ push(BandwidthType.AS)) |
+      (str("RS") ~ push(BandwidthType.RS)) |
+      (str("RR") ~ push(BandwidthType.RR)) |
       (capture(str("X-") ~ oneOrMore(ALPHANUM)) ~> (s ⇒ BandwidthType.Experimental(s)))
   }
 

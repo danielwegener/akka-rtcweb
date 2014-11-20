@@ -88,6 +88,8 @@ trait SdpRenderingLowPriorityImplicits {
   implicit val bandwidthTypeRenderer = stringRenderer[BandwidthType] {
     case BandwidthType.AS => "AS"
     case BandwidthType.CT => "CT"
+    case BandwidthType.RS => "RS"
+    case BandwidthType.RR => "RR"
     case BandwidthType.Experimental(name) => name
   }
 

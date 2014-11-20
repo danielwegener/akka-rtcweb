@@ -195,6 +195,12 @@ object BandwidthType {
    */
   case object AS extends BandwidthType
 
+  /** @see [[https://tools.ietf.org/html/rfc3556#section-2]] */
+  case object RS extends BandwidthType
+
+  /** @see [[https://tools.ietf.org/html/rfc3556#section-2]] */
+  case object RR extends BandwidthType
+
   final case class Experimental(name: String) extends BandwidthType
 
 }
