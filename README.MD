@@ -57,18 +57,16 @@ Describes how DTLS runs on top of DTLS
 - [rfc6525: Stream Control Transmission Protocol (SCTP) Stream Reconfiguration](https://tools.ietf.org/html/rfc6525) <br> Defines Reconfiguration of multiplexed application data channels over a single SCTP association
 
 
-
 ####[draft-ietf-rtcweb-data-protocol-08: DCEP - WebRTC Data Channel Establishment Protocol](https://tools.ietf.org/html/draft-ietf-rtcweb-data-protocol-08)
 
 Describes how DataChannels lifecycle can be controlled on a SCTP connection.
 
 
 
-## Acknowledgment
+## Acknowledgments
 
 Just yet many many thanks to [scodec](https://github.com/scodec/scodec) and [parboiled2](https://github.com/sirthias/parboiled2). They make encoding/decoding and parsing a breeze!
 
 ## Build it!
 
-currently built against the akka:2.3-SNAPSHOT (for early akka-http support that is not in the http-and-streams-experimental releases).
-so before you start: checkout akka release-2.3-dev and run `sbt publish-local -Dakka.scaladoc.diagrams=false`
+`sbt build` :)
