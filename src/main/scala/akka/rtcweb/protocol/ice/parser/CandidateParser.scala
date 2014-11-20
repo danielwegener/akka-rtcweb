@@ -4,7 +4,7 @@ import java.net.{ InetSocketAddress, InetAddress }
 
 import akka.parboiled2._
 import akka.rtcweb.protocol.ice.CandidateType.UnknownCandidateType
-import akka.rtcweb.protocol.ice.{ CandidateType, Transport }
+import akka.rtcweb.protocol.ice.{Candidate, CandidateType, Transport}
 import akka.rtcweb.protocol.ice.Transport.UnknownTransportExtension
 import akka.rtcweb.protocol.sdp.parser.{ CommonSdpParser, CharacterClasses, CommonRules, MediaAttributeExtensionRule }
 
@@ -34,7 +34,7 @@ trait CandidateParser extends MediaAttributeExtensionRule {
    * }}}
    *
    */
-  def `candidate-attribute` = rule {
+  def `candidate-attribute`:Rule1[Candidate] = rule {
     str("candidate:") ~ foundation ~ SP ~ `component-id` ~
       transport ~ SP ~
       priority ~ SP ~

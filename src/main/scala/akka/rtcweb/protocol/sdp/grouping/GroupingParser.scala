@@ -4,13 +4,11 @@ import akka.parboiled2._
 import akka.rtcweb.protocol.sdp.ExtensionAttribute
 import akka.rtcweb.protocol.sdp.parser._
 
-trait GroupingParser extends SessionAttributeExtensionRule with MediaAttributeExtensionRule {
+trait GroupingParser extends SessionAttributeExtensionRule {
 
   this: Parser with CommonRules ⇒
 
   import CharacterClasses._
-
-  override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { `group-attribute` }
 
   /**
    * {{{
