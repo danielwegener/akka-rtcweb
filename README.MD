@@ -69,4 +69,4 @@ Just yet many many thanks to [scodec](https://github.com/scodec/scodec) and [par
 
 ## Build it!
 
-`sbt build` :)
+`sbt package` :)

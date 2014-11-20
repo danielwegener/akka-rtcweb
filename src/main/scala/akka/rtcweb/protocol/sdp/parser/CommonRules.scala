@@ -17,8 +17,6 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
   // http://tools.ietf.org/html/rfc7230#section-3.2.3
   // ******************************************************************************************
 
-  def CRLF = rule { CR ~ LF }
-
   def token: Rule1[String] = rule { clearSB() ~ oneOrMore(`token-char` ~ appendSB()) ~ push(sb.toString) }
 
   def text = `byte-string`
@@ -33,13 +31,11 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
 
   def `numeric-string`: Rule1[String] = rule { clearSB() ~ oneOrMore(DIGIT ~ appendSB()) ~ push(sb.toString) }
 
+  def listSep = rule { ',' ~ OWS }
+
   // ******************************************************************************************
   //                                    helpers
   // ******************************************************************************************
-
-  def listSep = rule { ',' ~ OWS }
-
-  def OWS = rule { zeroOrMore(optional(CRLF) ~ oneOrMore(WSP)) } // extended with `obs-fold`
 
   def digit = rule { DIGIT ~ push(digitInt(lastChar)) }
 
@@ -55,6 +51,10 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
 
   def ws(s: String) = rule { s ~ OWS }
 
+  def OWS = rule { zeroOrMore(optional(CRLF) ~ oneOrMore(WSP)) } // extended with `obs-fold`
+
+  def CRLF = rule { CR ~ LF }
+
   // def number = rule((capture((1 to 18).times(DIGIT)) ~ !DIGIT) ~> (_.toLong)) | (oneOrMore(DIGIT) ~ push(999999999999999999L))
 
   /** Positive long value that does not start with a 0 (zero) */
@@ -66,7 +66,7 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
 
   // parses a potentially long series of digits and extracts its Long value capping at 999,999,999,999,999,999 in case of overflows
   // parses a potentially long series of digits and extracts its Long value capping at 999,999,999,999,999,999 in case of overflows
-  def number:Rule1[Long] = rule(
+  def number: Rule1[Long] = rule(
     (capture((1 to 18).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
       | oneOrMore(DIGIT) ~ push(999999999999999999L)))
 

@@ -1,6 +1,6 @@
 package akka.rtcweb.protocol.ice.parser
 
-import java.net.{InetSocketAddress, InetAddress}
+import java.net.{ InetSocketAddress, InetAddress }
 
 import akka.parboiled2._
 import akka.rtcweb.protocol.ice.CandidateType.UnknownCandidateType
@@ -44,15 +44,15 @@ trait CandidateParser extends MediaAttributeExtensionRule {
       SP ~ `cand-type` ~
       optional(SP ~ `rel-addr`) ~
       optional(SP ~ `rel-port`) ~
-      zeroOrMore(SP ~ `extension-att-name` ~ SP ~ `extension-att-value` ~> ((k:String,v:String) => (k,v)))
+      zeroOrMore(SP ~ `extension-att-name` ~ SP ~ `extension-att-value` ~> ((k: String, v: String) => (k, v)))
 
   }
 
   /** {{{foundation = 1*32ice-char}}} */
-  def foundation:Rule1[String] = rule { capture((1 to 32).times(`ice-char`)) }
+  def foundation: Rule1[String] = rule { capture((1 to 32).times(`ice-char`)) }
 
   /** {{{component-id = 1*5DIGIT}}} */
-  def `component-id`:Rule1[Int] = rule { capture((1 to 5).times(DIGIT))  ~> ((s:String)=>s.toInt) }
+  def `component-id`: Rule1[Int] = rule { capture((1 to 5).times(DIGIT)) ~> ((s: String) => s.toInt) }
 
   /** {{{transport = "UDP" / transport-extension}}} */
   def transport: Rule1[Transport] = rule { (str("UDP") ~ push(Transport.UDP)) | `transport-extension` }
@@ -61,7 +61,7 @@ trait CandidateParser extends MediaAttributeExtensionRule {
   def `transport-extension`: Rule1[UnknownTransportExtension] = rule { token ~> (t => UnknownTransportExtension(t)) }
 
   /** {{{priority = 1*10DIGIT}}} */
-  def priority:Rule1[Int] = rule { capture((1 to 10).times(DIGIT)) ~> ((l:String)=>l.toInt) }
+  def priority: Rule1[Int] = rule { capture((1 to 10).times(DIGIT)) ~> ((l: String) => l.toInt) }
 
   /** {{{cand-type = "typ" SP candidate-types}}} */
   def `cand-type`: Rule1[CandidateType] = rule { str("typ") ~ SP ~ `candidate-types` }

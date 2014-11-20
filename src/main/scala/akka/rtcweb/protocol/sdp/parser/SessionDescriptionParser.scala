@@ -29,10 +29,10 @@ private[protocol] trait SessionAttributeExtensionRule {
   def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute]
 }
 
-  trait NoSessionAttributeExtension extends SessionAttributeExtensionRule {
-    this: Parser =>
-    override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
-  }
+trait NoSessionAttributeExtension extends SessionAttributeExtensionRule {
+  this: Parser =>
+  override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = MISMATCH
+}
 
 private[protocol] trait MediaAttributeExtensionRule {
   def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute]
@@ -79,7 +79,7 @@ private[protocol] trait CommonSdpParser {
       (token ~> ((t: String) => PropertyAttribute(t)))
   }
 
-  def port: Rule1[Int] = rule { number ~> ((l:Long) => l.toInt) }
+  def port: Rule1[Int] = rule { number ~> ((l: Long) => l.toInt) }
 
   /**connection-field =    [%x63 "=" nettype SP addrtype SP connection-address CRLF] */
   def `connection-field`: Rule1[ConnectionData] = rule {
