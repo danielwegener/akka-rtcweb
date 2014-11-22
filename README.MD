@@ -1,6 +1,6 @@
 # akka-rtcweb-experimental
 
-This project aims to provide an akka serverside implementation of the rtcweb protocol stack focused on the RTCDataChannels.
+This project aims to provide an akka serverside implementation of the rtcweb protocol stack focused on the RTCDataChannels ([High Performance Browser Networking, Ch. 8](http://chimera.labs.oreilly.com/books/1230000000545/ch18.html) by [@igrigorik](https://twitter.com/igrigorik/) gives a very good introduction on this topic).
 
 RTCWEB allows akka systems to establish (somewhat) encrypted low-latency channels with browser sessions or other actor systems. These channels support
 partial ordering and relaxed reliability guarantees (like udp does) and thus can still reach a very low latencies on unreliable or slow connections
