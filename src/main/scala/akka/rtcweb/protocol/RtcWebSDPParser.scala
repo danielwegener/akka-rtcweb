@@ -7,7 +7,7 @@ import akka.rtcweb.protocol.sdp.grouping.parser.GroupParser
 import akka.rtcweb.protocol.sdp.parser._
 import akka.shapeless._
 
-trait RtcWebSDPAttributeParser extends Parser
+trait RtcWebSDPParser extends Parser
     with CommonSdpParser
     with SessionDescriptionParser
     with MediaParser

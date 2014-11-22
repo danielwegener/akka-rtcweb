@@ -1,19 +1,17 @@
-package akka.rtcweb.protocol.sdp.parser
+package akka.rtcweb.protocol.sdp
 
 import java.net.InetSocketAddress
 
-import akka.parboiled2.{Parser, ParseError}
 import akka.parboiled2.ParserInput.StringBasedParserInput
-import akka.rtcweb.protocol.{RtcWebSDPAttributeRenderer, RtcWebSDPAttributeParser}
-import akka.rtcweb.protocol.sdp._
+import akka.parboiled2.{ParseError, Parser}
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
-import akka.rtcweb.protocol.sdp.renderer.SdpRendering
-import scala.collection.immutable.Seq
-import org.scalatest.{ Matchers, WordSpecLike }
+import akka.rtcweb.protocol.{RtcWebSDPParser, RtcWebSDPRenderer}
+import org.scalatest.{Matchers, WordSpecLike}
 
+import scala.collection.immutable.Seq
 import scala.util.Try
 
-class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
+class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
 
   def input(str: String) = new StringBasedParserInput(str)
 
@@ -21,7 +19,7 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
 
     "parse the rfc example" in {
 
-      val parser = new TestAttributeParser(input(
+      val parser = new TestParser(input(
         """v=0
           |o=jdoe 5817373415835868156 2 IN IP4 127.0.0.1
           |s=SDP Seminar
@@ -196,14 +194,14 @@ class SessionDescriptionParserSpec extends WordSpecLike with Matchers {
           |""".stripMargin //
           .replace("\n", "\r\n")
 
-      val sd = new TestAttributeParser(input(sdtext)).parseSessionDescription().get
-      new RtcWebSDPAttributeRenderer().render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
+      val sd = new TestParser(input(sdtext)).parseSessionDescription().get
+      new RtcWebSDPRenderer().render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
 
     }
 
   }
 
-  class TestAttributeParser(val input:StringBasedParserInput) extends Parser with RtcWebSDPAttributeParser {
+  class TestParser(val input:StringBasedParserInput) extends Parser with RtcWebSDPParser {
     def parseSessionDescription(): Try[SessionDescription] = `session-description`.run()
   }
 

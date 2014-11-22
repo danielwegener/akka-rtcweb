@@ -2,7 +2,6 @@ package akka.rtcweb.protocol.dtls.handshake
 
 import java.security.SecureRandom
 
-import akka.rtcweb.protocol.DoNotExport
 import akka.rtcweb.protocol.dtls._
 import scodec._
 import scodec.bits._
@@ -410,7 +409,7 @@ object PreMasterSecret {
  * PublicValueEncoding.  This structure is a variant of the client
  * key exchange message, and not a message in itself.
  */
-@DoNotExport
+//@DoNotExport
 sealed trait PublicValueEncoding
 
 object PublicValueEncoding {
