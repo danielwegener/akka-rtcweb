@@ -4,6 +4,7 @@ import scodec._
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import scalaz._
+import shapeless._
 
 /**
  *  {{{
@@ -172,9 +173,9 @@ private[dcep] object DATA_CHANNEL_OPEN {
     ("Message Type" | constantValue(`Message Type`.DATA_CHANNEL_OPEN)) :~>:
       ("Channel Type" | `Channel Type`.codec) ::
       ("Priority" | Priority.codec) ::
-      ("Reliability" | uint32) :: variableSizeBytes2[String, String](
-        "Label Length" | uint8, "Protocl Length" | uint8,
-        "Label" | ascii, "Protocol" | ascii
+      ("Reliability" | uint32) :: multiVariableSizes(
+      ("Label Length" | uint8) :: ("Protocl Length" | uint8) :: HNil,
+      ("Label" | ascii) :: ("Protocol" | ascii) :: HNil
       )
   }.as[DATA_CHANNEL_OPEN]
 }

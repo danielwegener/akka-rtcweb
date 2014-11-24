@@ -5,6 +5,7 @@ import scodec.bits.BitVector
 import scodec.bits.BitVector._
 import scodec.codecs._
 import shapeless._
+import shapeless.ops.hlist._
 
 import scala.concurrent.duration.{ FiniteDuration, TimeUnit }
 import scala.math.Ordering
@@ -34,20 +35,57 @@ object SCodecContrib {
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encodeValid(constantValue))
 
-  final def variableSizeBytes2[A <: { def length(): Int }, B <: { def length(): Int }](length1: Codec[Int], length2: Codec[Int], value1: Codec[A], value2: Codec[B]): Codec[A :: B :: HNil] = {
-    val x: Codec[Int :: Int :: A :: B :: HNil] =
-      length1.flatPrepend { len1 =>
-        length2 flatPrepend { len2 =>
-          fixedSizeBytes(len1, value1) :: fixedSizeBytes(len2, value2)
-        }
-      }
 
-    val y = x.xmap[A :: B :: HNil](
-      { case l1 :: l2 :: v1 :: v2 :: HNil => v1 :: v2 :: HNil },
-      { case v1 :: v2 :: HNil => v1.length :: v2.length :: v1 :: v2 :: HNil }
-    )
-    y
+
+  object zipper extends Poly1 {
+    implicit def sizeAndValueCodec[Si <: Int, Vi] = at[(Si, Codec[Vi])] { case (s, cv) => scodec.codecs.fixedSizeBytes(s, cv) }
   }
+
+  object valueEncoder extends Poly1 {
+    implicit def lengthAndValueCodec[Vi] = at[(Vi, Codec[Vi])] { case (v, vc) => vc.encode(v) }
+  }
+
+  def multiVariableSizes[SC <: HList, S <: HList, VC <: HList, V <: HList, ZippedLandVCs <: HList, ZippedVandVCs <: HList,  SizeLimitedValueCodecs <: HList, EncodedValues <: HList]
+  (sizeCodecs: SC, valueCodecs: VC)
+    (implicit
+    scToHListCodec: ToHListCodec.Aux[SC, S],
+    vcToHListCodec: ToHListCodec.Aux[VC, V],
+    zipSandVCs: Zip.Aux[S :: VC :: HNil, ZippedLandVCs],
+    sAndVcMapper: Mapper.Aux[zipper.type, ZippedLandVCs, SizeLimitedValueCodecs],
+    zipVandVCs: Zip.Aux[V :: VC :: HNil, ZippedVandVCs],
+    vAndVcMapper: Mapper.Aux[valueEncoder.type, ZippedVandVCs, EncodedValues],
+    slvcToHListCodec: ToHListCodec.Aux[SizeLimitedValueCodecs, V]
+    ): Codec[V] = new Codec[V] {
+
+    override def toString = s"multiVariableSizes($sizeCodecs, $valueCodecs)"
+
+    private val sizeCodec: Codec[S] = scToHListCodec(sizeCodecs)
+
+    override def decode(bits: BitVector):Err \/ (BitVector, V) = {
+      sizeCodec.decode(bits).flatMap { case (rem, sizes) =>
+        val sizeLimitedValueCodecs = (sizes zip valueCodecs).map(zipper)
+        val sequenced = slvcToHListCodec(sizeLimitedValueCodecs)
+        sequenced.decode(rem)
+      }
+    }
+
+    override def encode(v: V) : Err \/ BitVector = {
+      // encode all values, zip with em over length codecs encoded their lengths and concat bits(length)  ++ bits(values)
+      val encodedValues:ZippedVandVCs = (v zip valueCodecs)//.map(valueEncoder)
+      //val encodedValueLengths = encodedValues.map{
+      //  case \/-(b:BitVector) => b.length
+      //  case e@ -\/ => e
+      //}
+
+      Console.println(this)
+      Console.println(encodedValues)
+      ???
+    }
+
+    private def fail(a: Any, msg: String): Err =
+      Err(s"[$a] is too long to be encoded: $msg")
+  }
+
 
   implicit class AwesomeCodecOps[A](codec: Codec[A]) {
 

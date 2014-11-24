@@ -1,11 +1,12 @@
 package akka.rtcweb.protocol.scodec
 
 import org.scalatest.{ Inside, Matchers, WordSpec }
+import scodec.Codec
 import scodec.bits.BitVector.{ empty => emptyVector }
 import scodec.bits.BitVector._
 import scodec.bits._
 import scodec.codecs._
-import shapeless.HNil
+import shapeless.{HList, HNil}
 import scala.language.postfixOps
 
 import scala.concurrent.duration._
@@ -68,12 +69,17 @@ class SCodecContribSpec extends WordSpec with Matchers with Inside {
     }
   }
 
-  "variableSizeBytes2" should {
+  "multiVariableSize" should {
 
     "decode" in {
-      val x = variableSizeBytes2(uint8, uint8, ascii, ascii).decodeValidValue(hex"0141024142".bits)
+      val x = multiVariableSizes(uint8 :: uint8 :: HNil, ascii :: ascii :: HNil).decodeValidValue(hex"0102414142".bits)
       x(0) should be("A")
       x(1) should be("AB")
+    }
+
+    "encode" in {
+      val x = multiVariableSizes(uint8 :: uint8 :: HNil, ascii :: ascii :: HNil).encodeValid("A" :: "AB" :: HNil)
+      x should be(hex"0102414142".bits)
     }
 
   }
