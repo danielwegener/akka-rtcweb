@@ -7,9 +7,9 @@ import scalaz.\/-
 
 class InitiationSpec extends WordSpec with Matchers with Inside {
 
-  "Initiation" should {
-    "be encodable" ignore {
-      val in = Initiation(1, 1, 1, 1, 1, Vector[InitiationParameter](`IPv4 Address`(ByteVector.fromByte(1))))
+  "An Initiation" should {
+    "be pickable back and forth" ignore {
+      val in = Initiation(1, 1, 1, 1, 1, Vector[OptionalInitiationParameter](`IPv4 Address`(ByteVector.fromByte(1))))
       inside(Initiation.codec.encode(in)) {
         case \/-(bits) =>
           bits should be("hi")

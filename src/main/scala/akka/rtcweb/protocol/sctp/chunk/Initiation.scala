@@ -1,6 +1,7 @@
 package akka.rtcweb.protocol.sctp.chunk
 
 
+import akka.rtcweb.protocol.sctp.chunk.Initiation.OptionalInitiationParameter
 import scodec._
 import scodec.bits.ByteVector
 import scodec.codecs._
@@ -9,12 +10,6 @@ import shapeless._
 import concurrent.duration._
 
 private[sctp] object Initiation {
-
-
-
-  /**
-   * Codec that parses all supported optional parameters
-   */
 
   /**
    * This chunk is used to initiate an SCTP association between two
@@ -56,15 +51,12 @@ private[sctp] object Initiation {
 
   }
 
-  sealed trait InitiationParameterType
 
-  sealed trait InitiationParameter extends Parameter
+  /**
+   * Codec that parses all supported optional parameters
+   */
 
-  sealed trait OptionalInitiationParameter extends InitiationParameter
-  object OptionalInitiationParameter {
-    implicit val discriminated: Discriminated[OptionalInitiationParameter, Int] = Discriminated("Type" | uint16)
-    implicit val codec: Codec[OptionalInitiationParameter] = Codec.derive[OptionalInitiationParameter]
-  }
+  sealed trait OptionalInitiationParameter extends Parameter
 
   sealed trait `Address Type`
 
@@ -145,7 +137,7 @@ private[sctp] object Initiation {
       Section 2.1 [RFC1123].  The method for resolving the host name is
       out of scope of SCTP.
    */
-  final case class `Host Name Address`(hostName: String) extends InitiationParameter
+  final case class `Host Name Address`(hostName: String) extends OptionalInitiationParameter
 
   /**
    * This parameter is used to pad an INIT chunk.  A PAD parameter can be
@@ -158,6 +150,17 @@ private[sctp] object Initiation {
   final case class `Padding Parameter`(length: Int) extends OptionalInitiationParameter
 
   final case class `Supported Address Types`(addressTypes: Vector[`Address Type`]) extends OptionalInitiationParameter
+
+  /**
+   * At the initialization of the association, the sender of the INIT or
+   * INIT ACK chunk MAY include this OPTIONAL parameter to inform its peer
+   * that it is able to support the Forward TSN chunk (see Section 3.3 for
+   * further details).
+   * @see [[https://tools.ietf.org/html/rfc3758#section-3.1 rfc3758 Protocol Changes to support PR-SCTP]]
+   */
+  case class `Forward-TSN-Supported`() extends OptionalInitiationParameter {
+
+  }
 
   object `IPv4 Address` {
     implicit val discriminator: Discriminator[OptionalInitiationParameter, `IPv4 Address`, Int] = Discriminator(5)
@@ -202,7 +205,6 @@ private[sctp] object Initiation {
         ("IPv6 Address" | bytes(16))
     }.as[`IPv6 Address`]
   }
-
   object `Cookie Preservative` {
     implicit val discriminator: Discriminator[OptionalInitiationParameter, `Cookie Preservative`, Int] = Discriminator(9)
     /**
@@ -223,6 +225,7 @@ private[sctp] object Initiation {
         ("Suggested Cookie Life-Span Increment" | duration(uint32, MILLISECONDS))
     }.as[`Cookie Preservative`]
   }
+
   object `Host Name Address` {
     implicit val discriminator: Discriminator[OptionalInitiationParameter,`Host Name Address` , Int] = Discriminator(11)
 
@@ -246,6 +249,8 @@ private[sctp] object Initiation {
     }.as[`Host Name Address`]
   }
 
+
+
   object `Padding Parameter` {
     implicit val discriminator: Discriminator[OptionalInitiationParameter, `Padding Parameter`, Int] = Discriminator(0x8005)
     /**
@@ -267,18 +272,7 @@ private[sctp] object Initiation {
         }
     }.dropUnits.as[`Padding Parameter`]
   }
-
-
-
-  /**
-   * At the initialization of the association, the sender of the INIT or
-   * INIT ACK chunk MAY include this OPTIONAL parameter to inform its peer
-   * that it is able to support the Forward TSN chunk (see Section 3.3 for
-   * further details).
-   * @see [[https://tools.ietf.org/html/rfc3758#section-3.1 rfc3758 Protocol Changes to support PR-SCTP]]
-   */
-  case object `Forward-TSN-Supported` extends InitiationParameter {
-
+  object `Forward-TSN-Supported` {
     implicit val discriminator: Discriminator[OptionalInitiationParameter, `Forward-TSN-Supported`.type, Int] = Discriminator(49152)
     /**
      * {{{
@@ -289,9 +283,10 @@ private[sctp] object Initiation {
      * }}}
      */
     implicit val codec: Codec[`Forward-TSN-Supported`.type] = "Forward-TSN-Supported Parameter" | {
-       ("Parameter Length" | constant(uint8.encodeValid(4))) ~>
+      ("Parameter Length" | constant(uint8.encodeValid(4))) ~>
         provide(`Forward-TSN-Supported`)
     }
+
   }
 
   object `Address Type` {
@@ -310,7 +305,7 @@ private[sctp] object Initiation {
     implicit val discriminator: Discriminator[OptionalInitiationParameter, `Supported Address Types`, Int] = Discriminator(12)
 
     /**
-     *         0                   1                   2                   3
+     * 0                   1                   2                   3
      * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * |          Type = 12            |          Length               |
@@ -326,6 +321,13 @@ private[sctp] object Initiation {
           4)
     }.as[`Supported Address Types`]
   }
+
+
+  object OptionalInitiationParameter {
+    implicit val discriminated: Discriminated[OptionalInitiationParameter, Int] = Discriminated("Type" | uint16)
+    implicit val codec: Codec[OptionalInitiationParameter] = Codec.coproduct[OptionalInitiationParameter].auto
+  }
+
 
 }
 
