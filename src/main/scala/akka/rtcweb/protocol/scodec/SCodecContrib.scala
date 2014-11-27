@@ -1,5 +1,8 @@
 package akka.rtcweb.protocol.scodec
 
+import java.nio.CharBuffer
+import java.nio.charset.{ UnmappableCharacterException, MalformedInputException, Charset }
+
 import scodec.{ Encoder, Err, Codec }
 import scodec.bits.BitVector
 import scodec.bits.BitVector._
@@ -26,7 +29,7 @@ object SCodecContrib {
    */
   final def duration[A: Numeric](discriminatorCodec: Codec[A], unit: TimeUnit) = discriminatorCodec.xmap[FiniteDuration](
     a => FiniteDuration.apply(implicitly[Numeric[A]].toLong(a), unit),
-    a => implicitly[Numeric[A]].fromInt(a.length.toInt))
+    a => implicitly[Numeric[A]].fromInt(a.toUnit(unit).toInt))
 
   /**
    * Codec that always encodes the specified value using an implicit available encoder and always decodes the specified value, returning `()` if the actual bits match
@@ -34,8 +37,6 @@ object SCodecContrib {
    * @group combinators
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encodeValid(constantValue))
-
-
 
   object zipper extends Poly1 {
     implicit def sizeAndValueCodec[Si <: Int, Vi] = at[(Si, Codec[Vi])] { case (s, cv) => scodec.codecs.fixedSizeBytes(s, cv) }
@@ -45,40 +46,39 @@ object SCodecContrib {
     implicit def lengthAndValueCodec[Vi] = at[(Vi, Codec[Vi])] { case (v, vc) => vc.encode(v) }
   }
 
-  def multiVariableSizes[SC <: HList, S <: HList, VC <: HList, V <: HList, ZippedLandVCs <: HList, ZippedVandVCs <: HList,  SizeLimitedValueCodecs <: HList, EncodedValues <: HList]
-  (sizeCodecs: SC, valueCodecs: VC)
-    (implicit
-    scToHListCodec: ToHListCodec.Aux[SC, S],
+  def multiVariableSizes[SC <: HList, S <: HList, VC <: HList, V <: HList, ZippedLandVCs <: HList, ZippedVandVCs <: HList, SizeLimitedValueCodecs <: HList, EncodedValues <: HList, EncodedValuesUnified <: HList](sizeCodecs: SC, valueCodecs: VC)(implicit scToHListCodec: ToHListCodec.Aux[SC, S],
     vcToHListCodec: ToHListCodec.Aux[VC, V],
     zipSandVCs: Zip.Aux[S :: VC :: HNil, ZippedLandVCs],
     sAndVcMapper: Mapper.Aux[zipper.type, ZippedLandVCs, SizeLimitedValueCodecs],
     zipVandVCs: Zip.Aux[V :: VC :: HNil, ZippedVandVCs],
     vAndVcMapper: Mapper.Aux[valueEncoder.type, ZippedVandVCs, EncodedValues],
-    slvcToHListCodec: ToHListCodec.Aux[SizeLimitedValueCodecs, V]
-    ): Codec[V] = new Codec[V] {
+    slvcToHListCodec: ToHListCodec.Aux[SizeLimitedValueCodecs, V]): Codec[V] = new Codec[V] {
 
     override def toString = s"multiVariableSizes($sizeCodecs, $valueCodecs)"
 
     private val sizeCodec: Codec[S] = scToHListCodec(sizeCodecs)
 
-    override def decode(bits: BitVector):Err \/ (BitVector, V) = {
-      sizeCodec.decode(bits).flatMap { case (rem, sizes) =>
-        val sizeLimitedValueCodecs = (sizes zip valueCodecs).map(zipper)
-        val sequenced = slvcToHListCodec(sizeLimitedValueCodecs)
-        sequenced.decode(rem)
+    override def decode(bits: BitVector): Err \/ (BitVector, V) = {
+      sizeCodec.decode(bits).flatMap {
+        case (rem, sizes) =>
+          val sizeLimitedValueCodecs = (sizes zip valueCodecs).map(zipper)
+          val sequenced = slvcToHListCodec(sizeLimitedValueCodecs)
+          sequenced.decode(rem)
       }
     }
 
-    override def encode(v: V) : Err \/ BitVector = {
+    import shapeless.test._
+
+    override def encode(v: V): Err \/ BitVector = {
       // encode all values, zip with em over length codecs encoded their lengths and concat bits(length)  ++ bits(values)
-      val encodedValues:ZippedVandVCs = (v zip valueCodecs)//.map(valueEncoder)
-      //val encodedValueLengths = encodedValues.map{
-      //  case \/-(b:BitVector) => b.length
-      //  case e@ -\/ => e
-      //}
+      val encodedValues: EncodedValues = (v zip valueCodecs).map(valueEncoder)
+      //val encodedValuesSimple = encodedValues.toList.collect{case a: \/[Err, BitVector] => a}
+
+      //typed[List[Err \/ BitVector]](encodedValuesSimple)
 
       Console.println(this)
       Console.println(encodedValues)
+      //Console.println(encodedValuesSimple)
       ???
     }
 
@@ -86,14 +86,24 @@ object SCodecContrib {
       Err(s"[$a] is too long to be encoded: $msg")
   }
 
+  /**
+   * A string terminated by a `null` byte
+   */
+  final def cstring(codec: Codec[String]): Codec[String] = codec.exmap[String](
+    {
+      case a if !a.isEmpty && a.indexOf('\0') + 1 == a.length => \/-[String](a.dropRight(1))
+      case a => -\/(Err(s"[$a] is not terminated by a nul character or contains multiple nuls"))
+    },
+    f => \/-(f + '\0')
+  )
 
-  implicit class AwesomeCodecOps[A](codec: Codec[A]) {
+  implicit class AwesomeCodecOps[A](val codec: Codec[A]) extends AnyVal {
 
     /**
      * A string terminated by a `null` byte
      * todo: really terminate!
      */
-    final def cstring(implicit ev: A <:< String): Codec[A] = codec <~ scodec.codecs.constant(lowByte)
+    final def cstring(implicit ev: A =:= String, ve: String =:= A): Codec[String] = SCodecContrib.cstring(codec.xmap(ev, ve))
 
     /**
      * Adds a validation to this coded that fails when the partial function applies.

@@ -174,8 +174,8 @@ private[dcep] object DATA_CHANNEL_OPEN {
       ("Channel Type" | `Channel Type`.codec) ::
       ("Priority" | Priority.codec) ::
       ("Reliability" | uint32) :: multiVariableSizes(
-      ("Label Length" | uint8) :: ("Protocl Length" | uint8) :: HNil,
-      ("Label" | ascii) :: ("Protocol" | ascii) :: HNil
+        ("Label Length" | uint8) :: ("Protocl Length" | uint8) :: HNil,
+        ("Label" | ascii) :: ("Protocol" | ascii) :: HNil
       )
   }.as[DATA_CHANNEL_OPEN]
 }

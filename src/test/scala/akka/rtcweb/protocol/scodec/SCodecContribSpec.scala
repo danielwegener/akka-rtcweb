@@ -1,7 +1,7 @@
 package akka.rtcweb.protocol.scodec
 
 import org.scalatest.{ Inside, Matchers, WordSpec }
-import scodec.Codec
+import scodec.Err
 import scodec.bits.BitVector.{ empty => emptyVector }
 import scodec.bits.BitVector._
 import scodec.bits._
@@ -83,5 +83,26 @@ class SCodecContribSpec extends WordSpec with Matchers with Inside {
     }
 
   }
+
+  "cstring" should {
+    val codec = cstring(ascii)
+    "encode" in {
+      codec.encode("AB") should be(\/-(hex"414200".bits))
+    }
+    "decode" in {
+      codec.decode(hex"414200".bits) should be(\/-(BitVector.empty, "AB"))
+    }
+
+    "not decode missing nul termination" in {
+      codec.decode(hex"4142".bits) should be(-\/(Err("[AB] is not terminated by a nul character or contains multiple nuls")))
+    }
+
+    "not decode strings with multiple nuls" in {
+      codec.decode(hex"41004200".bits) should be(-\/(Err("[A\0B\0] is not terminated by a nul character or contains multiple nuls")))
+    }
+
+  }
+
+
 
 }
