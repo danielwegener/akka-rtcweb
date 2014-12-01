@@ -14,7 +14,10 @@ class InitiationSpec extends WordSpec with Matchers with Inside {
         `IPv4 Address`(hex"00000001"),
         `IPv6 Address`(hex"00000000000000000000000000000001"),
         `Cookie Preservative`(100 seconds),
-        `Host Name Address`("host.name")
+        `Host Name Address`("host.name"),
+        `Padding Parameter`(255),
+        `Supported Address Types`(Vector(`Address Type`.IPv4, `Address Type`.`Host Name`)),
+        `Forward-TSN-Supported`()
       ))
 
       val decoded = Initiation.codec.encode(in).flatMap(Initiation.codec.decode)
