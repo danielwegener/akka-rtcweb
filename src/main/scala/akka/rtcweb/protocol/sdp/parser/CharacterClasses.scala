@@ -37,7 +37,7 @@ private[protocol] object CharacterClasses {
 
   def DIGIT = CharPredicate.Digit
 
-  def POSDIGIT = CharPredicate.Digit19
+  def `POS-DIGIT` = CharPredicate.Digit19
 
   def ALPHANUM = CharPredicate.AlphaNum
 
@@ -52,8 +52,6 @@ private[protocol] object CharacterClasses {
   def SP = ' '
 
   def VCHAR = CharPredicate.Visible
-
-  def DIGIT19 = CharPredicate.Digit19
 
   require(BCHAR.isMaskBased, "BCHAR must be mask based")
   require(`token-char`.isMaskBased, "BCHAR must be mask based")

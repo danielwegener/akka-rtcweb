@@ -5,6 +5,7 @@
 package akka.rtcweb.protocol.sdp.parser
 
 import akka.parboiled2._
+import akka.rtcweb.protocol.sdp.parser.CharacterClasses._
 
 private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
   import CharacterClasses._
@@ -19,7 +20,7 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
 
   def token: Rule1[String] = rule { clearSB() ~ oneOrMore(`token-char` ~ appendSB()) ~ push(sb.toString) }
 
-  def text = `byte-string`
+  def text: Rule1[String] = rule{ `byte-string` }
 
   def `byte-string`: Rule1[String] = rule { clearSB() ~ oneOrMore(BCHAR ~ appendSB()) ~ push(sb.toString) }
 
@@ -33,6 +34,26 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
 
   def listSep = rule { ',' ~ OWS }
 
+  def `decimal-uchar`:Rule1[String] = rule {
+    capture(DIGIT |
+    `POS-DIGIT` ~ DIGIT |
+      ("1" ~ DIGIT ~ DIGIT ) |
+      ("2" ~  CharacterClasses.DIGIT04 ~ DIGIT) |
+      ("2" ~ "5" ~ CharacterClasses.DIGIT05))
+  }
+
+  def m1 :Rule1[String] = rule {
+    capture(("22" ~ ("4"|"5"|"6"|"7"|"8"|"9")) |
+      ("23" ~ DIGIT ))
+  }
+
+  def hex4 : Rule1[String] = rule {
+    capture{ (1 to 4).times(HEXDIG) }
+  }
+
+  def `extn-addr` = rule {
+    `non-ws-string`
+  }
   // ******************************************************************************************
   //                                    helpers
   // ******************************************************************************************
@@ -59,7 +80,7 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
 
   /** Positive long value that does not start with a 0 (zero) */
   def integer = rule(
-    (capture(POSDIGIT ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
+    (capture(`POS-DIGIT` ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
       | oneOrMore(DIGIT) ~ push(999999999999999999L)))
 
   def numberDifferentThanZero: Rule1[Option[Long]] = rule { (ch('0') ~ push(None)) | (number ~> ((n) ⇒ Option[Long](n))) }

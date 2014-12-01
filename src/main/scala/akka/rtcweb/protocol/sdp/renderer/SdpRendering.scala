@@ -105,7 +105,7 @@ trait SdpRendering {
     override def render[R <: Rendering](r: R, renderee: Attribute): r.type = renderee match {
       case PropertyAttribute(key) => r ~ s"a=$key" ~ CRLF
       case ValueAttribute(key, value) => r ~ s"a=$key:$value" ~ CRLF
-      case ea: ExtensionAttribute => renderAttributeExtensions(r, ea)
+      case ea: ExtensionAttribute => r ~ "a="; renderAttributeExtensions(r, ea) ~ CRLF
     }
   }
   implicit val mediaDescriptionRenderer = makeMediaDescriptionRenderer

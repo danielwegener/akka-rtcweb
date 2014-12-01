@@ -19,7 +19,8 @@ trait RtcWebSDPParser extends Parser
     with StringBuilding
     with Base64Parsing {
 
-  override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { groupSessionAttributeExtensions | iceMediaAttributeExtensions }
-  override def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { groupMediaAttributeExtensions | iceSessionAttributeExtensions }
+  override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { groupSessionAttributeExtensions | iceSessionAttributeExtensions }
+  override def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { groupMediaAttributeExtensions | iceMediaAttributeExtensions }
+
 
 }

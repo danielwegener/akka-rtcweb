@@ -97,12 +97,12 @@ private[protocol] trait CommonSdpParser {
   def `connection-address`: Rule1[InetSocketAddress] = rule { `unicast-address` }
 
   /** unicast-address =     IP4-address / IP6-address / FQDN / extn-addr */
-  // simplified
+  // simplified: all unicase-addresses are interpreted as host names
   def `unicast-address`: Rule1[InetSocketAddress] = rule {
-    text ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
+    `extn-addr` ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
   }
 
-  def `connection-address SP port`: Rule1[InetSocketAddress] = rule { text ~ SP ~ port ~> ((a: String, p: Int) => InetSocketAddress.createUnresolved(a, p)) }
+  def `connection-address SP port`: Rule1[InetSocketAddress] = rule { `connection-address` ~ SP ~ port ~> ((a: InetSocketAddress, p: Int) => InetSocketAddress.createUnresolved(a.getHostName, p)) }
 
   def port: Rule1[Int] = rule { number ~> ((l: Long) => l.toInt) }
 

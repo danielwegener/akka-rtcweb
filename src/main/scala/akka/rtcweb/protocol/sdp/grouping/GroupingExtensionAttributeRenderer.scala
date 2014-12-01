@@ -10,7 +10,7 @@ trait GroupingExtensionAttributeRenderer {
   private implicit val semanticsRenderer: Renderer[Semantics] = stringRenderer[Semantics] {
     case Semantics.FID => "FID"
     case Semantics.LS => "LS"
-    case Semantics.UnknownSemanticsExtension(name) => "name"
+    case Semantics.UnknownSemanticsExtension(name) => name
   }
 
   def renderGroupingExtensionAttributes[R <: Rendering](r: R, v: GroupingExtensionAttribute): r.type = v match {

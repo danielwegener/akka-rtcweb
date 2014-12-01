@@ -35,9 +35,9 @@ private[ice] trait CandidateParser {
    *
    */
   def `candidate-attribute`: Rule1[Candidate] = rule {
-    str("candidate:") ~ foundation ~ SP ~ `component-id` ~
+    str("candidate:") ~ foundation ~ SP ~ `component-id` ~ SP ~
       transport ~ SP ~
-      (priority ~> (p => Priority(p))) ~ SP ~
+      (priority ~ SP ~> (p => Priority(p))) ~
       `connection-address SP port` ~
       SP ~ `cand-type` ~
       optional(SP ~ `rel-addr`) ~
@@ -56,7 +56,8 @@ private[ice] trait CandidateParser {
   private def foundation: Rule1[String] = rule { capture((1 to 32).times(`ice-char`)) }
 
   /** {{{transport = "UDP" / transport-extension}}} */
-  private def transport: Rule1[Transport] = rule { (str("UDP") ~ push(Transport.UDP)) | `transport-extension` }
+  /** TODO: It seems to be a bug that some implementations send an udp instead of an UDP */
+  private def transport: Rule1[Transport] = rule { ((str("UDP") | str("udp")) ~ push(Transport.UDP)) | `transport-extension` }
 
   /** {{{transport-extension = token ; from RFC 3261}}} */
   private def `transport-extension`: Rule1[UnknownTransportExtension] = rule { token ~> (t => UnknownTransportExtension(t)) }
@@ -82,10 +83,12 @@ private[ice] trait CandidateParser {
   /** {{{rel-port = "rport" SP port}}} */
   private def `rel-port`: Rule1[Int] = rule { str("rport") ~ SP ~ port }
 
+  //FIXME: The spec says its a `byte-string` but a `non-ws-string` makes much more sense here!
   /** {{{extension-att-name = byte-string}}} */
-  private def `extension-att-name`: Rule1[String] = rule { `byte-string` }
+  private def `extension-att-name`: Rule1[String] = rule { `non-ws-string` }
 
+  //FIXME: The spec says its a `byte-string` but a `non-ws-string` makes much more sense here!
   /** {{{extension-att-name = byte-string}}} */
-  private def `extension-att-value`: Rule1[String] = rule { `byte-string` }
+  private def `extension-att-value`: Rule1[String] = rule { `non-ws-string` }
 
 }
