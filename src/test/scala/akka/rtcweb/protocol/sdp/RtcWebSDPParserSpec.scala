@@ -3,11 +3,11 @@ package akka.rtcweb.protocol.sdp
 import java.net.InetSocketAddress
 
 import akka.parboiled2.ParserInput.StringBasedParserInput
-import akka.parboiled2.{ParseError, Parser}
-import akka.rtcweb.protocol.ice.{CandidateType, Priority, Transport, Candidate}
+import akka.parboiled2.{ ParseError, Parser }
+import akka.rtcweb.protocol.ice.{ CandidateType, Priority, Transport, Candidate }
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
-import akka.rtcweb.protocol.{RtcWebSDPParser, RtcWebSDPRenderer}
-import org.scalatest.{Matchers, WordSpecLike}
+import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
+import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.collection.immutable.Seq
 import scala.util.Try
@@ -119,14 +119,13 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
         MediaStreamIdentifier("foo"),
         PropertyAttribute("custom")))
 
-      result.mediaDescriptions(1).mediaAttributes should contain{
+      result.mediaDescriptions(1).mediaAttributes should contain {
         //candidate:1738249477 1 udp 2122260223 192.168.43.1 40678 typ host generation 0/
-        Candidate("1738249477",1, Transport.UDP, Priority(2122260223L),InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.host, None, List("generation" -> "0"))
+        Candidate("1738249477", 1, Transport.UDP, Priority(2122260223L), InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.host, None, List("generation" -> "0"))
 
       }
 
     }
-
 
     "parse and render identical" in {
       val sdtext =
@@ -210,7 +209,7 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
 
   }
 
-  class TestParser(val input:StringBasedParserInput) extends Parser with RtcWebSDPParser {
+  class TestParser(val input: StringBasedParserInput) extends Parser with RtcWebSDPParser {
     def parseSessionDescription(): Try[SessionDescription] = `session-description`.run()
   }
 

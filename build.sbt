@@ -19,8 +19,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-experimental" % "0.11",
   //"org.typelevel" %% "scodec-core" % "1.3.1",
   "org.typelevel" %% "scodec-core" % "1.5.1-SNAPSHOT",
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.6" % Test,
-  "org.scalatest" %% "scalatest" % "2.1.3"   % Test // ApacheV2
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.7" % Test,
+  "org.scalatest" %% "scalatest" % "2.2.1"   % Test // ApacheV2
 )
 
 scalariformSettings

@@ -12,53 +12,7 @@ import scala.concurrent.duration.FiniteDuration
 
 object RTCPeerConnection {
 
-  /**
-   * By specifying a policy from the list below, the application can control how aggressively it
-   * will try to BUNDLE media streams together.  The set of available
-   * policies is as follows:
-   */
-  sealed trait BundlePolicy
-  object BundlePolicy {
-
-    /**
-     * The application will BUNDLE all media streams of the same
-     * type together.  That is, if there are multiple audio and multiple
-     * video MediaStreamTracks attached to a PeerConnection, all but the
-     * first audio and video tracks will be marked as bundle-only, and
-     * candidates will only be gathered for N media streams, where N is
-     * the number of distinct media types.  When talking to a non-BUNDLE-
-     * aware endpoint, only the non-bundle-only streams will be
-     * negotiated.  This policy balances desire to multiplex with the
-     * need to ensure basic audio and video still works in legacy cases.
-     * Data channels will be in a separate bundle group.
-     */
-    case object balanced extends BundlePolicy
-
-    /**
-     *
-     * max-bundle:  The application will BUNDLE all of its media streams,
-     * including data channels, on a single transport.  All streams other
-     * than the first will be marked as bundle-only.  This policy aims to
-     * minimize candidate gathering and maximize multiplexing, at the
-     * cost of less compatibility with legacy endpoints.
-     */
-    case object `max-bundle` extends BundlePolicy
-
-    /**
-     * The application will offer BUNDLE, but mark none of its
-     * streams as bundle-only.  This policy will allow all streams to be
-     * received by non-BUNDLE-aware endpoints, but require separate
-     * candidates to be gathered for each media stream.
-     */
-    case object `max-compat` extends BundlePolicy
-  }
-
-  final case class StunServerDescription(address: InetAddress, credentials: Option[Nothing] = None)
-
-  final case class PeerConnectionConfiguration(
-    stunServers: Seq[StunServerDescription],
-    iceCandidatePoolSize: Int,
-    bundlePolicy: BundlePolicy)
+  type Label = String
 
   /**
    * Creates Props for an actor of this type.
@@ -67,6 +21,32 @@ object RTCPeerConnection {
    *         (e.g. calling `.withDispatcher()` on it)
    */
   def props(config: PeerConnectionConfiguration) = Props(new RTCPeerConnection(config))
+
+  /**
+   * By specifying a policy from the list below, the application can control how aggressively it
+   * will try to BUNDLE media streams together.  The set of available
+   * policies is as follows:
+   */
+  sealed trait BundlePolicy
+
+  /**
+   * Session description objects (RTCSessionDescription) may be of type
+   * "offer", "pranswer", and "answer".  These types provide information
+   * as to how the description parameter should be parsed, and how the
+   * media state should be changed.
+   */
+  sealed trait RTCSessionDescription
+
+  sealed trait HasSDPPayload extends RTCSessionDescription { def sessionDescription: SessionDescription }
+
+  sealed trait PeerConnectionMessage
+
+  final case class StunServerDescription(address: InetAddress, credentials: Option[Nothing] = None)
+
+  final case class PeerConnectionConfiguration(
+    stunServers: Seq[StunServerDescription],
+    iceCandidatePoolSize: Int,
+    bundlePolicy: BundlePolicy)
 
   /**
    *  The createOffer method takes as a parameter an RTCOfferOptions
@@ -122,76 +102,14 @@ object RTCPeerConnection {
    *
    */
   final case class RTCOfferOptions(
-    OfferToReceiveAudio: Option[Int],
-    OfferToReceiveVideo: Option[Int],
+    OfferToReceiveAudio: Option[Int] = None,
+    OfferToReceiveVideo: Option[Int] = None,
     VoiceActivityDetection: Boolean = false,
     IceRestart: Boolean = false,
     DtlsSrtpKeyAgreement: Boolean,
     RtpDataChannels: Boolean)
 
   final case class CreateAnswerOptions()
-
-  /**
-   * Session description objects (RTCSessionDescription) may be of type
-   * "offer", "pranswer", and "answer".  These types provide information
-   * as to how the description parameter should be parsed, and how the
-   * media state should be changed.
-   */
-  sealed trait RTCSessionDescription
-  sealed trait HasSDPPayload extends RTCSessionDescription { def sessionDescription: SessionDescription }
-
-  object RTCSessionDescription {
-
-    /**
-     *  "offer" indicates that a description should be parsed as an offer;
-     * said description may include many possible media configurations.  A
-     * description used as an "offer" may be applied anytime the
-     * PeerConnection is in a stable state, or as an update to a previously
-     * supplied but unanswered "offer".
-     */
-    final case class offer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
-
-    /**
-     * "pranswer" indicates that a description should be parsed as an
-     * answer, but not a final answer, and so should not result in the
-     * freeing of allocated resources.  It may result in the start of media
-     * transmission, if the answer does not specify an inactive media
-     * direction.  A description used as a "pranswer" may be applied as a
-     * response to an "offer", or an update to a previously sent "pranswer".
-     */
-    final case class pranswer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
-
-    /**
-     *  "answer" indicates that a description should be parsed as an answer,
-     * the offer-answer exchange should be considered complete, and any
-     * resources (decoders, candidates) that are no longer needed can be
-     * released.  A description used as an "answer" may be applied as a
-     * response to a "offer", or an update to a previously sent "pranswer".
-     *
-     * The only difference between a provisional and final answer is that
-     * the final answer results in the freeing of any unused resources that
-     * were allocated as a result of the offer.  As such, the application
-     * can use some discretion on whether an answer should be applied as
-     * provisional or final, and can change the type of the session
-     * description as needed.  For example, in a serial forking scenario, an
-     * application may receive multiple "final" answers, one from each
-     * remote endpoint.  The application could choose to accept the initial
-     * answers as provisional answers, and only apply an answer as final
-     * when it receives one that meets its criteria (e.g. a live user
-     * instead of voicemail).
-     */
-    final case class answer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
-
-    /**
-     *  "rollback" is a special session description type implying that the
-     * state machine should be rolled back to the previous state, as
-     * described in Section 4.1.4.2.  The contents MUST be empty.
-     */
-    case object rollback extends RTCSessionDescription
-
-  }
-
-  sealed trait PeerConnectionMessage
 
   /**
    * Session descriptions generated by createOffer must be immediately
@@ -366,11 +284,95 @@ object RTCPeerConnection {
     protocol: String = "",
     negotiated: Boolean = false,
     id: Int)
+
+  object BundlePolicy {
+
+    /**
+     * The application will BUNDLE all media streams of the same
+     * type together.  That is, if there are multiple audio and multiple
+     * video MediaStreamTracks attached to a PeerConnection, all but the
+     * first audio and video tracks will be marked as bundle-only, and
+     * candidates will only be gathered for N media streams, where N is
+     * the number of distinct media types.  When talking to a non-BUNDLE-
+     * aware endpoint, only the non-bundle-only streams will be
+     * negotiated.  This policy balances desire to multiplex with the
+     * need to ensure basic audio and video still works in legacy cases.
+     * Data channels will be in a separate bundle group.
+     */
+    case object balanced extends BundlePolicy
+
+    /**
+     *
+     * max-bundle:  The application will BUNDLE all of its media streams,
+     * including data channels, on a single transport.  All streams other
+     * than the first will be marked as bundle-only.  This policy aims to
+     * minimize candidate gathering and maximize multiplexing, at the
+     * cost of less compatibility with legacy endpoints.
+     */
+    case object `max-bundle` extends BundlePolicy
+
+    /**
+     * The application will offer BUNDLE, but mark none of its
+     * streams as bundle-only.  This policy will allow all streams to be
+     * received by non-BUNDLE-aware endpoints, but require separate
+     * candidates to be gathered for each media stream.
+     */
+    case object `max-compat` extends BundlePolicy
+  }
+  object RTCSessionDescription {
+
+    /**
+     *  "offer" indicates that a description should be parsed as an offer;
+     * said description may include many possible media configurations.  A
+     * description used as an "offer" may be applied anytime the
+     * PeerConnection is in a stable state, or as an update to a previously
+     * supplied but unanswered "offer".
+     */
+    final case class offer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
+
+    /**
+     * "pranswer" indicates that a description should be parsed as an
+     * answer, but not a final answer, and so should not result in the
+     * freeing of allocated resources.  It may result in the start of media
+     * transmission, if the answer does not specify an inactive media
+     * direction.  A description used as a "pranswer" may be applied as a
+     * response to an "offer", or an update to a previously sent "pranswer".
+     */
+    final case class pranswer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
+
+    /**
+     *  "answer" indicates that a description should be parsed as an answer,
+     * the offer-answer exchange should be considered complete, and any
+     * resources (decoders, candidates) that are no longer needed can be
+     * released.  A description used as an "answer" may be applied as a
+     * response to a "offer", or an update to a previously sent "pranswer".
+     *
+     * The only difference between a provisional and final answer is that
+     * the final answer results in the freeing of any unused resources that
+     * were allocated as a result of the offer.  As such, the application
+     * can use some discretion on whether an answer should be applied as
+     * provisional or final, and can change the type of the session
+     * description as needed.  For example, in a serial forking scenario, an
+     * application may receive multiple "final" answers, one from each
+     * remote endpoint.  The application could choose to accept the initial
+     * answers as provisional answers, and only apply an answer as final
+     * when it receives one that meets its criteria (e.g. a live user
+     * instead of voicemail).
+     */
+    final case class answer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
+
+    /**
+     *  "rollback" is a special session description type implying that the
+     * state machine should be rolled back to the previous state, as
+     * described in Section 4.1.4.2.  The contents MUST be empty.
+     */
+    case object rollback extends RTCSessionDescription
+
+  }
+
   object RTCDataChannelInit {
     val DEFAULT = RTCDataChannelInit(ordered = true, maxRetransmits = 10, maxPacketLifeTime = 5 seconds, id = 0)
   }
-
-  type Label = String
 
 }
 
@@ -379,8 +381,6 @@ final class RTCPeerConnection private[jsep] (private val config: PeerConnectionC
   import RTCPeerConnection._
 
   private var channelIdCounter: Int = 0
-  private def nextChannelId: Int = { channelIdCounter += 1; channelIdCounter }
-
   /** known dataChannels, id to ActorRef */
   private var dataChannels: Map[Int, (RTCDataChannelInit, Label, ActorRef)] = Map.empty
 
@@ -394,5 +394,7 @@ final class RTCPeerConnection private[jsep] (private val config: PeerConnectionC
       val dataChannelActor = context.actorOf(dataChannelActorProps)
       dataChannels += validChannelId -> (config, label, dataChannelActor)
   }
+
+  private def nextChannelId: Int = { channelIdCounter += 1; channelIdCounter }
 
 }

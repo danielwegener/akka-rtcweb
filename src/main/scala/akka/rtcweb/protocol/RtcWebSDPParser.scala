@@ -22,5 +22,4 @@ trait RtcWebSDPParser extends Parser
   override def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { groupSessionAttributeExtensions | iceSessionAttributeExtensions }
   override def mediaAttributesExtensionsRule: Rule1[ExtensionAttribute] = rule { groupMediaAttributeExtensions | iceMediaAttributeExtensions }
 
-
 }

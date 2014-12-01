@@ -6,7 +6,7 @@ import scodec.bits.BitVector.{ empty => emptyVector }
 import scodec.bits.BitVector._
 import scodec.bits._
 import scodec.codecs._
-import shapeless.{HList, HNil}
+import shapeless.{ HList, HNil }
 import scala.language.postfixOps
 
 import scala.concurrent.duration._
@@ -102,7 +102,5 @@ class SCodecContribSpec extends WordSpec with Matchers with Inside {
     }
 
   }
-
-
 
 }

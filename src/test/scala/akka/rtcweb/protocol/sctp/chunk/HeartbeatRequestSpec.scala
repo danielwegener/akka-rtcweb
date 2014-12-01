@@ -1,8 +1,8 @@
 package akka.rtcweb.protocol.sctp.chunk
 
-import org.scalatest.{Inside, Matchers, WordSpec}
+import org.scalatest.{ Inside, Matchers, WordSpec }
 import scodec.bits._
-import scalaz.{-\/, \/-}
+import scalaz.{ -\/, \/- }
 
 class HeartbeatRequestSpec extends WordSpec with Matchers with Inside {
 

@@ -4,7 +4,7 @@ import akka.rtcweb.protocol.sctp.chunk.Initiation._
 import org.scalatest.{ Matchers, Inside, WordSpec }
 import scodec.bits._
 import scala.concurrent.duration._
-import scalaz.{\/-, -\/}
+import scalaz.{ \/-, -\/ }
 
 class InitiationSpec extends WordSpec with Matchers with Inside {
 

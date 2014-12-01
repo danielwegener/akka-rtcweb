@@ -357,39 +357,35 @@ private[sctp] final case class Initiation(
   initialTsn: Long,
   optionalParameters: Vector[Initiation.InitiationParameter]) extends SctpChunk
 
-
-
-
-
 /**
  *
  *  Note 1: The INIT ACK chunks can contain any number of IP address
-   parameters that can be IPv4 and/or IPv6 in any combination.
-
- Note 2: The ECN Capable field is reserved for future use of Explicit
-   Congestion Notification.
-
- Note 3: The INIT ACK chunks MUST NOT contain more than one Host Name
-   Address parameter.  Moreover, the sender of the INIT ACK MUST NOT
-   combine any other address types with the Host Name Address in the
-   INIT ACK.  The receiver of the INIT ACK MUST ignore any other address
-   types if the Host Name Address parameter is present.
-
- IMPLEMENTATION NOTE: An implementation MUST be prepared to receive an
-   INIT ACK that is quite large (more than 1500 bytes) due to the
-   variable size of the State Cookie AND the variable address list.  For
-   example if a responder to the INIT has 1000 IPv4 addresses it wishes
-   to send, it would need at least 8,000 bytes to encode this in the
-   INIT ACK.
-
-   IMPLEMENTATION NOTE: If an INIT ACK chunk is received with known
-   parameters that are not optional parameters of the INIT ACK chunk,
-   then the receiver SHOULD process the INIT ACK chunk and send back a
-   COOKIE ECHO.  The receiver of the INIT ACK chunk MAY bundle an ERROR
-   chunk with the COOKIE ECHO chunk.  However, restrictive
-   implementations MAY send back an ABORT chunk in response to the INIT
-   ACK chunk.
-
+ * parameters that can be IPv4 and/or IPv6 in any combination.
+ *
+ * Note 2: The ECN Capable field is reserved for future use of Explicit
+ * Congestion Notification.
+ *
+ * Note 3: The INIT ACK chunks MUST NOT contain more than one Host Name
+ * Address parameter.  Moreover, the sender of the INIT ACK MUST NOT
+ * combine any other address types with the Host Name Address in the
+ * INIT ACK.  The receiver of the INIT ACK MUST ignore any other address
+ * types if the Host Name Address parameter is present.
+ *
+ * IMPLEMENTATION NOTE: An implementation MUST be prepared to receive an
+ * INIT ACK that is quite large (more than 1500 bytes) due to the
+ * variable size of the State Cookie AND the variable address list.  For
+ * example if a responder to the INIT has 1000 IPv4 addresses it wishes
+ * to send, it would need at least 8,000 bytes to encode this in the
+ * INIT ACK.
+ *
+ * IMPLEMENTATION NOTE: If an INIT ACK chunk is received with known
+ * parameters that are not optional parameters of the INIT ACK chunk,
+ * then the receiver SHOULD process the INIT ACK chunk and send back a
+ * COOKIE ECHO.  The receiver of the INIT ACK chunk MAY bundle an ERROR
+ * chunk with the COOKIE ECHO chunk.  However, restrictive
+ * implementations MAY send back an ABORT chunk in response to the INIT
+ * ACK chunk.
+ *
  *
  *
  * @param initiateTag
@@ -413,37 +409,37 @@ private[sctp] final case class Initiation(
  * from this association).
  * @param numberOfOutboundStreams (OS)
  *                                Defines the number of outbound streams the sender of this INIT ACK
-      chunk wishes to create in this association.  The value of 0 MUST
-      NOT be used, and the value MUST NOT be greater than the MIS value
-      sent in the INIT chunk.
-
-      Note: A receiver of an INIT ACK with the OS value set to 0 SHOULD
-      destroy the association discarding its TCB.
+ * chunk wishes to create in this association.  The value of 0 MUST
+ * NOT be used, and the value MUST NOT be greater than the MIS value
+ * sent in the INIT chunk.
+ *
+ * Note: A receiver of an INIT ACK with the OS value set to 0 SHOULD
+ * destroy the association discarding its TCB.
  * @param numberOfInboundStreams (MIS)
  *    Defines the maximum number of streams the sender of this INIT ACK
-      chunk allows the peer end to create in this association.  The
-      value 0 MUST NOT be used.
-
-      Note: There is no negotiation of the actual number of streams but
-      instead the two endpoints will use the min(requested, offered).
-      See Section 5.1.1 for details.
-
-    Note: A receiver of an INIT ACK with the MIS value set to 0 SHOULD
-      destroy the association discarding its TCB.
+ * chunk allows the peer end to create in this association.  The
+ * value 0 MUST NOT be used.
+ *
+ * Note: There is no negotiation of the actual number of streams but
+ * instead the two endpoints will use the min(requested, offered).
+ * See Section 5.1.1 for details.
+ *
+ * Note: A receiver of an INIT ACK with the MIS value set to 0 SHOULD
+ * destroy the association discarding its TCB.
  * @param initialTsn (I-TSN)
  * Defines the initial TSN that the INIT ACK sender will use.  The
-      valid range is from 0 to 4294967295.  This field MAY be set to the
-      value of the Initiate Tag field.
+ * valid range is from 0 to 4294967295.  This field MAY be set to the
+ * value of the Initiate Tag field.
  *
  * @param optionalParameters
  */
 private[sctp] final case class InitAck(
-                                        initiateTag: Long,
-                                        advertisedReceiverWindowCredit: Long,
-                                        numberOfOutboundStreams: Int,
-                                        numberOfInboundStreams: Int,
-                                        initialTsn: Long,
-                                        optionalParameters: Vector[Initiation.InitiationParameter]) extends SctpChunk {
+    initiateTag: Long,
+    advertisedReceiverWindowCredit: Long,
+    numberOfOutboundStreams: Int,
+    numberOfInboundStreams: Int,
+    initialTsn: Long,
+    optionalParameters: Vector[Initiation.InitiationParameter]) extends SctpChunk {
 
   require(optionalParameters.count(_.isInstanceOf[InitAck.`State Cookie`]) == 1, "The INIT ACK chunks MUST NOT contain more than one Host Name\n   Address parameter.")
   require(optionalParameters.count(_.isInstanceOf[Initiation.`Host Name Address`]) <= 1, "InitAck must have exactly one State Cookie as optional Parameter.")
@@ -451,61 +447,6 @@ private[sctp] final case class InitAck(
 }
 
 private[sctp] object InitAck {
-
-
-
-  /**
-   *  This parameter value MUST contain all the necessary state and
-      parameter information required for the sender of this INIT ACK to
-      create the association, along with a Message Authentication Code
-      (MAC).  See Section 5.1.3 for details on State Cookie definition.
-   */
-  final case class `State Cookie`(
-      data:ByteVector
-                                   )
-
-  object `State Cookie` {
-    implicit val discriminator: Discriminator[InitiationParameter, `State Cookie`, Int] = Discriminator(7)
-
-    implicit val codec: Codec[`State Cookie`] = {
-      variableSizeBytes("Length" | uint16,
-        "Parameter Value" | bytes,
-        4)
-    }.as[`State Cookie`]
-  }
-
-  final case class `Unrecognized Parameter`(
-      unrecognizedParameters:Vector[InitiationParameter]
-                                             ) extends InitiationParameter
-
-  object `Unrecognized Parameter` {
-
-    implicit val discriminator: Discriminator[InitiationParameter, `State Cookie`, Int] = Discriminator(8)
-
-    /**
-     * Unrecognized Parameter:
-
-      Parameter Type Value: 8
-
-   Parameter Length: Variable size.
-
-   Parameter Value:
-
-      This parameter is returned to the originator of the INIT chunk
-      when the INIT contains an unrecognized parameter that has a value
-      that indicates it should be reported to the sender.  This
-      parameter value field will contain unrecognized parameters copied
-      from the INIT chunk complete with Parameter Type, Length, and
-      Value fields.
-     */
-    implicit val codec:Codec[`Unrecognized Parameter`] = {
-      variableSizeBytes("Parameter Length" | uint16,
-        "Parameter Value" | vector[InitiationParameter](InitiationParameter.codec),
-        4)
-    }.as[`Unrecognized Parameter`]
-
-  }
-
 
   /**
    * The INIT ACK chunk is used to acknowledge the initiation of an SCTP
@@ -539,18 +480,65 @@ private[sctp] object InitAck {
    * }}}
    */
   implicit val codec: Codec[InitAck] = {
-      constant(ChunkType.codec.encodeValid(ChunkType.`INIT ACK`)) :~>:
-        ignore(8) :~>:
-        variableSizeBytes("Chunk Length" | uint16,
-          ("Initiate Tag" | nonZero(uint32)) ::
-            ("Advertised Receiver Window Credit" | uint32) ::
-            ("Number of Outbound Streams" | nonZero(uint16)) ::
-            ("Number of Inbound Streams" | nonZero(uint16)) ::
-            ("Initial TSN" | uint32) ::
-            ("Optional Parameters" | vector(InitiationParameter.codec)), 2)
-    }.as[InitAck]
+    constant(ChunkType.codec.encodeValid(ChunkType.`INIT ACK`)) :~>:
+      ignore(8) :~>:
+      variableSizeBytes("Chunk Length" | uint16,
+        ("Initiate Tag" | nonZero(uint32)) ::
+          ("Advertised Receiver Window Credit" | uint32) ::
+          ("Number of Outbound Streams" | nonZero(uint16)) ::
+          ("Number of Inbound Streams" | nonZero(uint16)) ::
+          ("Initial TSN" | uint32) ::
+          ("Optional Parameters" | vector(InitiationParameter.codec)), 2)
+  }.as[InitAck]
 
+  /**
+   *  This parameter value MUST contain all the necessary state and
+   * parameter information required for the sender of this INIT ACK to
+   * create the association, along with a Message Authentication Code
+   * (MAC).  See Section 5.1.3 for details on State Cookie definition.
+   */
+  final case class `State Cookie`(
+    data: ByteVector)
 
+  final case class `Unrecognized Parameter`(
+    unrecognizedParameters: Vector[InitiationParameter]) extends InitiationParameter
 
+  object `State Cookie` {
+    implicit val discriminator: Discriminator[InitiationParameter, `State Cookie`, Int] = Discriminator(7)
+
+    implicit val codec: Codec[`State Cookie`] = {
+      variableSizeBytes("Length" | uint16,
+        "Parameter Value" | bytes,
+        4)
+    }.as[`State Cookie`]
+  }
+
+  object `Unrecognized Parameter` {
+
+    implicit val discriminator: Discriminator[InitiationParameter, `State Cookie`, Int] = Discriminator(8)
+
+    /**
+     * Unrecognized Parameter:
+     *
+     * Parameter Type Value: 8
+     *
+     * Parameter Length: Variable size.
+     *
+     * Parameter Value:
+     *
+     * This parameter is returned to the originator of the INIT chunk
+     * when the INIT contains an unrecognized parameter that has a value
+     * that indicates it should be reported to the sender.  This
+     * parameter value field will contain unrecognized parameters copied
+     * from the INIT chunk complete with Parameter Type, Length, and
+     * Value fields.
+     */
+    implicit val codec: Codec[`Unrecognized Parameter`] = {
+      variableSizeBytes("Parameter Length" | uint16,
+        "Parameter Value" | vector[InitiationParameter](InitiationParameter.codec),
+        4)
+    }.as[`Unrecognized Parameter`]
+
+  }
 
 }
