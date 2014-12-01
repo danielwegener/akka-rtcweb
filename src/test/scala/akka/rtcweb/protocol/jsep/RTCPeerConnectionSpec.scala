@@ -9,8 +9,6 @@ import scala.concurrent.duration._
 
 class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with FreeSpecLike with GivenWhenThen with Matchers with BeforeAndAfterAll {
 
-  import MustMatchers._
-
   val listenerProbe = TestProbe()
   val unitRef = TestActorRef[RTCPeerConnection](RTCPeerConnection.props(PeerConnectionConfiguration(Nil, 1, BundlePolicy.`max-compat`)))
   val unit = unitRef.underlyingActor
@@ -23,10 +21,11 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
 
     "Initial Offers" in {
 
-      When("createOffer is called for the first time, the result is known as the initial offer.")
 
+      When("createOffer is called for the first time, the result is known as the initial offer.")
       unitRef ! CreateOffer(RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true))
-      val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+      lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+
 
       info(
         """
@@ -65,12 +64,12 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         initialOffer.bandwidthInformation should be(None)
 
         Then("Encryption Keys (\"k=\") lines do not provide sufficient security and MUST NOT be included.")
-        initialOffer.encryptionKey must be(None)
+        initialOffer.encryptionKey should be(None) //todo: can we mix should and must?
 
         Then("A \"t=\" line MUST be added, as specified in [RFC4566], Section 5.9; both <start-time> and <stop-time> SHOULD be set to zero, e.g. \"t=0 0\".")
         initialOffer.timings should be(Seq(Timing(Some(0L),Some(0L), None, Nil)))
         Then("An \"a=msid-semantic:WMS\" line MUST be added, as specified in [I-D.ietf-mmusic-msid], Section 4.")
-        initialOffer.sessionAttributes must contain(ValueAttribute("msid-semantic", "WMS"))
+        initialOffer.sessionAttributes should contain(ValueAttribute("msid-semantic", "WMS")) //todo: can we mix should and must?
 
       }
 
