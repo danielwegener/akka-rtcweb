@@ -167,7 +167,9 @@ private[protocol] trait MediaParser {
     str("udp") ~ push(MediaTransportProtocol.udp) |
       str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
       str("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
-      str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`)
+      str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`) |
+      str("UDP/TLS/RTP/SAVPF") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVPF`) |
+      str("UDP/TLS/RTP/SAVP") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVP`)
   }
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */

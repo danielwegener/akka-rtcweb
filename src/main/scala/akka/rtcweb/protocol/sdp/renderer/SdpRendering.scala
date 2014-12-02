@@ -42,6 +42,8 @@ trait SdpRendering {
     case `RTP/AVP` => "RTP/AVP"
     case `RTP/SAVP` => "RTP/SAVP"
     case `RTP/SAVPF` => "RTP/SAVPF"
+    case `UDP/TLS/RTP/SAVP` => "UDP/TLS/RTP/SAVP"
+    case `UDP/TLS/RTP/SAVPF` => "UDP/TLS/RTP/SAVPF"
   }
 
   implicit val nettypeRenderer = Renderer.stringRenderer[NetworkType] {

@@ -57,4 +57,17 @@ object MediaTransportProtocol {
 
   /** Real-time Transport Control Protocol (RTCP)-Based Feedback (RTP/SAVPF) rfc5124. */
   case object `RTP/SAVPF` extends MediaTransportProtocol
+
+  /**
+   * When a RTP/SAVP stream is transported over DTLS with UDP
+   * @see [[https://tools.ietf.org/html/rfc5764#section-8]]
+   */
+  case object `UDP/TLS/RTP/SAVP` extends MediaTransportProtocol
+
+  /**
+   * When a RTP/SAVPF stream is transported over DTLS with UDP
+   * @see [[https://tools.ietf.org/html/rfc5764#section-8]]
+   */
+  case object `UDP/TLS/RTP/SAVPF` extends MediaTransportProtocol
+
 }
