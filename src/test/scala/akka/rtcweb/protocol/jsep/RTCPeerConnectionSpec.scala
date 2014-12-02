@@ -3,6 +3,7 @@ package akka.rtcweb.protocol.jsep
 import java.net.InetSocketAddress
 
 import akka.actor.ActorSystem
+import akka.rtcweb.protocol.ice.{ IcePwd, IceUfrag }
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ BundlePolicy, PeerConnectionConfiguration, RTCOfferOptions, CreateOffer }
 import akka.rtcweb.protocol.sdp._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
@@ -189,9 +190,13 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
           // Neither...
         }
 
-
         """"a=ice-ufrag" and "a=ice-passwd" lines, as specified in [RFC5245], Section 15.4.""" in {
-
+          forAll(initialOffer.mediaDescriptions) { m =>
+            val iceUfrag = m.mediaAttributes.collectFirst { case IceUfrag(e) => e }
+            iceUfrag.value should not be empty
+            val icePwd = m.mediaAttributes.collectFirst { case IcePwd(e) => e }
+            icePwd.value should not be empty
+          }
         }
 
       }

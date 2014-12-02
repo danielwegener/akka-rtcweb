@@ -11,6 +11,7 @@ trait GroupingExtensionAttributeRenderer {
     case Semantics.FID => "FID"
     case Semantics.LS => "LS"
     case Semantics.UnknownSemanticsExtension(name) => name
+    case e: SemanticsExtension => ???
   }
 
   def renderGroupingExtensionAttributes[R <: Rendering](r: R, v: GroupingExtensionAttribute): r.type = v match {

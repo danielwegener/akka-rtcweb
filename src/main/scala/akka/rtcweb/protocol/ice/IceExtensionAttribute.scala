@@ -111,3 +111,9 @@ object CandidateType {
   case object relay extends CandidateType
 }
 
+final case class IcePwd(password: String) extends IceExtensionAttribute {
+  override def key: String = "ice-pwd"
+}
+final case class IceUfrag(ufrag: String) extends IceExtensionAttribute {
+  override def key: String = "ice-ufrag"
+}

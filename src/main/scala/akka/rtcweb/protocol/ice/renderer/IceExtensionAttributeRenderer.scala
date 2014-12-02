@@ -38,6 +38,8 @@ trait IceExtensionAttributeRenderer {
       extensionAttributes.foreach { case (key, value) => r ~ SP ~ key ~ SP ~ value }
       r
     case RemoteCandidates(candidates) => ???
+    case IcePwd(password) => r ~ "ice-pwd:" ~ password
+    case IceUfrag(ufrag) => r ~ "ice-ufrag:" ~ ufrag
   }
 
 }

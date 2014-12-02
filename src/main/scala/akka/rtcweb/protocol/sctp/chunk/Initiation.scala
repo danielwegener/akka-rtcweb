@@ -441,8 +441,8 @@ private[sctp] final case class InitAck(
     initialTsn: Long,
     optionalParameters: Vector[Initiation.InitiationParameter]) extends SctpChunk {
 
-  require(optionalParameters.count(_.isInstanceOf[InitAck.`State Cookie`]) == 1, "The INIT ACK chunks MUST NOT contain more than one Host Name\n   Address parameter.")
-  require(optionalParameters.count(_.isInstanceOf[Initiation.`Host Name Address`]) <= 1, "InitAck must have exactly one State Cookie as optional Parameter.")
+  require(optionalParameters.count(_.isInstanceOf[Initiation.`Host Name Address`]) <= 1, "The INIT ACK chunks MUST NOT contain more than one Host Name Address parameter.")
+  require(optionalParameters.count(_.isInstanceOf[InitAck.`State Cookie`]) == 1, "InitAck must have exactly one State Cookie as optional Parameter.")
 
 }
 
@@ -498,7 +498,7 @@ private[sctp] object InitAck {
    * (MAC).  See Section 5.1.3 for details on State Cookie definition.
    */
   final case class `State Cookie`(
-    data: ByteVector)
+    data: ByteVector) extends InitiationParameter
 
   final case class `Unrecognized Parameter`(
     unrecognizedParameters: Vector[InitiationParameter]) extends InitiationParameter
