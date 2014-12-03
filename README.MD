@@ -18,6 +18,7 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
         * [rfc4566: SDP: Session Description Protocol](https://tools.ietf.org/html/rfc4566) (marshalling and negotiation)
         * [rfc5888: The Session Description Protocol (SDP) Grouping Framework](https://tools.ietf.org/html/rfc5888)
         * [rfc3556: Session Description Protocol (SDP) Bandwidth Modifiers for RTP Control Protocol (RTCP) Bandwidth](https://tools.ietf.org/html/rfc3556) (specifying )
+        * [rfc4572: Connection-Oriented Media Transport over the Transport Layer Security (TLS) Protocol in the Session Description Protocol (SDP)](https://tools.ietf.org/html/rfc4572)
 
 ## Network Protocols
 

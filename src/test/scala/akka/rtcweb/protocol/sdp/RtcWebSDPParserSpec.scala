@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import akka.parboiled2.ParserInput.StringBasedParserInput
 import akka.parboiled2.{ ParseError, Parser }
-import akka.rtcweb.protocol.ice.{ CandidateType, Priority, Transport, Candidate }
+import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
 import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
 import org.scalatest.{ Matchers, WordSpecLike }
@@ -92,7 +92,7 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
         |""".stripMargin //
           .replace("\n", "\r\n")))
 
-      val result = parser.parseSessionDescription().recover { case e @ ParseError(position, traces) => fail(s"\n${parser.formatErrorProblem(e)}: ${parser.formatErrorLine(e)}: ${e.formatTraces}", e) }.get
+      val result = parser.parseSessionDescription().recover { case e @ ParseError(position, traces) => fail(s"\n${parser.formatErrorProblem(e)}:\n${parser.formatErrorLine(e)}:\n${e.formatTraces}", e) }.get
 
       result.origin should be(Origin(Some("jdoe"), "5817373415835868156", 2L, NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("127.0.0.1", 0)))
       result.protocolVersion should be(ProtocolVersion.`0`)
@@ -120,10 +120,14 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
         PropertyAttribute("custom")))
 
       result.mediaDescriptions(1).mediaAttributes should contain {
-        //candidate:1738249477 1 udp 2122260223 192.168.43.1 40678 typ host generation 0/
         Candidate("1738249477", 1, Transport.UDP, Priority(2122260223L), InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.host, None, List("generation" -> "0"))
-
       }
+      result.mediaDescriptions(1).mediaAttributes should contain {
+        Fingerprint(HashFunction.`sha-256`, "C5:CA:A0:C5:DA:59:2E:79:6D:EF:F3:7F:51:B5:E7:93:95:B0:82:66:3C:8B:34:7B:88:0C:B0:DD:F2:7E:EA:77")
+      }
+
+      result.mediaDescriptions(1).mediaAttributes should contain(IceUfrag("wAYPGvXiff8UghxF8"))
+      result.mediaDescriptions(1).mediaAttributes should contain(IcePwd("KAo7HueRkuhnYvI3xhT5uVCTc"))
 
     }
 

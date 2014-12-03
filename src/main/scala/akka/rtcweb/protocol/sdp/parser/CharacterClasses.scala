@@ -45,6 +45,8 @@ private[protocol] object CharacterClasses {
 
   def HEXDIG = CharPredicate.HexDigit
 
+  val UHEXDIG = CharPredicate.Digit ++ CharPredicate.UpperHexLetter
+
   def HTAB = '\t'
 
   def LF = '\n'

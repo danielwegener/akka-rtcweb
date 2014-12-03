@@ -3,7 +3,7 @@ package akka.rtcweb.protocol.jsep
 import java.net.InetSocketAddress
 
 import akka.actor.ActorSystem
-import akka.rtcweb.protocol.ice.{ IcePwd, IceUfrag }
+import akka.rtcweb.protocol.ice.{Setup, Fingerprint, IcePwd, IceUfrag}
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ BundlePolicy, PeerConnectionConfiguration, RTCOfferOptions, CreateOffer }
 import akka.rtcweb.protocol.sdp._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
@@ -191,12 +191,39 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         }
 
         """"a=ice-ufrag" and "a=ice-passwd" lines, as specified in [RFC5245], Section 15.4.""" in {
+          //TODO: ensure that ice ufrag is atleast present at session level
           forAll(initialOffer.mediaDescriptions) { m =>
             val iceUfrag = m.mediaAttributes.collectFirst { case IceUfrag(e) => e }
-            iceUfrag.value should not be empty
+            iceUfrag.value.size should (be >= 4 and be <= 255)
             val icePwd = m.mediaAttributes.collectFirst { case IcePwd(e) => e }
-            icePwd.value should not be empty
+            icePwd.value.size should (be >= 22 and be <= 255)
           }
+        }
+
+        """An "a=ice-options" line, with the "trickle" option,
+          |as specified in [I-D.ietf-mmusic-trickle-ice], Section 4.""".stripMargin ignore {
+          //TODO: trickle not yet supported. but it should be.
+        }
+
+        """An "a=fingerprint" line, as specified in [RFC4572], Section 5; the
+          |algorithm used for the fingerprint MUST match that used in the
+          |certificate signature.""".stripMargin in {
+          forAll(initialOffer.mediaDescriptions) { m =>
+            val fingerprint = m.mediaAttributes.collectFirst { case e @ Fingerprint(_, _) => e }
+            fingerprint.value.fingerprint
+          }
+        }
+
+        """An "a=setup" line, as specified in [RFC4145], Section 4, and
+          |      clarified for use in DTLS-SRTP scenarios in [RFC5763], Section 5.
+          |      The role value in the offer MUST be "actpass".""".stripMargin in {
+          forAll(initialOffer.mediaDescriptions) { m =>
+            val setupRole = m.mediaAttributes.collectFirst { case Setup(role) => role }
+            setupRole.value should be(Setup.Role.actpass)
+          }
+
+
+
         }
 
       }

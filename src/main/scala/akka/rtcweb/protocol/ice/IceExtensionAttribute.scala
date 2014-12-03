@@ -111,9 +111,106 @@ object CandidateType {
   case object relay extends CandidateType
 }
 
+/**
+ *  The "ice-pwd" attributes can appear at either the
+ * session-level or media-level.  When present in both, the value in the
+ * media-level takes precedence.  Thus, the value at the session-level
+ * is effectively a default that applies to all media streams, unless
+ * overridden by a media-level value.  Whether present at the session or
+ * media-level, there MUST be an ice-pwd attribute for
+ * each media stream.  If two media streams have identical ice-ufrag's,
+ * they MUST have identical ice-pwd's.
+ *
+ * The ice-ufrag and ice-pwd attributes MUST be chosen randomly at the
+ * beginning of a session.  The ice-pwd attribute MUST contain
+ * at least 128 bits of randomness.  This means that the ice-pwd attribute will be at least
+ * 22 characters long, since the grammar for these attributes
+ * allows for 6 bits of randomness per character.  The attributes MAY be
+ * longer than 22 characters, respectively, of course, up to 256
+ * characters.  The upper limit allows for buffer sizing in
+ * implementations.  Its large upper limit allows for increased amounts
+ * of randomness to be added over time.
+ */
 final case class IcePwd(password: String) extends IceExtensionAttribute {
   override def key: String = "ice-pwd"
 }
+
+/**
+ * The "ice-ufrag" attribute can appear at either the
+ * session-level or media-level.  When present in both, the value in the
+ * media-level takes precedence.  Thus, the value at the session-level
+ * is effectively a default that applies to all media streams, unless
+ * overridden by a media-level value.  Whether present at the session or
+ * media-level, there MUST be an ice-ufrag attribute for
+ * each media stream.  If two media streams have identical ice-ufrag's,
+ * they MUST have identical ice-pwd's.
+ *
+ * The ice-ufrag attributes MUST be chosen randomly at the
+ * beginning of a session.  The ice-ufrag attribute MUST contain at
+ * least 24 bits of randomness.  This means that the ice-ufrag
+ * attribute will be at least 4 characters long, since the grammar for these attributes
+ * allows for 6 bits of randomness per character.  The attributes MAY be
+ * longer than 4, of course, up to 256
+ * characters.  The upper limit allows for buffer sizing in
+ * implementations.  Its large upper limit allows for increased amounts
+ * of randomness to be added over time.
+ */
 final case class IceUfrag(ufrag: String) extends IceExtensionAttribute {
   override def key: String = "ice-ufrag"
+}
+
+/**
+ *  A fingerprint is represented in SDP as an attribute (an 'a' line).
+ * It consists of the name of the hash function used, followed by the
+ * hash value itself.  The hash value is represented as a sequence of
+ * uppercase hexadecimal bytes, separated by colons.  The number of
+ * bytes is defined by the hash function.  (This is the syntax used by
+ * openssl and by the browsers' certificate managers.  It is different
+ * from the syntax used to represent hash values in, e.g., HTTP digest
+ * authentication [18], which uses unseparated lowercase hexadecimal
+ * bytes.  It was felt that consistency with other applications of
+ * fingerprints was more important.)
+ * @see [[https://tools.ietf.org/html/rfc4572#section-5]]
+ */
+final case class Fingerprint(hashFunction: HashFunction, fingerprint: String) extends IceExtensionAttribute {
+  override def key: String = "fingerprint"
+}
+
+sealed trait HashFunction
+
+object HashFunction {
+  case object `sha-1` extends HashFunction
+  case object `sha-224` extends HashFunction
+  case object `sha-256` extends HashFunction
+  case object `sha-384` extends HashFunction
+  case object `sha-512` extends HashFunction
+  case object `md5` extends HashFunction
+  case object `md2` extends HashFunction
+  final case class UnknownHashFunction(token: String) extends HashFunction
+}
+
+/**
+ * The 'setup' attribute indicates which of the end points should
+ * initiate the TCP connection establishment (i.e., send the initial TCP
+ * SYN). The 'setup' attribute is charset-independent and can be a
+ * session-level or a media-level attribute.
+ */
+final case class Setup(role: Setup.Role) extends IceExtensionAttribute {
+  override def key: String = "setup"
+}
+
+object Setup {
+
+  sealed trait Role
+
+  object Role {
+    /** The endpoint will initiate an outgoing connection. */
+    case object active extends Role
+    /** The endpoint will accept an incoming connection. */
+    case object passive extends Role
+    /**  The endpoint is willing to accept an incoming connection or to initiate an outgoing connection. */
+    case object actpass extends Role
+    /** The endpoint does not want the connection to be established for the time being. */
+    case object holdconn extends Role
+  }
 }
