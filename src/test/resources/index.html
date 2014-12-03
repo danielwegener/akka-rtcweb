@@ -10,13 +10,14 @@
 
         var configuration = {"iceServers":[{"url":"stun:23.21.150.121"}]};
         //var cfg = {"iceServers":[]};
-        var options = { 'optional': [{'DtlsSrtpKeyAgreement': true}, {"RtpDataChannels": true}] };
+        //var options = { 'optional': [{'DtlsSrtpKeyAgreement': false}, {"RtpDataChannels": false}] };
+        var options = { 'optional': [] };
 
         /* THIS IS ALICE, THE CALLER/SENDER */
 
         var pc1 = new RTCPeerConnection(configuration, options);
         var tn1 = null;
-        var dc1 = pc1.createDataChannel('myDataChannel', {reliable:true});
+        var dc1 = pc1.createDataChannel('myDataChannel', {reliable:false});
         console.log("Created datachannel dc1 (pc1)");
         dc1.onopen = function (e) {
             console.log('data channel dc1 opened');

@@ -70,4 +70,28 @@ object MediaTransportProtocol {
    */
   case object `UDP/TLS/RTP/SAVPF` extends MediaTransportProtocol
 
+  /**
+   * The 'SCTP' proto value describes an SCTP association, as defined in [RFC4960].
+   * @see [[http://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-08#section-4.2]]
+   */
+  case object SCTP extends MediaTransportProtocol
+
+  /**
+   * The 'SCTP/DTLS' proto value describes a Datagram Transport Layer
+      Security (DTLS) [RFC6347] connection on top of an SCTP
+      association, as defined in [RFC6083].
+   * @see [[http://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-08#section-4.2]]
+   */
+  case object `SCTP/DTLS` extends MediaTransportProtocol
+
+  /**
+   * The 'DTLS/SCTP' proto value describes an SCTP association on top
+      of a DTLS connection, as defined in
+      [I-D.ietf-tsvwg-sctp-dtls-encaps].
+   * @see [[http://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-08#section-4.2]]
+   */
+  case object `DTLS/SCTP` extends MediaTransportProtocol
+
+
+
 }

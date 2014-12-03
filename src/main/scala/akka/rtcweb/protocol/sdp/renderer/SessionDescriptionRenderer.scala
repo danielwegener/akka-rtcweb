@@ -7,7 +7,7 @@ import akka.rtcweb.protocol.sdp.MediaTransportProtocol._
 import akka.rtcweb.protocol.sdp._
 import akka.util.ByteString
 
-trait SdpRendering {
+trait SessionDescriptionRenderer {
 
   import Renderer._
   import Rendering._
@@ -44,6 +44,9 @@ trait SdpRendering {
     case `RTP/SAVPF` => "RTP/SAVPF"
     case `UDP/TLS/RTP/SAVP` => "UDP/TLS/RTP/SAVP"
     case `UDP/TLS/RTP/SAVPF` => "UDP/TLS/RTP/SAVPF"
+    case SCTP => "SCTP"
+    case `SCTP/DTLS` => "SCTP/DTLS"
+    case `DTLS/SCTP` => "DTLS/SCTP"
   }
 
   implicit val nettypeRenderer = Renderer.stringRenderer[NetworkType] {

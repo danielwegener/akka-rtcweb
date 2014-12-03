@@ -1,8 +1,5 @@
 package akka.rtcweb.protocol.scodec
 
-import java.nio.CharBuffer
-import java.nio.charset.{ UnmappableCharacterException, MalformedInputException, Charset }
-
 import scodec.{ Encoder, Err, Codec }
 import scodec.bits.BitVector
 import scodec.bits.BitVector._
@@ -38,14 +35,6 @@ object SCodecContrib {
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encodeValid(constantValue))
 
-  object zipper extends Poly1 {
-    implicit def sizeAndValueCodec[Si <: Int, Vi] = at[(Si, Codec[Vi])] { case (s, cv) => scodec.codecs.fixedSizeBytes(s, cv) }
-  }
-
-  object valueEncoder extends Poly1 {
-    implicit def lengthAndValueCodec[Vi] = at[(Vi, Codec[Vi])] { case (v, vc) => vc.encode(v) }
-  }
-
   def multiVariableSizes[SC <: HList, S <: HList, VC <: HList, V <: HList, ZippedLandVCs <: HList, ZippedVandVCs <: HList, SizeLimitedValueCodecs <: HList, EncodedValues <: HList, EncodedValuesUnified <: HList](sizeCodecs: SC, valueCodecs: VC)(implicit scToHListCodec: ToHListCodec.Aux[SC, S],
     vcToHListCodec: ToHListCodec.Aux[VC, V],
     zipSandVCs: Zip.Aux[S :: VC :: HNil, ZippedLandVCs],
@@ -57,6 +46,7 @@ object SCodecContrib {
     override def toString = s"multiVariableSizes($sizeCodecs, $valueCodecs)"
 
     private val sizeCodec: Codec[S] = scToHListCodec(sizeCodecs)
+    private val valueCodec: Codec[V] = vcToHListCodec(valueCodecs)
 
     override def decode(bits: BitVector): Err \/ (BitVector, V) = {
       sizeCodec.decode(bits).flatMap {
@@ -73,6 +63,12 @@ object SCodecContrib {
       // encode all values, zip with em over length codecs encoded their lengths and concat bits(length)  ++ bits(values)
       val encodedValues: EncodedValues = (v zip valueCodecs).map(valueEncoder)
       //val encodedValuesSimple = encodedValues.toList.collect{case a: \/[Err, BitVector] => a}
+      //val encodedValues:ZippedVandVCs = (v zip valueCodecs)//.map(valueEncoder)
+      //val encodedValueLengths = encodedValues.map{
+      //  case \/-(b:BitVector) => b.length
+      //  case e@ -\/ => e
+      //}
+      valueCodec.encode(v)
 
       //typed[List[Err \/ BitVector]](encodedValuesSimple)
 
@@ -80,6 +76,9 @@ object SCodecContrib {
       Console.println(encodedValues)
       //Console.println(encodedValuesSimple)
       ???
+      //Console.println(this)
+      //Console.println(encodedValues)
+
     }
 
     private def fail(a: Any, msg: String): Err =
@@ -96,6 +95,30 @@ object SCodecContrib {
     },
     f => \/-(f + '\0')
   )
+
+  /**
+   * Codec that supports bit of the form `value ++ (value.size%padding)*0`.
+   * @param blockWidth width of the padding bytes (the maximum number of appended zero-bytes + 1)
+   * @group combinators
+   */
+  def blockalignBytes[A](value: Codec[A], blockWidth: Int): Codec[A] = blockalignBits(value, blockWidth * 8)
+
+  /**
+   * Codec that supports bit of the form `value ++ (value.size%padding)*0`.
+   *
+   * For example, encoding the string `"hello"` with `fillPadding(ascii, 8)` yields a vector of 8 bytes -- the first 5 byte being
+   * being the US-ASCII encoding of `"hello"` and the rest filled with zeros.
+   *
+   * The `width` denotes the number of bits that should be used for padding.
+   *
+   * During encoding, the missing padding bytes after an successful decode of the inner value will be consumed and ignored.
+   *
+   * @param value codec the encodes/decodes the value
+   * @param blockWidth width of the padding (the maximum number of appended zeros + 1)
+   * @group combinators
+   */
+  def blockalignBits[A](value: Codec[A], blockWidth: Int): Codec[A] =
+    new WithPaddingCodec(value, blockWidth)
 
   implicit class AwesomeCodecOps[A](val codec: Codec[A]) extends AnyVal {
 
@@ -127,35 +150,17 @@ object SCodecContrib {
 
   }
 
-  /**
-   * Codec that supports bit of the form `value ++ (value.size%padding)*0`.
-   * @param blockWidth width of the padding bytes (the maximum number of appended zero-bytes + 1)
-   * @group combinators
-   */
-  def blockalignBytes[A](value: Codec[A], blockWidth: Int): Codec[A] = blockalignBits(value, blockWidth * 8)
+  object zipper extends Poly1 {
+    implicit def sizeAndValueCodec[Si <: Int, Vi] = at[(Si, Codec[Vi])] { case (s, cv) => scodec.codecs.fixedSizeBytes(s, cv) }
+  }
 
-  /**
-   * Codec that supports bit of the form `value ++ (value.size%padding)*0`.
-   *
-   * For example, encoding the string `"hello"` with `fillPadding(ascii, 8)` yields a vector of 8 bytes -- the first 5 byte being
-   * being the US-ASCII encoding of `"hello"` and the rest filled with zeros.
-   *
-   * The `width` denotes the number of bits that should be used for padding.
-   *
-   * During encoding, the missing padding bytes after an successful decode of the inner value will be consumed and ignored.
-   *
-   * @param value codec the encodes/decodes the value
-   * @param blockWidth width of the padding (the maximum number of appended zeros + 1)
-   * @group combinators
-   */
-  def blockalignBits[A](value: Codec[A], blockWidth: Int): Codec[A] =
-    new WithPaddingCodec(value, blockWidth)
+  object valueEncoder extends Poly1 {
+    implicit def lengthAndValueCodec[Vi] = at[(Vi, Codec[Vi])] { case (v, vc) => vc.encode(v) }
+  }
 
 }
 
 private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingModulo: Int) extends Codec[A] {
-
-  def paddingGap(length: Long, alignSteps: Int): Long = (alignSteps - length % alignSteps) % alignSteps
 
   override def encode(a: A) = for {
     encA <- valueCodec.encode(a)
@@ -170,6 +175,8 @@ private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingMod
         \/-((rest.drop(gap), res))
       }
     }
+
+  def paddingGap(length: Long, alignSteps: Int): Long = (alignSteps - length % alignSteps) % alignSteps
 
   override def toString = s"alignBits($valueCodec, $paddingModulo)"
 }

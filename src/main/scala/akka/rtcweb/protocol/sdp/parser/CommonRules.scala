@@ -32,10 +32,6 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
 
   def listSep = rule { ',' ~ OWS }
 
-  def OWS = rule { zeroOrMore(optional(CRLF) ~ oneOrMore(WSP)) } // extended with `obs-fold`
-
-  def CRLF = rule { CR ~ LF }
-
   def `decimal-uchar`: Rule1[String] = rule {
     capture(DIGIT |
       `POS-DIGIT` ~ DIGIT |
@@ -52,34 +48,38 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
   def hex4: Rule1[String] = rule {
     capture { (1 to 4).times(HEXDIG) }
   }
-  // ******************************************************************************************
-  //                                    helpers
-  // ******************************************************************************************
 
   def `extn-addr` = rule {
     `non-ws-string`
   }
 
   def `non-ws-string`: Rule1[String] = rule { clearSB() ~ oneOrMore(NWSVCHAR ~ appendSB()) ~ push(sb.toString) }
+  // ******************************************************************************************
+  //                                    helpers
+  // ******************************************************************************************
 
   def digit = rule { DIGIT ~ push(digitInt(lastChar)) }
 
   def digit2 = rule { DIGIT ~ DIGIT ~ push(digitInt(charAt(-2)) * 10 + digitInt(lastChar)) }
 
+  private def digitInt(c: Char): Int = c - '0'
+
   def digit4 = rule {
     DIGIT ~ DIGIT ~ DIGIT ~ DIGIT ~ push(digitInt(charAt(-4)) * 1000 + digitInt(charAt(-3)) * 100 + digitInt(charAt(-2)) * 10 + digitInt(lastChar))
   }
 
-  private def digitInt(c: Char): Int = c - '0'
-
   def ws(c: Char) = rule { c ~ OWS }
+
+  def OWS = rule { zeroOrMore(optional(CRLF) ~ oneOrMore(WSP)) } // extended with `obs-fold`
+
+  def CRLF = rule { CR ~ LF }
 
   def ws(s: String) = rule { s ~ OWS }
 
   // def number = rule((capture((1 to 18).times(DIGIT)) ~ !DIGIT) ~> (_.toLong)) | (oneOrMore(DIGIT) ~ push(999999999999999999L))
 
   /** Positive long value that does not start with a 0 (zero) */
-  def integer = rule(
+  def integer:Rule1[Long] = rule(
     (capture(`POS-DIGIT` ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
       | oneOrMore(DIGIT) ~ push(999999999999999999L)))
 

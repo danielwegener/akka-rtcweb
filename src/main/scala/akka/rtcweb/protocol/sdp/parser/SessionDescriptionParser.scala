@@ -92,6 +92,8 @@ private[protocol] trait CommonSdpParser {
     str("IP4") ~ push(AddressType.IP4) | str("IP6") ~ push(AddressType.IP6)
   }
 
+  def `connection-address SP port`: Rule1[InetSocketAddress] = rule { `connection-address` ~ SP ~ port ~> ((a: InetSocketAddress, p: Int) => InetSocketAddress.createUnresolved(a.getHostName, p)) }
+
   /** connection-address =  multicast-address / unicast-address */
   //simplified: all adresses are treated as unicast addresses
   def `connection-address`: Rule1[InetSocketAddress] = rule { `unicast-address` }
@@ -101,8 +103,6 @@ private[protocol] trait CommonSdpParser {
   def `unicast-address`: Rule1[InetSocketAddress] = rule {
     `extn-addr` ~> { (a: String) => InetSocketAddress.createUnresolved(a, 0) }
   }
-
-  def `connection-address SP port`: Rule1[InetSocketAddress] = rule { `connection-address` ~ SP ~ port ~> ((a: InetSocketAddress, p: Int) => InetSocketAddress.createUnresolved(a.getHostName, p)) }
 
   def port: Rule1[Int] = rule { number ~> ((l: Long) => l.toInt) }
 
@@ -169,7 +169,10 @@ private[protocol] trait MediaParser {
       str("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
       str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`) |
       str("UDP/TLS/RTP/SAVPF") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVPF`) |
-      str("UDP/TLS/RTP/SAVP") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVP`)
+      str("UDP/TLS/RTP/SAVP") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVP`) |
+      str("SCTP") ~ push(MediaTransportProtocol.SCTP) |
+      str("SCTP/DTLS") ~ push(MediaTransportProtocol.`SCTP/DTLS`) |
+      str("DTLS/SCTP") ~ push(MediaTransportProtocol.`DTLS/SCTP`)
   }
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */

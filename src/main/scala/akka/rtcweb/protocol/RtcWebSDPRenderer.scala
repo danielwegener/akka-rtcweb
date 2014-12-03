@@ -4,10 +4,10 @@ import akka.rtcweb.protocol.ice.IceExtensionAttribute
 import akka.rtcweb.protocol.ice.renderer.IceExtensionAttributeRenderer
 import akka.rtcweb.protocol.sdp.grouping.{ GroupingExtensionAttribute, GroupingExtensionAttributeRenderer }
 import akka.rtcweb.protocol.sdp.{ SessionDescription, ExtensionAttribute }
-import akka.rtcweb.protocol.sdp.renderer.{ ByteStringRendering, StringRendering, Rendering, SdpRendering }
+import akka.rtcweb.protocol.sdp.renderer.{ ByteStringRendering, StringRendering, Rendering, SessionDescriptionRenderer }
 import akka.util.ByteString
 
-class RtcWebSDPRenderer extends SdpRendering with IceExtensionAttributeRenderer with GroupingExtensionAttributeRenderer {
+class RtcWebSDPRenderer extends SessionDescriptionRenderer with IceExtensionAttributeRenderer with GroupingExtensionAttributeRenderer {
 
   override def renderAttributeExtensions[R <: Rendering](r: R, extensionAttribute: ExtensionAttribute): r.type = extensionAttribute match {
     case e: IceExtensionAttribute => renderIceExtensionAttribute(r, e)

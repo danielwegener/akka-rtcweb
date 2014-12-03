@@ -5,6 +5,7 @@ import java.net.InetSocketAddress
 import akka.actor.ActorSystem
 import akka.rtcweb.protocol.ice.{Setup, Fingerprint, IcePwd, IceUfrag}
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ BundlePolicy, PeerConnectionConfiguration, RTCOfferOptions, CreateOffer }
+import akka.rtcweb.protocol.sdp
 import akka.rtcweb.protocol.sdp._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
 import akka.testkit.{ TestProbe, DefaultTimeout, TestKit, TestActorRef }
@@ -14,7 +15,8 @@ import scala.concurrent.duration._
 class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with FreeSpecLike with GivenWhenThen with Matchers with BeforeAndAfterAll with Inspectors with OptionValues {
 
   val listenerProbe = TestProbe()
-  val unitRef = TestActorRef[RTCPeerConnection](RTCPeerConnection.props(PeerConnectionConfiguration(Nil, 1, BundlePolicy.`max-compat`)))
+  val bundlePolicy:BundlePolicy = BundlePolicy.`max-bundle`
+  val unitRef = TestActorRef[RTCPeerConnection](RTCPeerConnection.props(PeerConnectionConfiguration(Nil, 1, bundlePolicy)))
   val unit = unitRef.underlyingActor
 
   override def afterAll() {
@@ -29,7 +31,8 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
     "Initial Offers" - {
 
       When("createOffer is called for the first time, the result is known as the initial offer.")
-      unitRef ! CreateOffer(RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true))
+      val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true)
+      unitRef ! CreateOffer(rtcOfferOptions)
       lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
 
       info(
@@ -150,12 +153,12 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         """An "a=rtcp" line, as specified in [RFC3605], Section 2.1,
           |containing the dummy value "9 IN IP6 ::", because no candidates
           |have yet been gathered.""".stripMargin ignore {
-          // SRTP is not yet supported by akka-rtcweb
+          info("no SRTP support yet")
         }
 
         """An "a=msid" line, as specified in [I-D.ietf-mmusic-msid],
           |Section 2.""".stripMargin ignore {
-          // SRTP is not yet supported by akka-rtcweb
+          info("no SRTP support yet")
         }
 
         """An "a=sendrecv" line, as specified in [RFC3264], Section 5.1.""" in {
@@ -167,8 +170,8 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         """For each supported codec, "a=rtpmap" and "a=fmtp" lines, as
           |specified in [RFC4566], Section 6.  For audio, the codecs
           |specified in [I-D.ietf-rtcweb-audio], Section 3, MUST be be
-          |supported.""".stripMargin in {
-          ???
+          |supported.""".stripMargin ignore {
+          info("no RTP support yet")
         }
 
         """If this m= section is for media with configurable frame sizes,
@@ -221,12 +224,102 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
             val setupRole = m.mediaAttributes.collectFirst { case Setup(role) => role }
             setupRole.value should be(Setup.Role.actpass)
           }
-
-
-
         }
 
+        """An "a=rtcp-mux" line, as specified in [RFC5761], Section 5.1.1.""" ignore {
+          info("no RTCP support yet")
+        }
+
+        """An "a=rtcp-rsize" line, as specified in [RFC5506], Section 5.""" ignore {
+          info("no RTCP support yet")
+        }
+
+        """For each supported RTP header extension, an "a=extmap" line, as
+          |specified in [RFC5285], Section 5.  The list of header extensions
+          |that SHOULD/MUST be supported is specified in
+          |[I-D.ietf-rtcweb-rtp-usage], Section 5.2.  [TODO: ensure that
+          |urn:ietf:params:rtp-hdrext:sdes:mid appears either there or here]
+          |Any header extensions that require encryption MUST be specified as
+          |indicated in [RFC6904], Section 4.""".stripMargin ignore {
+          info("no RTP support yet")
+        }
+
+        """For each supported RTCP feedback mechanism, an "a=rtcp-fb"
+          |mechanism, as specified in [RFC4585], Section 4.2.  The list of
+          |RTCP feedback mechanisms that SHOULD/MUST be supported is
+          |specified in [I-D.ietf-rtcweb-rtp-usage], Section 5.1.""".stripMargin ignore {
+          info("no RTP support yet")
+        }
+
+        """An "a=ssrc" line, as specified in [RFC5576], Section 4.1,
+          |indicating the SSRC to be used for sending media, along with the
+          |mandatory "cname" source attribute, as specified in Section 6.1,
+          |indicating the CNAME for the source.  The CNAME must be generated
+          |in accordance with [RFC7022].  [OPEN ISSUE: How are CNAMEs
+          |specified for MSTs?  Are they randomly generated for each
+          |MediaStream?  If so, can two MediaStreams be synced?  See:
+          |https://github.com/rtcweb-wg/jsep/issues/4]""".stripMargin ignore {
+          info("no RTP support yet")
+        }
+
+        """If RTX is supported for this media type, another "a=ssrc" line
+          |with the RTX SSRC, and an "a=ssrc-group" line, as specified in
+          |[RFC5576], section 4.2, with semantics set to "FID" and including
+          |the primary and RTX SSRCs.""".stripMargin ignore {
+          info("RTX not supported")
+        }
+
+        """If FEC is supported for this media type, another "a=ssrc" line
+          |with the FEC SSRC, and an "a=ssrc-group" line, as specified in
+          |[RFC5576], section 4.2, with semantics set to "FEC" and including
+          |the primary and FEC SSRCs.""".stripMargin ignore {
+          info("FEC not supported")
+        }
+
+        """[OPEN ISSUE: Handling of a=imageattr]""" ignore {
+          info("wait for draft-ietf-rtcweb-jsep-09 :)")
+        }
+
+        """If the BUNDLE policy for this PeerConnection is set to "max-
+          |bundle", and this is not the first m= section, or the BUNDLE
+          |policy is set to "balanced", and this is not the first m= section
+          |for this media type, an "a=bundle-only" line.""" in {
+          if (bundlePolicy == BundlePolicy.`max-bundle` || bundlePolicy == BundlePolicy.balanced) {
+            forAll(initialOffer.mediaDescriptions.tail) { m =>
+              m.mediaAttributes should contain(PropertyAttribute("bundle-only"))
+            }
+          } else {
+            info(s"In this case, the bundle-policy was $bundlePolicy")
+          }
+        }
+
+
+
+
       }
+
+      """Lastly, if a data channel has been created, a m= section MUST be
+        |generated for data.  The <media> field MUST be set to "application"
+        |and the <proto> field MUST be set to "UDP/TLS/SCTP" if the default
+        |candidate uses UDP transport, or "TCP/TLS/SCTP" if the default
+        |candidate uses TCP transport [I-D.ietf-mmusic-sctp-sdp].  The "fmt"
+        |value MUST be set to the SCTP port number, as specified in
+        |Section 4.1.  [TODO: update this to use a=sctp-port, as indicated in
+        |the latest data channel docs]""".stripMargin in {
+        if (rtcOfferOptions.RtpDataChannels) {
+          val m = initialOffer.mediaDescriptions.find(_.media == Media.application)
+          /* FIXME: This seem to be an inconsistency between draft-ietf-rtcweb-jsep-08 and draft-ietf-mmusic-sctp-sdp-08
+            * draft-ietf-mmusic-sctp-sdp-08 names the protocol identifier 'DTLS/SCTP'. Since it is in a newer version, we will use this */
+
+          m.value.protocol shouldBe MediaTransportProtocol.`DTLS/SCTP`
+          m.value.portRange.port shouldBe MediaTransportProtocol.`DTLS/SCTP`
+
+
+        } else {
+          info(s"In this case, the bundle-policy was $bundlePolicy")
+        }
+      }
+
 
     }
 

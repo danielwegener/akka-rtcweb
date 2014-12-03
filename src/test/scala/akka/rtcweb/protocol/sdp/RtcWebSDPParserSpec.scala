@@ -6,6 +6,7 @@ import akka.parboiled2.ParserInput.StringBasedParserInput
 import akka.parboiled2.{ ParseError, Parser }
 import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
+import akka.rtcweb.protocol.sdp.sctp.SctpPort
 import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
 import org.scalatest.{ Matchers, WordSpecLike }
 
@@ -89,7 +90,20 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
           |a=rtpmap:13 CN/8000
           |a=rtpmap:126 telephone-event/8000
           |a=maxptime:60
-        |""".stripMargin //
+          |m=application 41769 DTLS/SCTP 5000
+          |c=IN IP4 10.0.3.1
+          |a=candidate:211962667 1 udp 2122129151 10.0.3.1 41769 typ host generation 0
+          |a=candidate:3747858019 1 udp 2122063615 192.168.178.47 56516 typ host generation 0
+          |a=candidate:2441410931 1 udp 2121998079 172.17.42.1 42305 typ host generation 0
+          |a=ice-ufrag:nTwQmih0yw2tjA1/
+          |a=ice-pwd:1VsAwIdEnw9iGqYp7C49EByQ
+          |a=ice-options:google-ice
+          |a=fingerprint:sha-256 D3:D6:06:09:FC:5F:4D:54:E8:64:90:45:7C:7A:FA:92:56:54:19:9B:1C:A1:EA:2A:61:64:D8:04:41:5B:44:73
+          |a=setup:actpass
+          |a=mid:data
+          |a=fmtp:webrtc-datachannel max-message-size=100000
+          |a=sctp-port 5000
+        |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")))
 
       val result = parser.parseSessionDescription().recover { case e @ ParseError(position, traces) => fail(s"\n${parser.formatErrorProblem(e)}:\n${parser.formatErrorLine(e)}:\n${e.formatTraces}", e) }.get
@@ -118,6 +132,8 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
         PropertyAttribute("allowed_here_because_chrome_misplaces_it"),
         MediaStreamIdentifier("foo"),
         PropertyAttribute("custom")))
+      result.mediaDescriptions(3).mediaAttributes should contain(SctpPort(5000))
+
 
       result.mediaDescriptions(1).mediaAttributes should contain {
         Candidate("1738249477", 1, Transport.UDP, Priority(2122260223L), InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.host, None, List("generation" -> "0"))
@@ -203,7 +219,20 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
           |a=ssrc:2730398394 msid:myDataChannel myDataChannel
           |a=ssrc:2730398394 mslabel:myDataChannel
           |a=ssrc:2730398394 label:myDataChannel
-          |""".stripMargin //
+          |m=application 41769 DTLS/SCTP 5000
+          |c=IN IP4 10.0.3.1
+          |a=candidate:211962667 1 UDP 2122129151 10.0.3.1 41769 typ host generation 0
+          |a=candidate:3747858019 1 UDP 2122063615 192.168.178.47 56516 typ host generation 0
+          |a=candidate:2441410931 1 UDP 2121998079 172.17.42.1 42305 typ host generation 0
+          |a=ice-ufrag:nTwQmih0yw2tjA1/
+          |a=ice-pwd:1VsAwIdEnw9iGqYp7C49EByQ
+          |a=ice-options:google-ice
+          |a=fingerprint:sha-256 D3:D6:06:09:FC:5F:4D:54:E8:64:90:45:7C:7A:FA:92:56:54:19:9B:1C:A1:EA:2A:61:64:D8:04:41:5B:44:73
+          |a=setup:actpass
+          |a=mid:data
+          |a=fmtp:webrtc-datachannel max-message-size=100000
+          |a=sctp-port 5000
+          |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")
 
       val sd = new TestParser(input(sdtext)).parseSessionDescription().get
