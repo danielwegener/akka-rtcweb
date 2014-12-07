@@ -13,10 +13,9 @@ resolvers += "Akka Snapshot Repository" at "http://repo.akka.io/snapshots/"
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-stream-experimental" % "0.11",
-  "com.typesafe.akka" %% "akka-http-core-experimental" % "0.11",
-  "com.typesafe.akka" %% "akka-parsing-experimental" % "0.11",
-  "com.typesafe.akka" %% "akka-http-experimental" % "0.11",
+  "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M1",
+  "com.typesafe.akka" %% "akka-parsing-experimental" % "1.0-M1",
+  "com.typesafe.akka" %% "akka-http-experimental" % "1.0-M1",
   //"org.typelevel" %% "scodec-core" % "1.3.1",
   "org.typelevel" %% "scodec-core" % "1.5.1-SNAPSHOT",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.7" % Test,

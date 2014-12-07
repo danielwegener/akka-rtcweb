@@ -1,7 +1,7 @@
 /**
  * Copyright (C) 2009-2014 Typesafe Inc. <http://www.typesafe.com>
  */
-package akka.stream.io2
+package akka.stream.io
 
 import java.net.{ InetSocketAddress, URLEncoder }
 
@@ -10,8 +10,8 @@ import akka.io.Inet.SocketOption
 import akka.io.{ IO, Udp }
 import akka.stream.MaterializerSettings
 import akka.stream.impl.ActorProcessor
-import akka.stream.io2.StreamUdp.UdpPacket
-import akka.stream.io2.StreamUdpManager.ExposedProcessor
+import akka.stream.io.StreamUdp.UdpPacket
+import akka.stream.io.StreamUdpManager.ExposedProcessor
 import akka.util.ByteString
 import org.reactivestreams.{ Processor, Publisher, Subscriber }
 
