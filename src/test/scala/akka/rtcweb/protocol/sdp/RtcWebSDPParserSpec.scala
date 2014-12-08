@@ -101,8 +101,7 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
           |a=fingerprint:sha-256 D3:D6:06:09:FC:5F:4D:54:E8:64:90:45:7C:7A:FA:92:56:54:19:9B:1C:A1:EA:2A:61:64:D8:04:41:5B:44:73
           |a=setup:actpass
           |a=mid:data
-          |a=fmtp:webrtc-datachannel max-message-size=100000
-          |a=sctp-port 5000
+          |a=sctpmap:5000 webrtc-datachannel 1024
         |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")))
 

@@ -79,7 +79,7 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
   // def number = rule((capture((1 to 18).times(DIGIT)) ~ !DIGIT) ~> (_.toLong)) | (oneOrMore(DIGIT) ~ push(999999999999999999L))
 
   /** Positive long value that does not start with a 0 (zero) */
-  def integer:Rule1[Long] = rule(
+  def integer: Rule1[Long] = rule(
     (capture(`POS-DIGIT` ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
       | oneOrMore(DIGIT) ~ push(999999999999999999L)))
 

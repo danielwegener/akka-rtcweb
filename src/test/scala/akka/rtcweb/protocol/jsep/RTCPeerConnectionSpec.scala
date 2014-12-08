@@ -5,17 +5,19 @@ import java.net.InetSocketAddress
 import akka.actor.ActorSystem
 import akka.rtcweb.protocol.ice.{Setup, Fingerprint, IcePwd, IceUfrag}
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ BundlePolicy, PeerConnectionConfiguration, RTCOfferOptions, CreateOffer }
-import akka.rtcweb.protocol.sdp
 import akka.rtcweb.protocol.sdp._
-import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
+import akka.rtcweb.protocol.sdp.grouping.{Semantics, Group, MediaStreamIdentifier}
+import akka.rtcweb.protocol.sdp.sctp.Sctpmap
 import akka.testkit.{ TestProbe, DefaultTimeout, TestKit, TestActorRef }
 import org.scalatest._
 import scala.concurrent.duration._
 
 class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with FreeSpecLike with GivenWhenThen with Matchers with BeforeAndAfterAll with Inspectors with OptionValues {
 
+  import Inspectors._
+
   val listenerProbe = TestProbe()
-  val bundlePolicy:BundlePolicy = BundlePolicy.`max-bundle`
+  val bundlePolicy: BundlePolicy = BundlePolicy.`max-bundle`
   val unitRef = TestActorRef[RTCPeerConnection](RTCPeerConnection.props(PeerConnectionConfiguration(Nil, 1, bundlePolicy)))
   val unit = unitRef.underlyingActor
 
@@ -100,8 +102,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
 
       """Each m= section should be generated as specified in [RFC4566],
         |Section 5.14.  For the m= line itself, the following rules MUST be
-        |followed:""".stripMargin - {
-        """The port value is set to the port of the default ICE candidate for
+        |followed:""".stripMargin - { """The port value is set to the port of the default ICE candidate for
           |this m= section, but given that no candidates have yet been
           |gathered, the "dummy" port value of 9 (Discard) MUST be used, as
           |indicated in [I-D.ietf-mmusic-trickle-ice], Section 5.1.
@@ -163,7 +164,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
 
         """An "a=sendrecv" line, as specified in [RFC3264], Section 5.1.""" in {
           forAll(initialOffer.mediaDescriptions) { m =>
-            val sendrcv = m.mediaAttributes.collectFirst { case e @ PropertyAttribute("sendrecv") => e }
+            val sendrcv = m.mediaAttributes.collectFirst { case e @PropertyAttribute("sendrecv") => e }
             sendrcv should be(Some(PropertyAttribute("sendrecv")))
           }
         }
@@ -212,7 +213,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
           |algorithm used for the fingerprint MUST match that used in the
           |certificate signature.""".stripMargin in {
           forAll(initialOffer.mediaDescriptions) { m =>
-            val fingerprint = m.mediaAttributes.collectFirst { case e @ Fingerprint(_, _) => e }
+            val fingerprint = m.mediaAttributes.collectFirst { case e @Fingerprint(_, _) => e }
             fingerprint.value.fingerprint
           }
         }
@@ -293,9 +294,6 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
           }
         }
 
-
-
-
       }
 
       """Lastly, if a data channel has been created, a m= section MUST be
@@ -306,13 +304,14 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         |value MUST be set to the SCTP port number, as specified in
         |Section 4.1.  [TODO: update this to use a=sctp-port, as indicated in
         |the latest data channel docs]""".stripMargin in {
-        if (rtcOfferOptions.RtpDataChannels) {
+        if (true /* TODO: ensure create dataChannel has been called */) {
           val m = initialOffer.mediaDescriptions.find(_.media == Media.application)
           /* FIXME: This seem to be an inconsistency between draft-ietf-rtcweb-jsep-08 and draft-ietf-mmusic-sctp-sdp-08
             * draft-ietf-mmusic-sctp-sdp-08 names the protocol identifier 'DTLS/SCTP'. Since it is in a newer version, we will use this */
 
+          val sctpmap = m.value.mediaAttributes.collectFirst{ case e: Sctpmap => e }
           m.value.protocol shouldBe MediaTransportProtocol.`DTLS/SCTP`
-          m.value.portRange.port shouldBe MediaTransportProtocol.`DTLS/SCTP`
+          m.value.fmt shouldBe List(sctpmap.value.number.toString)
 
 
         } else {
@@ -320,9 +319,92 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         }
       }
 
+      """Once all m= sections have been generated, a session-level "a=group"
+        |attribute MUST be added as specified in [RFC5888].  This attribute
+        |MUST have semantics "BUNDLE", and MUST include the mid identifiers of
+        |each m= section.  The effect of this is that the browser offers all
+        |m= sections as one BUNDLE group.  However, whether the m= sections
+        |are bundle-only or not depends on the BUNDLE policy.""".stripMargin - {
+
+        val mediaIdentifiersFromGroup = initialOffer.sessionAttributes.collectFirst{ case e@Group(Semantics.UnknownSemanticsExtension("BUNDLE"), mids) => mids }
+        val midsFromMedia = initialOffer.mediaDescriptions.flatMap{ md => md.mediaAttributes.collectFirst { case MediaStreamIdentifier(tag) => tag} }
+
+      }
+
+      """Attributes other than the ones specified above MAY be included,
+        |except for the following attributes which are specifically
+        |incompatible with the requirements of [I-D.ietf-rtcweb-rtp-usage],
+        |and MUST NOT be included:
+        |o "a=crypto"
+        |o  "a=key-mgmt"
+        |o  "a=ice-lite"
+        |""".stripMargin in {
+        forAll(initialOffer.mediaDescriptions) {
+          _ should not matchPattern {
+            case PropertyAttribute("crypto") =>
+            case PropertyAttribute("key-mgmt") =>
+            case PropertyAttribute("ice-lite") =>
+          }
+        }
+      }
+
+      """Note that when BUNDLE is used, any additional attributes that are
+        |added MUST follow the advice in [I-D.ietf-mmusic-sdp-mux-attributes]
+        |on how those attributes interact with BUNDLE.""" ignore {
+        //TODO: implement
+      }
+
+
+    }
+
+
+
+
+    "5.2.2.  Subsequent Offers" - {
+
+      info("""When createOffer is called a second (or later) time, or is called
+        |after a local description has already been installed, the processing
+        |is somewhat different than for an initial offer.""".stripMargin)
+
+        """If the initial offer was not applied using setLocalDescription,
+        |meaning the PeerConnection is still in the "stable" state, the steps
+        |for generating an initial offer should be followed, subject to the
+        |following restriction:""".stripMargin in {
+
+          val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true)
+          unitRef ! CreateOffer(rtcOfferOptions)
+          lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+          unitRef ! CreateOffer(rtcOfferOptions)
+          lazy val subsequentOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+
+          """The fields of the "o=" line MUST stay the same except for the
+            |<session-version> field, which MUST increment if the session
+            |description changes in any way, including the addition of ICE
+            |candidates.""".stripMargin in {
+            if (initialOffer != subsequentOffer) {
+              subsequentOffer.origin.`sess-id` shouldBe initialOffer.origin.`sess-id`
+              subsequentOffer.origin.`unicast-address` shouldBe initialOffer.origin.`unicast-address`
+              subsequentOffer.origin.addrtype shouldBe initialOffer.origin.addrtype
+              subsequentOffer.origin.nettype shouldBe initialOffer.origin.nettype
+              subsequentOffer.origin.username shouldBe initialOffer.origin.username
+              subsequentOffer.origin.`sess-version` shouldNot be(initialOffer.origin.`sess-version` + 1)
+            }
+          }
+
+      }
+
+      """ If the initial offer was applied using setLocalDescription, but an
+        |answer from the remote side has not yet been applied, meaning the
+        |PeerConnection is still in the "local-offer" state, an offer is
+        |generated by following the steps in the "stable" state above, along
+        |with these exceptions:""".stripMargin in {
+          //TODO: continue
+      }
 
     }
 
   }
 
-}
+  }
+
+

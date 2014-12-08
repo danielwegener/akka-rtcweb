@@ -7,7 +7,7 @@ import akka.io.Inet
 import akka.rtcweb.protocol.dtls.handshake.SessionId
 import akka.rtcweb.protocol.dtls.record.DtlsPlaintext
 import akka.stream.MaterializerSettings
-import akka.stream.io2.StreamUdp.UdpPacket
+import akka.stream.io.StreamUdp.UdpPacket
 import akka.util.ByteString
 
 import com.typesafe.config.Config

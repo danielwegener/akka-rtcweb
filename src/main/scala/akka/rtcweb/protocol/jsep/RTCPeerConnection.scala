@@ -4,7 +4,7 @@ import java.net.{ InetSocketAddress, InetAddress }
 
 import akka.actor.{ Props, ActorRef, Actor }
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.PeerConnectionConfiguration
-import akka.rtcweb.protocol.sdp.{ AddressType, Origin, ProtocolVersion, SessionDescription }
+import akka.rtcweb.protocol.sdp._
 import collection.immutable.Seq
 import scala.concurrent.duration._
 
@@ -386,13 +386,28 @@ final class RTCPeerConnection private[jsep] (private val config: PeerConnectionC
 
   override def receive: Receive = {
 
-    case CreateOffer(options) => sender ! new SessionDescription(protocolVersion = ProtocolVersion.`0`, origin = Origin(None, "pseudo-unique", 1, addrtype = AddressType.IP4, `unicast-address` = InetSocketAddress.createUnresolved("0.0.0.0", 0)))
+    case CreateOffer(options) => sender ! createOffer
     case CreateDataChannel(listener, label, dataChannelInit) =>
       val validChannelId = if (dataChannels.contains(dataChannelInit.id) || dataChannelInit.id == 0) nextChannelId else dataChannelInit.id
       val config = dataChannelInit.copy(id = validChannelId)
       val dataChannelActorProps = RTCDataChannel.props(listener, config)
       val dataChannelActor = context.actorOf(dataChannelActorProps)
       dataChannels += validChannelId -> (config, label, dataChannelActor)
+  }
+
+  private def createOffer = {
+
+    val mediaDescriptions: Seq[MediaDescription] = Nil
+
+    val sessionAttributes: Seq[Attribute] = Nil
+    new SessionDescription(
+      protocolVersion = ProtocolVersion.`0`,
+      origin = Origin(None, "pseudo-unique",
+        `sess-version` = 1,
+        addrtype = AddressType.IP4,
+        `unicast-address` = InetSocketAddress.createUnresolved("0.0.0.0", 0)),
+      sessionAttributes = sessionAttributes,
+      mediaDescriptions = mediaDescriptions)
   }
 
   private def nextChannelId: Int = { channelIdCounter += 1; channelIdCounter }

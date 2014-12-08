@@ -2,8 +2,8 @@ package akka.rtcweb.protocol.dtls
 
 import akka.rtcweb.protocol.dtls.StreamDtls.DtlsRecord
 import akka.rtcweb.protocol.dtls.record.DtlsPlaintext
-import akka.stream.Transformer
-import akka.stream.io2.StreamUdp.UdpPacket
+import akka.stream.{TransformerLike}
+import akka.stream.io.StreamUdp.UdpPacket
 import akka.util.ByteString
 
 import scodec._
@@ -14,7 +14,7 @@ import scalaz._
 
 import scala.collection.immutable
 
-private[dtls] class RecordDecoder(val serverSettings: ServerSettings) extends Transformer[UdpPacket, DtlsRecord] {
+private[dtls] class RecordDecoder(val serverSettings: ServerSettings) extends TransformerLike[UdpPacket, DtlsRecord] {
 
   /**
    * Invoked for each element to produce a (possibly empty) sequence of
@@ -29,7 +29,7 @@ private[dtls] class RecordDecoder(val serverSettings: ServerSettings) extends Tr
 
 }
 
-private[dtls] class RecordEncoder(val serverSettings: ServerSettings) extends Transformer[DtlsRecord, UdpPacket] {
+private[dtls] class RecordEncoder(val serverSettings: ServerSettings) extends TransformerLike[DtlsRecord, UdpPacket] {
   /**
    * Invoked for each element to produce a (possibly empty) sequence of
    * output elements.

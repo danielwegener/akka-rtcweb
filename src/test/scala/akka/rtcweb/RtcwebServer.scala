@@ -29,7 +29,7 @@ object RtcwebServer extends App {
 
   //(IO(StreamDtls) ? StreamDtls.Bind(materializer.settings, InetSocketAddress.createUnresolved("127.0.0.1", 4242))).mapTo[StreamDtls.DtlsConnection]
 
-  val httpBindingFuture = (IO(Http) ? Http.Bind(interface = "127.0.0.1", port = 8080)).mapTo[Http.ServerBinding]
+  val httpBindingFuture = Http(system).bind(interface = "127.0.0.1", port = 8080)
 
   val sdpMediaType = MediaType.custom("application/sdp")
 
@@ -39,10 +39,9 @@ object RtcwebServer extends App {
   implicit val toSessionDescriptionUnmarshaller = Unmarshaller((SessionDescriptionParser.parse _).andThen(a => Future.apply(a)))
 
   val renderer = new RtcWebSDPRenderer
+  import akka.http.server.Directives._
 
-  import akka.http.server.ScalaRoutingDSL._
-
-  handleConnections(httpBindingFuture) withRoute {
+  httpBindingFuture startHandlingWith {
     (get | post) {
       path("") {
         complete(index)
@@ -75,6 +74,5 @@ object RtcwebServer extends App {
   Console.readLine()
   system.shutdown()
 
-  ////////////// helpers //////////////
 
 }
