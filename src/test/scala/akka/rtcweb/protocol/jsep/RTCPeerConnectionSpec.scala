@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 
 import akka.actor.ActorSystem
 import akka.rtcweb.protocol.ice.{Setup, Fingerprint, IcePwd, IceUfrag}
-import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ BundlePolicy, PeerConnectionConfiguration, RTCOfferOptions, CreateOffer }
+import akka.rtcweb.protocol.jsep.RTCPeerConnection._
 import akka.rtcweb.protocol.sdp._
 import akka.rtcweb.protocol.sdp.grouping.{Semantics, Group, MediaStreamIdentifier}
 import akka.rtcweb.protocol.sdp.sctp.Sctpmap
@@ -14,9 +14,9 @@ import scala.concurrent.duration._
 
 class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with FreeSpecLike with GivenWhenThen with Matchers with BeforeAndAfterAll with Inspectors with OptionValues {
 
-  import Inspectors._
 
   val listenerProbe = TestProbe()
+  val dataChannelProbe = TestProbe()
   val bundlePolicy: BundlePolicy = BundlePolicy.`max-bundle`
   val unitRef = TestActorRef[RTCPeerConnection](RTCPeerConnection.props(PeerConnectionConfiguration(Nil, 1, bundlePolicy)))
   val unit = unitRef.underlyingActor
@@ -32,10 +32,13 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
 
     "Initial Offers" - {
 
+      unitRef ! CreateDataChannel(dataChannelProbe.ref, "my-data-channel")
       When("createOffer is called for the first time, the result is known as the initial offer.")
-      val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true)
-      unitRef ! CreateOffer(rtcOfferOptions)
-      lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+      val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = false)
+      listenerProbe.send(unitRef, CreateOffer(rtcOfferOptions))
+      lazy val initialRTCOffer = listenerProbe.expectMsgClass(1 second, classOf[RTCSessionDescription.offer])
+      lazy val initialOffer = initialRTCOffer.sessionDescription
+
 
       info(
         """
@@ -127,10 +130,10 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         |gathered, the "c=" line must contain the "dummy" value "IN IP6 ::",
         | as defined in [I-D.ietf-mmusic-trickle-ice], Section 5.1.""".stripMargin in {
         forAll(initialOffer.mediaDescriptions) { m =>
-          m.connectionInformation should have size 1
-          m.connectionInformation(0).nettype should be(NetworkType.IN)
-          m.connectionInformation(0).addrtype should be(AddressType.IP6)
-          m.connectionInformation(0).`connection-address` should be(InetSocketAddress.createUnresolved("::", 0))
+
+          m.connectionInformation.value.nettype should be(NetworkType.IN)
+          m.connectionInformation.value.addrtype should be(AddressType.IP6)
+          m.connectionInformation.value.`connection-address` should be(InetSocketAddress.createUnresolved("::", 0))
 
         }
       }

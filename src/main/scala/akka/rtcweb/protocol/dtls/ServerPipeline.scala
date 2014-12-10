@@ -2,7 +2,7 @@ package akka.rtcweb.protocol.dtls
 
 import akka.event.LoggingAdapter
 import akka.rtcweb.protocol.dtls.StreamDtls.{ DtlsRecord, DtlsConnection }
-import akka.stream.{TransformerLike, FlowMaterializer}
+import akka.stream.{ TransformerLike, FlowMaterializer }
 import akka.stream.io.StreamUdp.{ UdpPacket, UdpConnection }
 import akka.stream.io.StreamUdp
 

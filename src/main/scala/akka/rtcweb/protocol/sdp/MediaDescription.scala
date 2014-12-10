@@ -23,7 +23,7 @@ final case class MediaDescription(
   protocol: MediaTransportProtocol,
   mediaAttributes: Seq[Attribute],
   fmt: Seq[String],
-  connectionInformation: Seq[ConnectionData],
+  connectionInformation: Option[ConnectionData],
   bandwidthInformation: Seq[BandwidthInformation],
   encryptionKey: Option[EncryptionKey])
 

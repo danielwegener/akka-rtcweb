@@ -135,7 +135,7 @@ private[protocol] trait MediaParser {
   def `media-description` = rule {
     `media-field` ~
       optional(`information-field`) ~
-      zeroOrMore(`connection-field`) ~
+      optional(`connection-field`) ~
       zeroOrMore(`bandwidth-field`) ~
       optional(`key-field`) ~ // the ignored zeroOrMore(`bandwidth-field`) is a workaround for chromes missplaced sdp bandwidth rendering
       zeroOrMore(`media-attribute-field` ~ zeroOrMore(`bandwidth-field`) ~> ((attr, ignore) => attr)) ~> ((mf, i, conn, bw, key, attr) => MediaDescription(mf._1, i, mf._2, mf._3, attr, mf._4, conn, bw, key))

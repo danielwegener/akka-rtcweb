@@ -3,12 +3,13 @@ package akka.rtcweb.protocol.jsep
 import java.net.{ InetSocketAddress, InetAddress }
 
 import akka.actor.{ Props, ActorRef, Actor }
-import akka.rtcweb.protocol.jsep.RTCPeerConnection.PeerConnectionConfiguration
+import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ ICECandidatePolicy, PeerConnectionConfiguration }
 import akka.rtcweb.protocol.sdp._
 import collection.immutable.Seq
 import scala.concurrent.duration._
 
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Random
 
 object RTCPeerConnection {
 
@@ -30,6 +31,66 @@ object RTCPeerConnection {
   sealed trait BundlePolicy
 
   /**
+   *  Typically, when gathering ICE candidates, the browser will gather all
+   * possible forms of initial candidates - host, server reflexive, and
+   * relay.  However, in certain cases, applications may want to have more
+   * specific control over the gathering process, due to privacy or
+   * related concerns.  For example, one may want to suppress the use of
+   * host candidates, to avoid exposing information about the local
+   * network, or go as far as only using relay candidates, to leak as
+   * little location information as possible (note that these choices come
+   * with corresponding operational costs).  To accomplish this, the
+   * browser MUST allow the application to restrict which ICE candidates
+   * are used in a session.  In addition, administrators may also wish to
+   * control the set of ICE candidates, and so the browser SHOULD also
+   * allow control via local policy, with the most restrictive policy
+   * prevailing.
+   *
+   * There may also be cases where the application wants to change which
+   * types of candidates are used while the session is active.  A prime
+   * example is where a callee may initially want to use only relay
+   * candidates, to avoid leaking location information to an arbitrary
+   * caller, but then change to use all candidates (for lower operational
+   * cost) once the user has indicated they want to take the call.  For
+   * this scenario, the browser MUST allow the candidate policy to be
+   * changed in mid-session, subject to the aforementioned interactions
+   * with local policy.
+   *
+   * To administer the ICE candidate policy, the browser will determine
+   * the current setting at the start of each gathering phase.  Then,
+   * during the gathering phase, the browser MUST NOT expose candidates
+   * disallowed by the current policy to the application, use them as the
+   * source of connectivity checks, or indirectly expose them via other
+   * fields, such as the raddr/rport attributes for other ICE candidates.
+   * Later, if a different policy is specified by the application, the
+   * application can apply it by kicking off a new gathering phase via an
+   * ICE restart.
+   * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-3.4.3]]
+   */
+  sealed trait ICECandidatePolicy
+
+  object ICECandidatePolicy {
+    /** All candidates will be gathered and used. **/
+    case object all extends ICECandidatePolicy
+    /**
+     * Candidates with private IP addresses [RFC1918] will be
+     * filtered out.  This prevents exposure of internal network details,
+     * at the cost of requiring relay usage even for intranet calls, if
+     * the NAT does not allow hairpinning as described in [RFC4787],
+     * section 6. *
+     */
+    case object public extends ICECandidatePolicy
+    /**
+     * All candidates except relay candidates will be filtered out.
+     * This obfuscates the location information that might be ascertained
+     * by the remote peer from the received candidates.  Depending on how
+     * the application deploys its relay servers, this could obfuscate
+     * location to a metro or possibly even global level. *
+     */
+    case object relay extends ICECandidatePolicy
+  }
+
+  /**
    * Session description objects (RTCSessionDescription) may be of type
    * "offer", "pranswer", and "answer".  These types provide information
    * as to how the description parameter should be parsed, and how the
@@ -43,10 +104,25 @@ object RTCPeerConnection {
 
   final case class StunServerDescription(address: InetAddress, credentials: Option[Nothing] = None)
 
+  /**
+   * @param stunServers TODO
+   * @param iceCandidatePoolSize TODO
+   * @param bundlePolicy   Lastly, the application can specify its preferred policy regarding
+   * use of BUNDLE, the multiplexing mechanism defined in
+   * [I-D.ietf-mmusic-sdp-bundle-negotiation].  By specifying a policy
+   * from the list below, the application can control how aggressively it
+   * will try to BUNDLE media streams together.  The set of available
+   * policies is as follows:
+   * @param iceCandidatePolicy If an ICE candidate policy is specified,
+   * it functions as described in Section 3.4.3, causing the browser to only surface the permitted
+   * candidates to the application, and only use those candidates for
+   * connectivity checks.  The set of available policies is as follows:
+   */
   final case class PeerConnectionConfiguration(
     stunServers: Seq[StunServerDescription],
     iceCandidatePoolSize: Int,
-    bundlePolicy: BundlePolicy)
+    bundlePolicy: BundlePolicy,
+    iceCandidatePolicy: ICECandidatePolicy = ICECandidatePolicy.all)
 
   /**
    *  The createOffer method takes as a parameter an RTCOfferOptions
@@ -108,7 +184,6 @@ object RTCPeerConnection {
     IceRestart: Boolean = false,
     DtlsSrtpKeyAgreement: Boolean,
     RtpDataChannels: Boolean)
-
   final case class CreateAnswerOptions()
 
   /**
@@ -212,7 +287,7 @@ object RTCPeerConnection {
   final case class CreateAnswer(options: CreateAnswerOptions) extends PeerConnectionMessage
 
   /**
-   *   The SetLocalDescription method instructs the PeerConnection to apply
+   * The SetLocalDescription method instructs the PeerConnection to apply
    * the supplied SDP blob as its local configuration.  The type field
    * indicates whether the blob should be processed as an offer,
    * provisional answer, or final answer; offers and answers are checked
@@ -238,10 +313,77 @@ object RTCPeerConnection {
    * setLocalDescription is called with an answer (provisional or final),
    * and the media directions are compatible, and media are available to
    * send, this will result in the starting of media transmission.
+   * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.5]]
    */
-  final case class SetLocalDescription(todo: Nothing = ???) extends PeerConnectionMessage
+  final case class SetLocalDescription(rtcSessionDescription: RTCSessionDescription) extends PeerConnectionMessage
 
-  final case class SetRemoteDescription(todo: Nothing = ???) extends PeerConnectionMessage
+  /**
+   * The setRemoteDescription method instructs the PeerConnection to apply
+   * the supplied SDP blob as the desired remote configuration.  As in
+   * setLocalDescription, the type field of the indicates how the blob
+   * should be processed.
+   *
+   * This API changes the local media state; among other things, it sets
+   * up local resources for sending and encoding media.
+   *
+   * If setLocalDescription was previously called with an offer, and
+   * setRemoteDescription is called with an answer (provisional or final),
+   * and the media directions are compatible, and media are available to
+   * send, this will result in the starting of media transmission.
+   * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.6]]
+   */
+  final case class SetRemoteDescription(rtcSessionDescription: RTCSessionDescription) extends PeerConnectionMessage
+
+  /**
+   * The localDescription method returns a copy of the current local
+   * configuration, i.e. what was most recently passed to
+   * setLocalDescription, plus any local candidates that have been
+   * generated by the ICE Agent.
+   *
+   * A null object will be returned if the local description has not yet
+   * been established, or if the PeerConnection has been closed.
+   * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.7]]
+   */
+  case object GetLocalDescription extends PeerConnectionMessage
+
+  /**
+   * The setConfiguration method allows the global configuration of the
+   * PeerConnection, which was initially set by constructor parameters, to
+   * be changed during the session.  The effects of this method call
+   * depend on when it is invoked, and differ depending on which specific
+   * parameters are changed:
+   *
+   * o  Any changes to the STUN/TURN servers to use affect the next
+   * gathering phase.  If gathering has already occurred, this will
+   * cause the next call to createOffer to generate new ICE
+   * credentials, for the purpose of forcing an ICE restart and kicking
+   * off a new gathering phase, in which the new servers will be used.
+   * If the ICE candidate pool has a nonzero size, any existing
+   * candidates will be discarded, and new candidates will be gathered
+   * from the new servers.
+   *
+   * o  Any changes to the ICE candidate policy also affect the next
+   * gathering phase, in similar fashion to the server changes
+   * described above.  Note though that changes to the policy have no
+   * effect on the candidate pool, because pooled candidates are not
+   * surfaced to the application until a gathering phase occurs, and so
+   * any necessary filtering can still be done on any pooled
+   * candidates.
+   *
+   * o  Any changes to the ICE candidate pool size take effect
+   * immediately; if increased, additional candidates are pre-gathered;
+   * if decreased, the now-superfluous candidates are discarded.
+   *
+   * o  Any changes to the BUNDLE policy take effect immediately, i.e.
+   * any future tracks added to the PeerConnection will have their
+   * bundle-only state marked accordingly.
+   *
+   * This call may result in a change to the state of the ICE Agent, and
+   * may result in a change to media state if it results in connectivity
+   * being established.
+   * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.10]]
+   */
+  final case class SetConfiguration(configuration: RTCPeerConnection.PeerConnectionConfiguration) extends PeerConnectionMessage
 
   /**
    * Creates a new RTCDataChannel object with the given label. The RTCDataChannelInit dictionary can be
@@ -318,6 +460,14 @@ object RTCPeerConnection {
      * candidates to be gathered for each media stream.
      */
     case object `max-compat` extends BundlePolicy
+
+    /**
+     * Similar to [[`max-bundle`]], but RTCP candidates
+     * are not gathered.  This policy reduces the candidates that must be
+     * gathered to the absolute minimum, but will not be compatible with
+     * legacy endpoints that do not support RTCP mux.
+     */
+    case object `max-bundle-and-rtcp-mux` extends BundlePolicy
   }
   object RTCSessionDescription {
 
@@ -378,15 +528,20 @@ object RTCPeerConnection {
 
 final class RTCPeerConnection private[jsep] (private val config: PeerConnectionConfiguration) extends Actor {
 
+  require(config.iceCandidatePolicy == ICECandidatePolicy.all, "Only ICECandidatePolicy.all is supported yet.")
+
   import RTCPeerConnection._
 
   private var channelIdCounter: Int = 0
   /** known dataChannels, id to ActorRef */
-  private var dataChannels: Map[Int, (RTCDataChannelInit, Label, ActorRef)] = Map.empty
+  private val dataChannels: collection.mutable.Map[Int, (RTCDataChannelInit, Label, ActorRef)] = collection.mutable.Map.empty
 
   override def receive: Receive = {
 
-    case CreateOffer(options) => sender ! createOffer
+    case CreateOffer(options) => {
+      require(!options.RtpDataChannels, "Option RtpDataChannels is not yet supported")
+      sender ! RTCSessionDescription.offer(createOffer)
+    }
     case CreateDataChannel(listener, label, dataChannelInit) =>
       val validChannelId = if (dataChannels.contains(dataChannelInit.id) || dataChannelInit.id == 0) nextChannelId else dataChannelInit.id
       val config = dataChannelInit.copy(id = validChannelId)
@@ -395,19 +550,49 @@ final class RTCPeerConnection private[jsep] (private val config: PeerConnectionC
       dataChannels += validChannelId -> (config, label, dataChannelActor)
   }
 
+  private def createSessionId = Random.nextLong()
+
   private def createOffer = {
 
-    val mediaDescriptions: Seq[MediaDescription] = Nil
+    val mediaDescriptions: Seq[MediaDescription] = dataChannels.map { case (id, dc) =>
+      val attributes:Seq[Attribute] = Nil
 
-    val sessionAttributes: Seq[Attribute] = Nil
-    new SessionDescription(
+      MediaDescription(media = Media.application,
+                        mediaTitle=None,
+                        portRange = PortRange(1),
+                        protocol = MediaTransportProtocol.`DTLS/SCTP`,
+                        mediaAttributes = attributes,
+                        fmt = Nil,
+                        connectionInformation = Some(
+                          ConnectionData(NetworkType.IN, AddressType.IP6, InetSocketAddress.createUnresolved("::",0))
+                        ),
+                        bandwidthInformation = Nil,
+                        encryptionKey = None
+      )
+    }.toList
+
+    val sessionAttributes: Seq[Attribute] = Seq(ValueAttribute("msid-semantic", "WMS"))
+
+    SessionDescription(
       protocolVersion = ProtocolVersion.`0`,
-      origin = Origin(None, "pseudo-unique",
-        `sess-version` = 1,
+      origin = Origin(
+        username = None,
+        `sess-id` = createSessionId.toString,
+        `sess-version` = 0L,
         addrtype = AddressType.IP4,
         `unicast-address` = InetSocketAddress.createUnresolved("0.0.0.0", 0)),
       sessionAttributes = sessionAttributes,
-      mediaDescriptions = mediaDescriptions)
+      mediaDescriptions = mediaDescriptions,
+      sessionName = None,
+      sessionInformation = None,
+      descriptionUri = None,
+      emailAddresses = Nil,
+      phoneNumbers = Nil,
+      connectionInformation = None,
+      bandwidthInformation = None,
+      encryptionKey = None,
+      timings = Seq(Timing(Some(0L), Some(0L)))
+    )
   }
 
   private def nextChannelId: Int = { channelIdCounter += 1; channelIdCounter }

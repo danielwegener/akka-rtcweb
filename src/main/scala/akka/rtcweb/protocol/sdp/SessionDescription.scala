@@ -62,7 +62,7 @@ final case class SessionDescription(
     sessionAttributes: Seq[Attribute] = Nil,
     mediaDescriptions: Seq[MediaDescription] = Nil) {
 
-  require(connectionInformation.isDefined || mediaDescriptions.nonEmpty && mediaDescriptions.forall(_.connectionInformation.nonEmpty),
+  require(connectionInformation.isDefined || (mediaDescriptions.nonEmpty && mediaDescriptions.forall(_.connectionInformation.isDefined)),
     """A session description MUST contain either at least one connectionInformation in
             | each media description or a single connectionInformation at the session level.
             | It MAY contain a single session-level connectionInformation and additional connectionInformation
