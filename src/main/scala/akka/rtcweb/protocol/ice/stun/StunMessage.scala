@@ -110,13 +110,40 @@ object StunMessageHeader {
  * the transaction IDs in requests received by the agent.
  */
 case class StunMessage(
-  stunMessageType: StunMessageType,
-  length: Int,
+  messageClass: Class,
+  method: Method,
   transactionId: ByteVector,
   attribute: Vector[StunAttribute])
 
-sealed trait StunMessageType
-object StunMessageType {
+sealed trait Class
 
+/**
+ * C1 and C0 represent a 2-bit encoding of
+ * the class.  A class of 0b00 is a request, a class of 0b01 is an
+ * indication, a class of 0b10 is a success response, and a class of
+ * 0b11 is an error response.
+ */
+object Class {
+  implicit val codec:Codec[Class] = mappedEnum(bits(2),
+    request -> bin"00",
+    indication -> bin"01",
+    successResponse -> bin"10",
+    errorResponse -> bin"11"
+  )
+  case object request extends Class
+  case object indication extends Class
+  case object successResponse extends Class
+  case object errorResponse extends Class
 }
 
+sealed trait Method
+object Method {
+  implicit val codec:Codec[Method] = mappedEnum(bits(12),
+    Binding -> bin"0b000000000001"
+  )
+
+  final case class UnknownMethod(bits:BitVector) extends Method
+  case object Binding extends Method
+
+
+}
