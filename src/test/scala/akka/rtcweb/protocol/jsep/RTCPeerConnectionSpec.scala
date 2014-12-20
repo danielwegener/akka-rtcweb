@@ -3,17 +3,16 @@ package akka.rtcweb.protocol.jsep
 import java.net.InetSocketAddress
 
 import akka.actor.ActorSystem
-import akka.rtcweb.protocol.ice.{Setup, Fingerprint, IcePwd, IceUfrag}
+import akka.rtcweb.protocol.ice.{ Setup, Fingerprint, IcePwd, IceUfrag }
 import akka.rtcweb.protocol.jsep.RTCPeerConnection._
 import akka.rtcweb.protocol.sdp._
-import akka.rtcweb.protocol.sdp.grouping.{Semantics, Group, MediaStreamIdentifier}
+import akka.rtcweb.protocol.sdp.grouping.{ Semantics, Group, MediaStreamIdentifier }
 import akka.rtcweb.protocol.sdp.sctp.Sctpmap
 import akka.testkit.{ TestProbe, DefaultTimeout, TestKit, TestActorRef }
 import org.scalatest._
 import scala.concurrent.duration._
 
 class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with FreeSpecLike with GivenWhenThen with Matchers with BeforeAndAfterAll with Inspectors with OptionValues {
-
 
   val listenerProbe = TestProbe()
   val dataChannelProbe = TestProbe()
@@ -30,7 +29,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
       """createOffer is called, a new SDP description must be created that includes the functionality specified in
            |[I-D.ietf-rtcweb-rtp-usage].  The exact details of this process are explained below.""".stripMargin)
 
-    "Initial Offers" - {
+    "5.2.1 Initial Offers" - {
 
       unitRef ! CreateDataChannel(dataChannelProbe.ref, "my-data-channel")
       When("createOffer is called for the first time, the result is known as the initial offer.")
@@ -38,7 +37,6 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
       listenerProbe.send(unitRef, CreateOffer(rtcOfferOptions))
       lazy val initialRTCOffer = listenerProbe.expectMsgClass(1 second, classOf[RTCSessionDescription.offer])
       lazy val initialOffer = initialRTCOffer.sessionDescription
-
 
       info(
         """
@@ -60,7 +58,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         }
 
         "To ensure uniqueness, this number SHOULD be at least 64 bits long" in {
-          initialOffer.origin.`sess-id` should have length 8
+          initialOffer.origin.`sess-id`.length should be >= 8
         }
 
         "The value of the <sess-version> field SHOULD be zero" in {
@@ -105,7 +103,8 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
 
       """Each m= section should be generated as specified in [RFC4566],
         |Section 5.14.  For the m= line itself, the following rules MUST be
-        |followed:""".stripMargin - { """The port value is set to the port of the default ICE candidate for
+        |followed:""".stripMargin - {
+        """The port value is set to the port of the default ICE candidate for
           |this m= section, but given that no candidates have yet been
           |gathered, the "dummy" port value of 9 (Discard) MUST be used, as
           |indicated in [I-D.ietf-mmusic-trickle-ice], Section 5.1.
@@ -167,7 +166,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
 
         """An "a=sendrecv" line, as specified in [RFC3264], Section 5.1.""" in {
           forAll(initialOffer.mediaDescriptions) { m =>
-            val sendrcv = m.mediaAttributes.collectFirst { case e @PropertyAttribute("sendrecv") => e }
+            val sendrcv = m.mediaAttributes.collectFirst { case e @ PropertyAttribute("sendrecv") => e }
             sendrcv should be(Some(PropertyAttribute("sendrecv")))
           }
         }
@@ -216,7 +215,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
           |algorithm used for the fingerprint MUST match that used in the
           |certificate signature.""".stripMargin in {
           forAll(initialOffer.mediaDescriptions) { m =>
-            val fingerprint = m.mediaAttributes.collectFirst { case e @Fingerprint(_, _) => e }
+            val fingerprint = m.mediaAttributes.collectFirst { case e @ Fingerprint(_, _) => e }
             fingerprint.value.fingerprint
           }
         }
@@ -307,15 +306,14 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         |value MUST be set to the SCTP port number, as specified in
         |Section 4.1.  [TODO: update this to use a=sctp-port, as indicated in
         |the latest data channel docs]""".stripMargin in {
-        if (true /* TODO: ensure create dataChannel has been called */) {
+        if (true /* TODO: ensure create dataChannel has been called */ ) {
           val m = initialOffer.mediaDescriptions.find(_.media == Media.application)
           /* FIXME: This seem to be an inconsistency between draft-ietf-rtcweb-jsep-08 and draft-ietf-mmusic-sctp-sdp-08
             * draft-ietf-mmusic-sctp-sdp-08 names the protocol identifier 'DTLS/SCTP'. Since it is in a newer version, we will use this */
 
-          val sctpmap = m.value.mediaAttributes.collectFirst{ case e: Sctpmap => e }
+          val sctpmap = m.value.mediaAttributes.collectFirst { case e: Sctpmap => e }
           m.value.protocol shouldBe MediaTransportProtocol.`DTLS/SCTP`
           m.value.fmt shouldBe List(sctpmap.value.number.toString)
-
 
         } else {
           info(s"In this case, the bundle-policy was $bundlePolicy")
@@ -329,8 +327,8 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         |m= sections as one BUNDLE group.  However, whether the m= sections
         |are bundle-only or not depends on the BUNDLE policy.""".stripMargin - {
 
-        val mediaIdentifiersFromGroup = initialOffer.sessionAttributes.collectFirst{ case e@Group(Semantics.UnknownSemanticsExtension("BUNDLE"), mids) => mids }
-        val midsFromMedia = initialOffer.mediaDescriptions.flatMap{ md => md.mediaAttributes.collectFirst { case MediaStreamIdentifier(tag) => tag} }
+        val mediaIdentifiersFromGroup = initialOffer.sessionAttributes.collectFirst { case e @ Group(Semantics.UnknownSemanticsExtension("BUNDLE"), mids) => mids }
+        val midsFromMedia = initialOffer.mediaDescriptions.flatMap { md => md.mediaAttributes.collectFirst { case MediaStreamIdentifier(tag) => tag } }
 
       }
 
@@ -357,11 +355,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         //TODO: implement
       }
 
-
     }
-
-
-
 
     "5.2.2.  Subsequent Offers" - {
 
@@ -369,30 +363,30 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         |after a local description has already been installed, the processing
         |is somewhat different than for an initial offer.""".stripMargin)
 
-        """If the initial offer was not applied using setLocalDescription,
+      """If the initial offer was not applied using setLocalDescription,
         |meaning the PeerConnection is still in the "stable" state, the steps
         |for generating an initial offer should be followed, subject to the
         |following restriction:""".stripMargin in {
 
-          val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true)
-          unitRef ! CreateOffer(rtcOfferOptions)
-          lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
-          unitRef ! CreateOffer(rtcOfferOptions)
-          lazy val subsequentOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+        val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true)
+        unitRef ! CreateOffer(rtcOfferOptions)
+        lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+        unitRef ! CreateOffer(rtcOfferOptions)
+        lazy val subsequentOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
 
-          """The fields of the "o=" line MUST stay the same except for the
+        """The fields of the "o=" line MUST stay the same except for the
             |<session-version> field, which MUST increment if the session
             |description changes in any way, including the addition of ICE
             |candidates.""".stripMargin in {
-            if (initialOffer != subsequentOffer) {
-              subsequentOffer.origin.`sess-id` shouldBe initialOffer.origin.`sess-id`
-              subsequentOffer.origin.`unicast-address` shouldBe initialOffer.origin.`unicast-address`
-              subsequentOffer.origin.addrtype shouldBe initialOffer.origin.addrtype
-              subsequentOffer.origin.nettype shouldBe initialOffer.origin.nettype
-              subsequentOffer.origin.username shouldBe initialOffer.origin.username
-              subsequentOffer.origin.`sess-version` shouldNot be(initialOffer.origin.`sess-version` + 1)
-            }
+          if (initialOffer != subsequentOffer) {
+            subsequentOffer.origin.`sess-id` shouldBe initialOffer.origin.`sess-id`
+            subsequentOffer.origin.`unicast-address` shouldBe initialOffer.origin.`unicast-address`
+            subsequentOffer.origin.addrtype shouldBe initialOffer.origin.addrtype
+            subsequentOffer.origin.nettype shouldBe initialOffer.origin.nettype
+            subsequentOffer.origin.username shouldBe initialOffer.origin.username
+            subsequentOffer.origin.`sess-version` shouldNot be(initialOffer.origin.`sess-version` + 1)
           }
+        }
 
       }
 
@@ -401,13 +395,12 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
         |PeerConnection is still in the "local-offer" state, an offer is
         |generated by following the steps in the "stable" state above, along
         |with these exceptions:""".stripMargin in {
-          //TODO: continue
+        //TODO: continue
       }
 
     }
 
   }
 
-  }
-
+}
 

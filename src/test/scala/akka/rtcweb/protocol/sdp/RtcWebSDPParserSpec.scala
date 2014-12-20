@@ -133,7 +133,6 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
         PropertyAttribute("custom")))
       result.mediaDescriptions(3).mediaAttributes should contain(SctpPort(5000))
 
-
       result.mediaDescriptions(1).mediaAttributes should contain {
         Candidate("1738249477", 1, Transport.UDP, Priority(2122260223L), InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.host, None, List("generation" -> "0"))
       }

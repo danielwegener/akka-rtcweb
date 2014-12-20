@@ -1,12 +1,11 @@
 package akka.rtcweb.protocol
 
 import akka.parboiled2._
-import akka.rtcweb.protocol.ice.parser.{ IceExtensionAttributeParser, CandidateParser }
+import akka.rtcweb.protocol.ice.parser.IceExtensionAttributeParser
 import akka.rtcweb.protocol.sdp.ExtensionAttribute
 import akka.rtcweb.protocol.sdp.grouping.parser.GroupParser
 import akka.rtcweb.protocol.sdp.parser._
 import akka.rtcweb.protocol.sdp.sctp.parser.SctpExtensionAttributeParser
-import akka.shapeless._
 
 trait RtcWebSDPParser extends Parser
     with CommonSdpParser
