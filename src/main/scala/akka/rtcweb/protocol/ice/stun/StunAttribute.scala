@@ -1,11 +1,12 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.InetSocketAddress
+import java.net.{ InetAddress, InetSocketAddress }
 
 import scodec._
-import scodec.bits._
+import scodec.bits.HexStringSyntax
 import codecs._
 import scalaz.\/
+import akka.rtcweb.protocol.scodec.SCodecContrib._
 
 sealed trait StunAttributeType
 
@@ -71,7 +72,8 @@ object StunAttribute {
     }
 
   }.as[StunAttribute]*/
-    ??? }
+    ???
+  }
 
 }
 
@@ -83,7 +85,9 @@ object StunAttribute {
  * address family is IPv6, the address MUST be 128 bits.  All fields
  * must be in network byte order.
  */
-case class `MAPPED-ADDRESS`(family: `MAPPED-ADDRESS`.Family, address: InetSocketAddress) extends StunAttribute
+case class `MAPPED-ADDRESS`(family: `MAPPED-ADDRESS`.Family, port: Int, address: InetAddress) extends StunAttribute {
+  lazy val inetSocketAddress = new InetSocketAddress(address, port)
+}
 
 object `MAPPED-ADDRESS` {
 
@@ -100,13 +104,23 @@ object `MAPPED-ADDRESS` {
    * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    * }}}
    */
-  implicit val codec: Codec[`MAPPED-ADDRESS`] = ??? /*{
+  implicit val codec: Codec[`MAPPED-ADDRESS`] = {
     ignore(8) ::
-      { "Family" | Family.codec } ::
-      { "Port" | uint8 } ::
-      { "Address" | ??? }
-
-  }.as[`MAPPED-ADDRESS`]*/
+      {
+        "Family" | Family.codec >>:~ { family =>
+          {
+            "Port" | uint8
+          } :: {
+            "Address" | {
+              family match {
+                case Family.IPv4 => ipv4Address
+                case Family.IPv6 => ipv6Address
+              }
+            }
+          }
+        }
+      }
+  }.dropUnits.as[`MAPPED-ADDRESS`]
 
   sealed trait Family
 

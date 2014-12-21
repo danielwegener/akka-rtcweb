@@ -1,7 +1,9 @@
 package akka.rtcweb.protocol.scodec
 
+import java.net.{ InetAddress, InetSocketAddress }
+
 import scodec.{ Encoder, Err, Codec }
-import scodec.bits.BitVector
+import scodec.bits.{ ByteVector, BitVector }
 import scodec.bits.BitVector._
 import scodec.codecs._
 import shapeless._
@@ -27,6 +29,18 @@ object SCodecContrib {
   final def duration[A: Numeric](discriminatorCodec: Codec[A], unit: TimeUnit) = discriminatorCodec.xmap[FiniteDuration](
     a => FiniteDuration.apply(implicitly[Numeric[A]].toLong(a), unit),
     a => implicitly[Numeric[A]].fromInt(a.toUnit(unit).toInt))
+
+  final def ipv4Address: Codec[InetAddress] = {
+    bytes(4).xmap(bits => InetAddress.getByAddress(bits.toArray),
+      f => ByteVector(f.getAddress)
+    )
+  }
+
+  final def ipv6Address: Codec[InetAddress] = {
+    bytes(32).xmap(bits => InetAddress.getByAddress(bits.toArray),
+      f => ByteVector(f.getAddress)
+    )
+  }
 
   /**
    * Codec that always encodes the specified value using an implicit available encoder and always decodes the specified value, returning `()` if the actual bits match
@@ -167,6 +181,8 @@ private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingMod
     gap = paddingGap(encA.length, paddingModulo)
   } yield encA ++ low(gap)
 
+  def paddingGap(length: Long, alignSteps: Int): Long = (alignSteps - length % alignSteps) % alignSteps
+
   override def decode(buffer: BitVector) =
     valueCodec.decode(buffer) match {
       case e @ -\/(_) => e
@@ -175,8 +191,6 @@ private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingMod
         \/-((rest.drop(gap), res))
       }
     }
-
-  def paddingGap(length: Long, alignSteps: Int): Long = (alignSteps - length % alignSteps) % alignSteps
 
   override def toString = s"alignBits($valueCodec, $paddingModulo)"
 }

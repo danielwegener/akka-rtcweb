@@ -5,7 +5,7 @@ import scodec.bits._
 import codecs._
 import shapeless._
 
-import scalaz.{-\/, \/-}
+import scalaz.{ -\/, \/- }
 
 /**
  * STUN messages are encoded in binary using network-oriented format
@@ -39,10 +39,10 @@ object StunMessage {
   implicit lazy val codec: Codec[StunMessage] = "STUN header" | {
     { "0 0" | constant(bin"0b00") } ::
       { "STUN Message Type" | stunMessageTypeCodec } :::
-      variableSizeBytes( { "Message Length" | uint16 },
+      variableSizeBytes({ "Message Length" | uint16 },
         { "Magic Cookie" | constant(hex"0x2112A442") } ::
-        { "Transaction ID" | fixedSizeBits(96, bytes) } ::
-        { "Attributes" | vector(StunAttribute.codec) }
+          { "Transaction ID" | fixedSizeBits(96, bytes) } ::
+          { "Attributes" | vector(StunAttribute.codec) }
       )
 
   }.dropUnits.as[StunMessage]
@@ -72,8 +72,8 @@ object StunMessage {
    * methods MUST indicate which classes are permitted for that method.
    */
   val stunMessageTypeBitCodec = {
-    codecs.bits(14).xmap[BitVector::BitVector::HNil](
-      v => v.slice(0, 5) ++ v.slice(6, 9) ++ v.slice(10, 14)  :: v.slice(5, 6) ++ v.slice(9, 10) ::HNil,
+    codecs.bits(14).xmap[BitVector :: BitVector :: HNil](
+      v => v.slice(0, 5) ++ v.slice(6, 9) ++ v.slice(10, 14) :: v.slice(5, 6) ++ v.slice(9, 10) :: HNil,
       {
         case m :: c :: HNil => m.slice(0, 5) ++ c.slice(0, 1) ++ m.slice(5, 8) ++ c.slice(1, 2) ++ m.slice(8, 12)
       }
@@ -81,22 +81,19 @@ object StunMessage {
   }
 
   //TODO: Can you do this nicer?
-  val stunMessageTypeCodec = stunMessageTypeBitCodec.exmap[Class :: Method :: HNil] (
-  {
-    case methodBits :: classBits :: HNil => Class.codec.decode(classBits).flatMap {
-      case (_, clazz) => Method.codec.decode(methodBits).map{ case (_, method) => clazz :: method :: HNil }
+  val stunMessageTypeCodec = stunMessageTypeBitCodec.exmap[Class :: Method :: HNil](
+    {
+      case methodBits :: classBits :: HNil => Class.codec.decode(classBits).flatMap {
+        case (_, clazz) => Method.codec.decode(methodBits).map { case (_, method) => clazz :: method :: HNil }
+      }
+    },
+    {
+      case clazz :: method :: HNil => Class.codec.encode(clazz).flatMap {
+        clazzBits => Method.codec.encode(method).map(methodBits => methodBits :: clazzBits :: HNil)
+      }
     }
-  },
-  {
-    case clazz :: method :: HNil => Class.codec.encode(clazz).flatMap {
-      clazzBits => Method.codec.encode(method).map( methodBits => methodBits :: clazzBits :: HNil)
-    }
-  }
 
   )
-
-
-
 
 }
 
@@ -137,7 +134,7 @@ case class StunMessage(
 sealed trait Class
 
 object Class {
-  implicit val codec:Codec[Class] = mappedEnum(codecs.bits(2),
+  implicit val codec: Codec[Class] = mappedEnum(codecs.bits(2),
     request -> bin"00",
     indication -> bin"01",
     successResponse -> bin"10",
@@ -151,7 +148,7 @@ object Class {
 
 sealed trait Method
 object Method {
-  implicit val codec:Codec[Method] = mappedEnum(codecs.bits(12),
+  implicit val codec: Codec[Method] = mappedEnum(codecs.bits(12),
     Binding -> bin"0b000000000001"
   )
   case object Binding extends Method
