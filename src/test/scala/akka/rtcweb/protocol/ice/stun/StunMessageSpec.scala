@@ -19,7 +19,6 @@ class StunMessageSpec extends WordSpec with Matchers with Inside {
       }
     }
 
-
     "encode funky encoded stun message type" in {
       inside(StunMessage.stunMessageTypeBitCodec.encode(bin"000000000000" :: bin"11" :: HNil)) {
         case \/-(bits) =>

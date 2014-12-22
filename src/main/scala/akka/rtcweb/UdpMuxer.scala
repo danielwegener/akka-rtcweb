@@ -11,7 +11,7 @@ object UdpMuxer {
   def props(receivers: List[(ByteString => Boolean, ActorRef)]) = Props(new UdpMuxer(receivers))
 }
 
-class UdpMuxer(private val receivers: Seq[(ByteString => Boolean, ActorRef)]) extends Actor {
+class UdpMuxer private(private val receivers: Seq[(ByteString => Boolean, ActorRef)]) extends Actor {
   import context.system
   //IO(Udp) ! Udp.Bind(self, new InetSocketAddress("::", 0))
 
@@ -21,7 +21,7 @@ class UdpMuxer(private val receivers: Seq[(ByteString => Boolean, ActorRef)]) ex
       receivers.foreach(_._2 ! bound)
   }
 
-  def ready(socket: ActorRef, localAddress:InetSocketAddress): Receive = {
+  def ready(socket: ActorRef, localAddress: InetSocketAddress): Receive = {
     case received @ Udp.Received(data, _) =>
       receivers.find(_._1(data)).foreach(_._2 ! received)
     case send @ Udp.Send(data, remote, ack) => socket ! Udp.Send(data, remote, ack)

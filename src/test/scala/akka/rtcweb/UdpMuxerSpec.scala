@@ -1,19 +1,22 @@
 package akka.rtcweb
 
-import java.net.{InetAddress, InetSocketAddress}
-
-import akka.actor.ActorSystem
+import java.net.{ InetAddress, InetSocketAddress }
+import akka.testkit.CallingThreadDispatcher
+import akka.actor.{Terminated, ActorSystem}
 import akka.io.Udp
 import akka.testkit._
 import akka.util.ByteString
 import org.scalatest._
 import scala.concurrent.duration._
 
-class UdpMuxerSpec extends TestKit(ActorSystem("UdpMuxerSpec"))
-  with DefaultTimeout with WordSpecLike with Matchers with BeforeAndAfterAll
-  with Inspectors with OptionValues with ImplicitSender{
+class UdpMuxerSpec extends TestKitBase
+    with WordSpecLike with Matchers with BeforeAndAfterAll
+    with Inspectors with OptionValues {
+  10.milliseconds.dilated
 
-  val udpSender = new InetSocketAddress(InetAddress.getLoopbackAddress,1337)
+  implicit lazy val system = ActorSystem()
+
+  val udpSender = new InetSocketAddress(InetAddress.getLoopbackAddress, 1337)
 
   override def afterAll() {
     shutdown()
@@ -21,41 +24,49 @@ class UdpMuxerSpec extends TestKit(ActorSystem("UdpMuxerSpec"))
 
   "UdpMuxer" should {
 
-    "forward an UDP.Received only the first children whose predicate matches the payload" in {
+    "forward an UDP.Received only to the first client whose predicate matches the payload" in {
       val client1 = TestProbe()
       val client2 = TestProbe()
       val socket = TestProbe()
-      val unitRef = TestActorRef[UdpMuxer](UdpMuxer.props(List( ( {a:ByteString => false}, client1.ref), ({a:ByteString => true}, client2.ref))))
-      socket.send(unitRef, Udp.Bound(InetSocketAddress.createUnresolved("foo.de",123)))
-      client1.expectMsgClass(1 millisecond, classOf[Udp.Bound])
-      client2.expectMsgClass(1 millisecond, classOf[Udp.Bound])
-      socket.send(unitRef, Udp.Received(ByteString("foo"),udpSender))
-      client1.expectNoMsg()
+      val unitRef = TestActorRef[UdpMuxer](UdpMuxer.props(List(({ a: ByteString => false }, client1.ref), ({ a: ByteString => true }, client2.ref))))
+      unitRef.underlying.become(unitRef.underlyingActor.ready(socket.ref,InetSocketAddress.createUnresolved("0.0.0.0", 123)))
+      socket.send(unitRef, Udp.Received(ByteString("foo"), udpSender))
       client2.expectMsgClass(1 millisecond, classOf[Udp.Received])
+      client1.expectNoMsg(1 millisecond)
     }
 
-    "if the socket sends an UDP.Unbound it should be propagated to the client actors" in {
+    "accept a single Udp.Bound message before entering normal operation and forward this message to its clients" in {
+      val socket = TestProbe()
+      val client1 = TestProbe()
+      val unit = TestActorRef[UdpMuxer](UdpMuxer.props(List(({ a: ByteString => false }, client1.ref))))
+      val boundMessage = Udp.Bound(InetSocketAddress.createUnresolved("0.0.0.0", 123))
+      socket.send(unit, boundMessage)
+      client1.expectMsg(boundMessage)
+    }
+
+    "if the socket sends an UDP.Unbound it should terminate itself and propagated the UDP.Unbound to the client actors" in {
       val client1 = TestProbe()
       val client2 = TestProbe()
       val socket = TestProbe()
-      val unitRef = TestActorRef[UdpMuxer](UdpMuxer.props(List( ( {a:ByteString => false}, client1.ref), ({a:ByteString => true}, client2.ref))))
-      socket.send(unitRef , Udp.Bound(InetSocketAddress.createUnresolved("foo.de",123)))
-      client1.expectMsgClass(1 millisecond, classOf[Udp.Bound])
-      client2.expectMsgClass(1 millisecond, classOf[Udp.Bound])
-      socket.send(unitRef , Udp.Unbound)
+      val unitRef = TestActorRef[UdpMuxer](UdpMuxer.props(List(({ a: ByteString => false }, client1.ref), ({ a: ByteString => true }, client2.ref))))
+      unitRef.underlying.become(unitRef.underlyingActor.ready(socket.ref,InetSocketAddress.createUnresolved("0.0.0.0", 123)))
+      watch(unitRef)
+      socket.send(unitRef, Udp.Unbound)
       client1.expectMsgClass(1 millisecond, classOf[Udp.Unbound])
       client2.expectMsgClass(1 millisecond, classOf[Udp.Unbound])
+      expectMsgPF(){ case Terminated(subject) if subject == unitRef => true }
     }
 
     "if any sender sends an UDP.Unbind it should be propagated to the socket actor" in {
       val socket = TestProbe()
       val unitRef = TestActorRef[UdpMuxer](UdpMuxer.props(Nil))
-      socket.send(unitRef, Udp.Bound(InetSocketAddress.createUnresolved("foo.de",123)))
+      socket.send(unitRef, Udp.Bound(InetSocketAddress.createUnresolved("foo.de", 123)))
       unitRef ! Udp.Unbind
       socket.expectMsg(1 millisecond, Udp.Unbind)
     }
 
-  }
 
+
+  }
 
 }
