@@ -12,8 +12,7 @@ object UdpMuxer {
 }
 
 class UdpMuxer private(private val receivers: Seq[(ByteString => Boolean, ActorRef)]) extends Actor {
-  import context.system
-  //IO(Udp) ! Udp.Bind(self, new InetSocketAddress("::", 0))
+
 
   override def receive = {
     case bound @ Udp.Bound(localAddress) =>

@@ -81,7 +81,7 @@ object RTCPeerConnection {
 
   sealed trait PeerConnectionMessage
 
-  final case class StunServerDescription(address: InetAddress, credentials: Option[Nothing] = None)
+  final case class StunServerDescription(address: InetSocketAddress, credentials: Option[Nothing] = None)
 
   /**
    * @param stunServers TODO

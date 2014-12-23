@@ -23,7 +23,7 @@ class CandidateParserSpec extends WordSpecLike with Matchers with Inside {
         transport = Transport.UDP,
         priority = Priority(2),
         InetSocketAddress.createUnresolved("localhost", 40678),
-        candidateType = CandidateType.host,
+        candidateType = CandidateType.HostCandidate,
         relayConnectionAddress = None,
         extensionAttributes = List(("generation", "0")))
       )
@@ -39,7 +39,7 @@ class CandidateParserSpec extends WordSpecLike with Matchers with Inside {
         transport = Transport.UnknownTransportExtension("rfid"),
         priority = Priority(2122260223L),
         InetSocketAddress.createUnresolved("192.168.43.1", 40678),
-        candidateType = CandidateType.host,
+        candidateType = CandidateType.HostCandidate,
         relayConnectionAddress = None,
         extensionAttributes = List(("generation", "0")))
       )

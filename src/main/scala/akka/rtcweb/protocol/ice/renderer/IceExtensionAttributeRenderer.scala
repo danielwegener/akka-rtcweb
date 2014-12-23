@@ -12,10 +12,10 @@ trait IceExtensionAttributeRenderer {
 
   private implicit val candidateTypeRenderer = new Renderer[CandidateType] {
     override def render[R <: Rendering](r: R, value: CandidateType): r.type = value match {
-      case CandidateType.host => r ~ "host"
-      case CandidateType.prflx => r ~ "prflx"
-      case CandidateType.relay => r ~ "relay"
-      case CandidateType.srflx => r ~ "srflx"
+      case CandidateType.HostCandidate => r ~ "host"
+      case CandidateType.PeerReflexiveCandidate => r ~ "prflx"
+      case CandidateType.RelayCandidate => r ~ "relay"
+      case CandidateType.ServerReflexiveCandidate => r ~ "srflx"
       case CandidateType.UnknownCandidateType(token) => r ~ token
     }
   }

@@ -129,7 +129,9 @@ case class StunMessage(
   messageClass: Class,
   method: Method,
   transactionId: ByteVector,
-  attribute: Vector[StunAttribute])
+  attribute: Vector[StunAttribute] = Vector.empty) {
+  require(transactionId.length == 12, "The transactionId MUST be 12 byte (96-bit).")
+}
 
 sealed trait Class
 

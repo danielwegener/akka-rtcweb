@@ -134,7 +134,7 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
       result.mediaDescriptions(3).mediaAttributes should contain(SctpPort(5000))
 
       result.mediaDescriptions(1).mediaAttributes should contain {
-        Candidate("1738249477", 1, Transport.UDP, Priority(2122260223L), InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.host, None, List("generation" -> "0"))
+        Candidate("1738249477", 1, Transport.UDP, Priority(2122260223L), InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.HostCandidate, None, List("generation" -> "0"))
       }
       result.mediaDescriptions(1).mediaAttributes should contain {
         Fingerprint(HashFunction.`sha-256`, "C5:CA:A0:C5:DA:59:2E:79:6D:EF:F3:7F:51:B5:E7:93:95:B0:82:66:3C:8B:34:7B:88:0C:B0:DD:F2:7E:EA:77")

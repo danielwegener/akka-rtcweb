@@ -105,10 +105,14 @@ sealed trait CandidateType
 object CandidateType {
 
   final case class UnknownCandidateType(token: String) extends CandidateType
-  case object host extends CandidateType
-  case object srflx extends CandidateType
-  case object prflx extends CandidateType
-  case object relay extends CandidateType
+  /** host: Candidate that is learned from local interfaces */
+  case object HostCandidate extends CandidateType
+  /** srflx: Candidate that is learned from a STUN server */
+  case object ServerReflexiveCandidate extends CandidateType
+  /** prflx: Candidate that is learned from a peer receiving a connection check. */
+  case object PeerReflexiveCandidate extends CandidateType
+  /** relay: Candidate that is obtained from a TURN relay. **/
+  case object RelayCandidate extends CandidateType
 }
 
 /**
@@ -179,6 +183,7 @@ final case class Fingerprint(hashFunction: HashFunction, fingerprint: String) ex
 sealed trait HashFunction
 
 object HashFunction {
+  final case class UnknownHashFunction(token: String) extends HashFunction
   case object `sha-1` extends HashFunction
   case object `sha-224` extends HashFunction
   case object `sha-256` extends HashFunction
@@ -186,7 +191,6 @@ object HashFunction {
   case object `sha-512` extends HashFunction
   case object `md5` extends HashFunction
   case object `md2` extends HashFunction
-  final case class UnknownHashFunction(token: String) extends HashFunction
 }
 
 /**

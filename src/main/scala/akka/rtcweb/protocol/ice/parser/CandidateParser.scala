@@ -70,10 +70,10 @@ private[ice] trait CandidateParser {
 
   /** {{{candidate-types = "host" / "srflx" / "prflx" / "relay" / token}}} */
   private def `candidate-types`: Rule1[CandidateType] = rule {
-    str("host") ~ push(CandidateType.host) |
-      str("srflx") ~ push(CandidateType.srflx) |
-      str("prflx") ~ push(CandidateType.prflx) |
-      str("relay") ~ push(CandidateType.relay) |
+    str("host") ~ push(CandidateType.HostCandidate) |
+      str("srflx") ~ push(CandidateType.ServerReflexiveCandidate) |
+      str("prflx") ~ push(CandidateType.PeerReflexiveCandidate) |
+      str("relay") ~ push(CandidateType.RelayCandidate) |
       token ~> (t => UnknownCandidateType(t))
   }
 
