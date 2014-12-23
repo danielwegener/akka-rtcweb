@@ -23,16 +23,26 @@ import shapeless._
 private[dcep] sealed trait `Message Type`
 private[dcep] object `Message Type` {
 
-  case object DATA_CHANNEL_ACK extends `Message Type`
-  case object DATA_CHANNEL_OPEN extends `Message Type`
-
   implicit val codec = "Message Type" | mappedEnum(uint8,
     DATA_CHANNEL_ACK -> 0x01,
     DATA_CHANNEL_OPEN -> 0x02)
+  case object DATA_CHANNEL_ACK extends `Message Type`
+
+  case object DATA_CHANNEL_OPEN extends `Message Type`
 }
 
 private[dcep] sealed trait `Channel Type`
 private[dcep] object `Channel Type` {
+
+  implicit val codec: Codec[`Channel Type`] = "Channel Type" | mappedEnum(uint8,
+    DATA_CHANNEL_RELIABLE -> 0x00,
+    DATA_CHANNEL_RELIABLE_UNORDERED -> 0x80,
+    DATA_CHANNEL_PARTIAL_RELIABLE_REXMIT -> 0x01,
+    DATA_CHANNEL_PARTIAL_RELIABLE_REXMIT_UNORDERED -> 0x81,
+    DATA_CHANNEL_PARTIAL_RELIABLE_TIMED -> 0x02,
+    DATA_CHANNEL_PARTIAL_RELIABLE_TIMED_UNORDERED -> 0x82
+
+  )
 
   /**
    * (0x00):  The Data Channel provides a
@@ -80,16 +90,6 @@ private[dcep] object `Channel Type` {
    * when providing the user message to the protocol stack.
    */
   case object DATA_CHANNEL_PARTIAL_RELIABLE_TIMED_UNORDERED extends `Channel Type`
-
-  implicit val codec: Codec[`Channel Type`] = "Channel Type" | mappedEnum(uint8,
-    DATA_CHANNEL_RELIABLE -> 0x00,
-    DATA_CHANNEL_RELIABLE_UNORDERED -> 0x80,
-    DATA_CHANNEL_PARTIAL_RELIABLE_REXMIT -> 0x01,
-    DATA_CHANNEL_PARTIAL_RELIABLE_REXMIT_UNORDERED -> 0x81,
-    DATA_CHANNEL_PARTIAL_RELIABLE_TIMED -> 0x02,
-    DATA_CHANNEL_PARTIAL_RELIABLE_TIMED_UNORDERED -> 0x82
-
-  )
 }
 
 /**
@@ -100,23 +100,25 @@ private[dcep] object `Channel Type` {
 private[dcep] sealed trait Priority //todo: extends Ordered[Priority]
 
 private[dcep] object Priority {
-  case object `below normal` extends Priority
-  case object `normal` extends Priority
-  case object `high` extends Priority
-  case object `extra high` extends Priority
-  final case class Ordinal(value: Int) extends Priority
-
-  implicit val codec: Codec[Priority] = "Priority" | choice(mappedEnum[Priority, Int](uint16,
-    `below normal` -> 128,
-    `normal` -> 256,
-    `high` -> 256,
-    `extra high` -> 1024
-  ),
+  implicit val codec: Codec[Priority] = "Priority" | choice(
+    mappedEnum[Priority, Int](uint16,
+      `below normal` -> 128,
+      `normal` -> 256,
+      `high` -> 256,
+      `extra high` -> 1024
+    ),
     uint16.as[Ordinal].widen[Priority](identity, {
       case a: Ordinal => \/-(a)
       case _ => -\/(Err("Is not an Ordinal"))
     })
   )
+
+  final case class Ordinal(value: Int) extends Priority
+  case object `below normal` extends Priority
+  case object `normal` extends Priority
+  case object `high` extends Priority
+
+  case object `extra high` extends Priority
 
 }
 

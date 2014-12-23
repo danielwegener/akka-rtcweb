@@ -4,6 +4,7 @@ import scodec._
 import scodec.bits._
 import codecs._
 import shapeless._
+import akka.rtcweb.protocol.scodec.SCodecContrib._
 
 import scalaz.{ -\/, \/- }
 
@@ -126,10 +127,10 @@ object StunMessage {
  * the transaction IDs in requests received by the agent.
  */
 case class StunMessage(
-  messageClass: Class,
-  method: Method,
-  transactionId: ByteVector,
-  attribute: Vector[StunAttribute] = Vector.empty) {
+    messageClass: Class,
+    method: Method,
+    transactionId: ByteVector,
+    attribute: Vector[StunAttribute] = Vector.empty) {
   require(transactionId.length == 12, "The transactionId MUST be 12 byte (96-bit).")
 }
 

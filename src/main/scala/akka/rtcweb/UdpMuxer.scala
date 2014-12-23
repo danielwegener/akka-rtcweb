@@ -11,8 +11,7 @@ object UdpMuxer {
   def props(receivers: List[(ByteString => Boolean, ActorRef)]) = Props(new UdpMuxer(receivers))
 }
 
-class UdpMuxer private(private val receivers: Seq[(ByteString => Boolean, ActorRef)]) extends Actor {
-
+class UdpMuxer private (private val receivers: Seq[(ByteString => Boolean, ActorRef)]) extends Actor {
 
   override def receive = {
     case bound @ Udp.Bound(localAddress) =>
