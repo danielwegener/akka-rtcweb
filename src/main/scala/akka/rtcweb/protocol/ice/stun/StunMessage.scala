@@ -37,7 +37,7 @@ import scalaz.{ -\/, \/- }
  */
 object StunMessage {
 
-  final val MAGIC_COOKIE = hex"0x2112A442"
+  final val MAGIC_COOKIE = hex"0x2112A442".bits
   /**
    * {{{
    *      0                 1

@@ -9,7 +9,7 @@ import scodec.bits.{ ByteOrdering, BitVector, HexStringSyntax }
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 
-import scalaz.{ -\/, \/- }
+import scalaz.{\/, -\/, \/-}
 
 sealed trait StunAttributeType
 
@@ -106,6 +106,7 @@ object `ERROR-CODE` {
       { "Number" | uint8 }
   }.xmap[Int]({ case clazz :: number :: HNil => clazz * 100 + number }, { code => code / 100 :: code % 100 :: HNil })
 
+
 }
 
 /**
@@ -190,7 +191,6 @@ object `XOR-MAPPED-ADDRESS` {
   implicit val codec: Codec[`XOR-MAPPED-ADDRESS`] = {
 
     StunAttribute.withAttributeHeader(constantValue[StunAttributeType](StunAttributeType.`XOR-MAPPED-ADDRESS`),
-
       ignore(8) ::
         {
           "Family" | Family.codec >>:~ { family =>
@@ -199,22 +199,28 @@ object `XOR-MAPPED-ADDRESS` {
             } :: {
               "X-Address" | {
                 family match {
-                  case Family.IPv4 => SCodecContrib.xor(ipv4Address, StunMessage.MAGIC_COOKIE.bits)
+                  case Family.IPv4 => SCodecContrib.xor(ipv4Address, StunMessage.MAGIC_COOKIE)
                   case Family.IPv6 => ??? // cannot be done yet since we do not have the transaction id here //ipv6Address
                 }
               }
             }
           }
         }
-
     )
 
   }.dropUnits.as[`XOR-MAPPED-ADDRESS`]
   implicit val discriminator: Discriminator[StunAttribute, `XOR-MAPPED-ADDRESS`, StunAttributeType] = Discriminator(StunAttributeType.`XOR-MAPPED-ADDRESS`)
+  private val MAGIC_COOKIE_MSBS = StunMessage.MAGIC_COOKIE.take(16)
 
-  private[stun] def xPortCodec = uint16.xmap[Int](
-    f => uint16L.decodeValidValue(uint16L.encodeValid(f).xor(StunMessage.MAGIC_COOKIE.bits.take(16))),
-    f => uint16L.decodeValidValue(uint16L.encodeValid(f).xor(StunMessage.MAGIC_COOKIE.bits.take(16))))
+  final def xPortCodec: Codec[Int] = new Codec[Int] {
+    def encode(b: Int): Err \/ BitVector = uint16.encode(b).map(_.xor(StunMessage.MAGIC_COOKIE))
+    def decode(buffer: BitVector): Err \/ (BitVector, Int) = {
+      val (xPortRaw, rest) = buffer.splitAt(16)
+      uint16.decode(xPortRaw.xor(MAGIC_COOKIE_MSBS)).map { case (_, a) => (rest, a) }
+    }
+  }
+
+
 }
 
 /**
@@ -223,8 +229,6 @@ object `XOR-MAPPED-ADDRESS` {
 sealed trait StunAttribute
 
 object StunAttribute {
-
-  implicit val discriminated: Discriminated[StunAttribute, StunAttributeType] = Discriminated(StunAttributeType.codec)
 
   /**
    * {{{
@@ -264,7 +268,8 @@ object StunAttribute {
    * The rest of this section describes the format of the various
    * attributes defined in this specification.
    */
-  implicit val codec: Codec[StunAttribute] = Codec.coproduct[StunAttribute].choice.as[StunAttribute]
+  implicit lazy val codec: Codec[StunAttribute] = Codec.coproduct[StunAttribute].choice.as[StunAttribute]
+  implicit val discriminated: Discriminated[StunAttribute, StunAttributeType] = Discriminated(StunAttributeType.codec)
 
   def withAttributeHeader[A, D](discriminator: Codec[Unit], valueCodec: Codec[A]): Codec[A] = {
     blockalignBits(
