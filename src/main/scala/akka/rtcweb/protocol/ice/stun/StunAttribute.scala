@@ -2,9 +2,10 @@ package akka.rtcweb.protocol.ice.stun
 
 import java.net.{ InetAddress, InetSocketAddress }
 
+import akka.rtcweb.protocol.scodec.SCodecContrib
 import shapeless._
 import scodec._
-import scodec.bits.{ ByteOrdering, ByteVector, BitVector, HexStringSyntax }
+import scodec.bits.{ ByteOrdering, BitVector, HexStringSyntax }
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 
@@ -58,6 +59,22 @@ object StunAttributeType {
 
 }
 
+/**
+ * The ERROR-CODE attribute is used in error response messages.  It
+ * contains a numeric error code value in the range of 300 to 699 plus a
+ * textual reason phrase encoded in UTF-8 [RFC3629], and is consistent
+ * in its code assignments and semantics with SIP [RFC3261] and HTTP
+ * [RFC2616].  The reason phrase is meant for user consumption, and can
+ * be anything appropriate for the error code.  Recommended reason
+ * phrases for the defined error codes are included in the IANA registry
+ * for error codes.  The reason phrase MUST be a UTF-8 [RFC3629] encoded
+ * sequence of less than 128 characters (which can be as long as 763
+ * bytes).
+ *
+ * @see [[https://tools.ietf.org/html/rfc5389#section-15.6]]
+ */
+final case class `ERROR-CODE`(errorCode: Int, reasonPhrase: String) extends StunAttribute
+
 object `ERROR-CODE` {
 
   /**
@@ -72,7 +89,7 @@ object `ERROR-CODE` {
    * }}}
    */
   implicit val codec: Codec[`ERROR-CODE`] = {
-    StunAttribute.withAttributeHeader(constantValue[StunAttributeType](StunAttributeType.`MAPPED-ADDRESS`),
+    StunAttribute.withAttributeHeader(constantValue[StunAttributeType](StunAttributeType.`ERROR-CODE`),
       ignore(20) ::
         classNumberCodec ::
         { "ReasonPhrase" | utf8 })
@@ -92,22 +109,18 @@ object `ERROR-CODE` {
 }
 
 /**
- * The ERROR-CODE attribute is used in error response messages.  It
- * contains a numeric error code value in the range of 300 to 699 plus a
- * textual reason phrase encoded in UTF-8 [RFC3629], and is consistent
- * in its code assignments and semantics with SIP [RFC3261] and HTTP
- * [RFC2616].  The reason phrase is meant for user consumption, and can
- * be anything appropriate for the error code.  Recommended reason
- * phrases for the defined error codes are included in the IANA registry
- * for error codes.  The reason phrase MUST be a UTF-8 [RFC3629] encoded
- * sequence of less than 128 characters (which can be as long as 763
- * bytes).
- *
- * @see [[https://tools.ietf.org/html/rfc5389#section-15.6]]
+ * The MAPPED-ADDRESS attribute indicates a reflexive transport address
+ * of the client.  It consists of an 8-bit address family and a 16-bit
+ * port, followed by a fixed-length value representing the IP address.
+ * If the address family is IPv4, the address MUST be 32 bits.  If the
+ * address family is IPv6, the address MUST be 128 bits.  All fields
+ * must be in network byte order.
+ * @see [[https://tools.ietf.org/html/rfc5389#section-15.1]]
  */
-final case class `ERROR-CODE`(errorCode: Int, reasonPhrase: String) extends StunAttribute
+final case class `MAPPED-ADDRESS`(family: Family, port: Int, address: InetAddress) extends StunAttribute {
+  lazy val inetSocketAddress = new InetSocketAddress(address, port)
+}
 
-/**  */
 object `MAPPED-ADDRESS` {
 
   /**
@@ -147,27 +160,61 @@ object `MAPPED-ADDRESS` {
 
   }.dropUnits.as[`MAPPED-ADDRESS`]
   implicit val discriminator: Discriminator[StunAttribute, `MAPPED-ADDRESS`, StunAttributeType] = Discriminator(StunAttributeType.`MAPPED-ADDRESS`)
-
-  sealed trait Family
-
-  object Family {
-    implicit val codec: Codec[Family] = mappedEnum(uint8, IPv4 -> 1, IPv6 -> 2)
-    case object IPv4 extends Family
-    case object IPv6 extends Family
-  }
 }
 
-/**
- * The MAPPED-ADDRESS attribute indicates a reflexive transport address
- * of the client.  It consists of an 8-bit address family and a 16-bit
- * port, followed by a fixed-length value representing the IP address.
- * If the address family is IPv4, the address MUST be 32 bits.  If the
- * address family is IPv6, the address MUST be 128 bits.  All fields
- * must be in network byte order.
- * @see [[https://tools.ietf.org/html/rfc5389#section-15.1]]
- */
-final case class `MAPPED-ADDRESS`(family: `MAPPED-ADDRESS`.Family, port: Int, address: InetAddress) extends StunAttribute {
+sealed trait Family
+
+object Family {
+  implicit val codec: Codec[Family] = mappedEnum(uint8, IPv4 -> 1, IPv6 -> 2)
+  case object IPv4 extends Family
+  case object IPv6 extends Family
+}
+
+final case class `XOR-MAPPED-ADDRESS`(family: Family, port: Int, address: InetAddress) extends StunAttribute {
   lazy val inetSocketAddress = new InetSocketAddress(address, port)
+}
+
+object `XOR-MAPPED-ADDRESS` {
+
+  /**
+   * {{{
+   * 0                   1                   2                   3
+   * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * |x x x x x x x x|    Family     |         X-Port                |
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * |                X-Address (Variable)
+   * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   * }}}
+   */
+  implicit val codec: Codec[`XOR-MAPPED-ADDRESS`] = {
+
+    StunAttribute.withAttributeHeader(constantValue[StunAttributeType](StunAttributeType.`XOR-MAPPED-ADDRESS`),
+
+      ignore(8) ::
+        {
+          "Family" | Family.codec >>:~ { family =>
+            {
+              "X-Port" | xPortCodec
+            } :: {
+              "X-Address" | {
+                family match {
+                  case Family.IPv4 => SCodecContrib.xor(ipv4Address, StunMessage.MAGIC_COOKIE.bits)
+                  case Family.IPv6 => ??? // cannot be done yet since we do not have the transaction id here //ipv6Address
+                }
+              }
+            }
+          }
+        }
+
+    )
+
+  }.dropUnits.as[`XOR-MAPPED-ADDRESS`]
+  implicit val discriminator: Discriminator[StunAttribute, `XOR-MAPPED-ADDRESS`, StunAttributeType] = Discriminator(StunAttributeType.`XOR-MAPPED-ADDRESS`)
+
+  private[stun] def xPortCodec = uint16.xmap[Int](
+    f => uint16L.decodeValidValue(uint16L.encodeValid(f).xor(StunMessage.MAGIC_COOKIE.bits.take(16))),
+    f => uint16L.decodeValidValue(uint16L.encodeValid(f).xor(StunMessage.MAGIC_COOKIE.bits.take(16))))
 }
 
 /**

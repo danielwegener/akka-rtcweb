@@ -14,17 +14,13 @@ import akka.testkit.TestProbe
 import akka.util.ByteString
 
 import scala.concurrent.{ Await, Future }
+import scala.language.postfixOps
 
-/**
- * @author Daniel Wegener (Holisticon AG)
- */
 class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
 
   val settings = MaterializerSettings(
     initialInputBufferSize = 4,
     maxInputBufferSize = 4,
-    initialFanOutBufferSize = 2,
-    maxFanOutBufferSize = 2,
     dispatcher = "akka.test.stream-dispatcher",
     subscriptionTimeoutSettings = StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.WarnTermination, 10 seconds),
     fileIODispatcher = "akka.test.fileio-dispatcher")

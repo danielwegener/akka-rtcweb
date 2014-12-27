@@ -37,16 +37,7 @@ import scalaz.{ -\/, \/- }
  */
 object StunMessage {
 
-  implicit lazy val codec: Codec[StunMessage] = "STUN header" | {
-    { "0 0" | constant(bin"0b00") } ::
-      { "STUN Message Type" | stunMessageTypeCodec } :::
-      variableSizeBytes({ "Message Length" | uint16 },
-        { "Magic Cookie" | constant(hex"0x2112A442") } ::
-          { "Transaction ID" | fixedSizeBits(96, bytes) } ::
-          { "Attributes" | vector(StunAttribute.codec) }
-      )
-
-  }.dropUnits.as[StunMessage]
+  final val MAGIC_COOKIE = hex"0x2112A442"
   /**
    * {{{
    *      0                 1
@@ -72,7 +63,7 @@ object StunMessage {
    * indication are possible for that method.  Extensions defining new
    * methods MUST indicate which classes are permitted for that method.
    */
-  val stunMessageTypeBitCodec = {
+  final val stunMessageTypeBitCodec = {
     codecs.bits(14).xmap[BitVector :: BitVector :: HNil](
       v => v.slice(0, 5) ++ v.slice(6, 9) ++ v.slice(10, 14) :: v.slice(5, 6) ++ v.slice(9, 10) :: HNil,
       {
@@ -80,9 +71,8 @@ object StunMessage {
       }
     )
   }
-
   //TODO: Can you do this nicer?
-  val stunMessageTypeCodec = stunMessageTypeBitCodec.exmap[Class :: Method :: HNil](
+  final val stunMessageTypeCodec = stunMessageTypeBitCodec.exmap[Class :: Method :: HNil](
     {
       case methodBits :: classBits :: HNil => Class.codec.decode(classBits).flatMap {
         case (_, clazz) => Method.codec.decode(methodBits).map { case (_, method) => clazz :: method :: HNil }
@@ -95,6 +85,15 @@ object StunMessage {
     }
 
   )
+  implicit lazy val codec: Codec[StunMessage] = "STUN header" | {
+    { "0 0" | constant(bin"0b00") } ::
+      { "STUN Message Type" | stunMessageTypeCodec } :::
+      variableSizeBytes({ "Message Length" | uint16 },
+        { "Magic Cookie" | constant(MAGIC_COOKIE) } ::
+          { "Transaction ID" | fixedSizeBits(96, bytes) } ::
+          { "Attributes" | vector(StunAttribute.codec) }, -16)
+
+  }.dropUnits.as[StunMessage]
 
 }
 

@@ -5,6 +5,7 @@ import java.net.{InetAddress, InetSocketAddress}
 import akka.actor.ActorSystem
 import akka.io.{IO, Udp}
 import akka.pattern.ask
+import akka.rtcweb.protocol.ice.IceAgent.OnIceCandidate
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.StunServerDescription
 import akka.testkit._
 import akka.util.Timeout
@@ -34,16 +35,15 @@ class IceAgentSpec extends TestKitBase
   "IceAgent" should {
 
     "go on a discovery" in {
-      val unitRef = TestActorRef[IceAgent](IceAgent.props(Vector(StunServerDescription(InetSocketAddress.createUnresolved("stun.l.google.com",19302)))))
+      val unitRef = TestActorRef[IceAgent](IceAgent.props(Vector(StunServerDescription(new InetSocketAddress("74.125.136.127",19302)))))
 
-      val block = for {
-        boundEvent <- (IO(Udp) ? Udp.Bind(unitRef, new InetSocketAddress("::", 0))).mapTo[Udp.Bound]
-        two <- Future(unitRef ! boundEvent)
-        three <- Future(unitRef ! IceAgent.GatherCandidates)
-        expect <- Future(expectNoMsg(5 seconds))
-      } yield expect
+      IO(Udp).!(Udp.Bind(unitRef, new InetSocketAddress("::", 0)))(unitRef)
+      Thread.sleep(1000)
+      unitRef ! IceAgent.GatherCandidates
+      expectMsgClass(5 seconds,classOf[OnIceCandidate])
+      expectMsgClass(5 seconds,classOf[OnIceCandidate])
 
-      Await.result(block, 10 seconds)
+
     }
   }
 

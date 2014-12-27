@@ -19,11 +19,12 @@ import scala.util.control.NoStackTrace
  * INTERNAL API
  */
 private[akka] object UdpActor {
-  case object WriteAck extends Udp.Event
-  class UdpStreamException(msg: String) extends RuntimeException(msg) with NoStackTrace
-
   def props(bindCmd: Udp.Bind, requester: ActorRef, settings: MaterializerSettings): Props =
     Props(new UdpActor(bindCmd, requester, settings)).withDispatcher(settings.dispatcher)
+
+  class UdpStreamException(msg: String) extends RuntimeException(msg) with NoStackTrace
+
+  case object WriteAck extends Udp.Event
 }
 
 /**
@@ -65,19 +66,30 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
   }
 
   val primaryOutputs: Outputs =
-    new FanoutOutputs(settings.maxFanOutBufferSize, settings.initialFanOutBufferSize, self, readPump) {
+    /*new FanoutOutputs(settings.maxFanOutBufferSize, settings.initialFanOutBufferSize, self, readPump) {
       override def afterShutdown(): Unit = {
         udpInputs.cancel()
         UdpStreamActor.this.tryShutdown()
       }
-    }
+    }*/ ???
+
+  override def receive =
+    primaryInputs.subreceive orElse primaryOutputs.subreceive orElse udpInputs.subreceive orElse udpOutputs.subreceive
+
+  def fail(e: Throwable): Unit = {
+    udpInputs.cancel()
+    udpOutputs.cancel(e)
+    primaryInputs.cancel()
+    primaryOutputs.cancel(e)
+  }
+
+  def tryShutdown(): Unit = if (primaryInputs.isClosed && udpInputs.isClosed && udpOutputs.isClosed) context.stop(self)
 
   object udpInputs extends DefaultInputTransferStates {
+    val subreceive = new SubReceive(Actor.emptyBehavior)
     private var closed: Boolean = false
     private var pendingElement: UdpPacket = null
     private var connection: ActorRef = _
-
-    val subreceive = new SubReceive(Actor.emptyBehavior)
 
     def setConnection(c: ActorRef): Unit = {
       connection = c
@@ -99,8 +111,10 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
       case CommandFailed(cmd) ⇒ fail(new UdpStreamException(s"Udp command [$cmd] failed"))
     }
 
-    override def inputsAvailable: Boolean = pendingElement ne null
     override def inputsDepleted: Boolean = closed && !inputsAvailable
+
+    override def inputsAvailable: Boolean = pendingElement ne null
+
     override def isClosed: Boolean = closed
 
     override def cancel(): Unit = {
@@ -117,19 +131,16 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
   }
 
   object udpOutputs extends DefaultOutputTransferStates {
+    val subreceive = new SubReceive(Actor.emptyBehavior)
     private var closed: Boolean = false
     private var pendingDemand = true
     private var connection: ActorRef = _
-
-    private def initialized: Boolean = connection ne null
 
     def setConnection(c: ActorRef): Unit = {
       connection = c
       writePump.pump()
       subreceive.become(handleWrite)
     }
-
-    val subreceive = new SubReceive(Actor.emptyBehavior)
 
     def handleWrite: Receive = {
       case WriteAck ⇒
@@ -139,12 +150,15 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
     }
 
     override def isClosed: Boolean = closed
+
     override def cancel(e: Throwable): Unit = {
       closed = true
     }
+
     override def complete(): Unit = {
       closed = true
     }
+
     override def enqueueOutputElement(elem: Any): Unit = {
       val msg = elem.asInstanceOf[UdpPacket]
       connection ! Send(msg.content, msg.address, WriteAck)
@@ -152,7 +166,12 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
     }
 
     override def demandAvailable: Boolean = pendingDemand
+
+    private def initialized: Boolean = connection ne null
   }
+
+  readPump.nextPhase(readPump.running)
+  writePump.nextPhase(writePump.running)
 
   object writePump extends Pump {
 
@@ -180,20 +199,5 @@ private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) 
     }
     override protected def pumpFailed(e: Throwable): Unit = fail(e)
   }
-
-  override def receive =
-    primaryInputs.subreceive orElse primaryOutputs.subreceive orElse udpInputs.subreceive orElse udpOutputs.subreceive
-
-  readPump.nextPhase(readPump.running)
-  writePump.nextPhase(writePump.running)
-
-  def fail(e: Throwable): Unit = {
-    udpInputs.cancel()
-    udpOutputs.cancel(e)
-    primaryInputs.cancel()
-    primaryOutputs.cancel(e)
-  }
-
-  def tryShutdown(): Unit = if (primaryInputs.isClosed && udpInputs.isClosed && udpOutputs.isClosed) context.stop(self)
 
 }

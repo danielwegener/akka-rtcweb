@@ -42,6 +42,16 @@ object SCodecContrib {
     )
   }
 
+  final def xor[A](codec: Codec[A], or: BitVector): Codec[A] = {
+
+    new Codec[A] {
+      override def decode(bits: BitVector): \/[Err, (BitVector, A)] =
+        codec.decode(bits.xor(or.take(bits.length).padLeft(bits.length))).
+          map { case (rest, decoded) => (bits.drop(bits.length - rest.length), decoded) }
+      override def encode(value: A): \/[Err, BitVector] = codec.encode(value).map(_.xor(or))
+    }.withToString(s"xor($codec ^ $or)")
+  }
+
   /**
    * Codec that always encodes the specified value using an implicit available encoder and always decodes the specified value, returning `()` if the actual bits match
    * the specified bits and returning an error otherwise.

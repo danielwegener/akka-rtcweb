@@ -34,7 +34,8 @@ class IceAgent private (iceServers: Vector[StunServerDescription]) extends Actor
   override def receive: Receive = {
     case Udp.Bound(localWildcardAddress) if localWildcardAddress.getAddress.isAnyLocalAddress =>
       context.become(ready(sender(), localAddresses(), localWildcardAddress.getPort))
-    case Udp.Bound(localAddress) => context.become(ready(sender(), Vector(localAddress.getAddress), localAddress.getPort))
+    case Udp.Bound(localAddress) =>
+      context.become(ready(sender(), Vector(localAddress.getAddress), localAddress.getPort))
   }
 
   def ready(socket: ActorRef, localAddresses: Seq[InetAddress], port: Int): Receive = {
@@ -45,7 +46,8 @@ class IceAgent private (iceServers: Vector[StunServerDescription]) extends Actor
       sender() ! OnIceCandidate(localAddresses.map(address => new InetSocketAddress(address, port)))
       iceServers.foreach { server =>
         val stunBindingRequest = StunMessage(stun.Class.request, stun.Method.Binding, generateTransactionId())
-        socket ! Udp.Send(ByteString.fromByteBuffer(StunMessage.codec.encodeValid(stunBindingRequest).toByteBuffer), server.address)
+        val byteBuffer = ByteString.fromByteBuffer(StunMessage.codec.encodeValid(stunBindingRequest).toByteBuffer).compact
+        socket ! Udp.Send(byteBuffer, server.address)
       }
   }
 
