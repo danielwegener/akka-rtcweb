@@ -1,9 +1,9 @@
 package akka.rtcweb.protocol.ice
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{ InetAddress, InetSocketAddress }
 
 import akka.actor.ActorSystem
-import akka.io.{IO, Udp}
+import akka.io.{ IO, Udp }
 import akka.pattern.ask
 import akka.rtcweb.protocol.ice.IceAgent.OnIceCandidate
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.StunServerDescription
@@ -12,7 +12,7 @@ import akka.util.Timeout
 import org.scalatest._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 
 class IceAgentSpec extends TestKitBase
@@ -30,19 +30,16 @@ class IceAgentSpec extends TestKitBase
     shutdown()
   }
 
-
-
   "IceAgent" should {
 
     "go on a discovery" in {
-      val unitRef = TestActorRef[IceAgent](IceAgent.props(Vector(StunServerDescription(new InetSocketAddress("74.125.136.127",19302)))))
+      val unitRef = TestActorRef[IceAgent](IceAgent.props(Vector(StunServerDescription(new InetSocketAddress("74.125.136.127", 19302)))))
 
       IO(Udp).!(Udp.Bind(unitRef, new InetSocketAddress("::", 0)))(unitRef)
       Thread.sleep(1000)
       unitRef ! IceAgent.GatherCandidates
-      expectMsgClass(5 seconds,classOf[OnIceCandidate])
-      expectMsgClass(5 seconds,classOf[OnIceCandidate])
-
+      expectMsgClass(5 seconds, classOf[OnIceCandidate])
+      expectMsgClass(5 seconds, classOf[OnIceCandidate])
 
     }
   }

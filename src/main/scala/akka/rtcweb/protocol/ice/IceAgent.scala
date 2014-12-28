@@ -27,7 +27,7 @@ object IceAgent {
 
 class IceAgent private (iceServers: Vector[StunServerDescription]) extends Actor with ActorLogging {
 
-  require(!iceServers.isEmpty, "iceServers must not be empty")
+  require(iceServers.nonEmpty, "iceServers must not be empty")
 
   var outstandingTransactionIds: Vector[(BitVector, StunServerDescription)] = Vector.empty
 
@@ -61,6 +61,5 @@ class IceAgent private (iceServers: Vector[StunServerDescription]) extends Actor
     val localInterfaces = NetworkInterface.getNetworkInterfaces.toSeq
     localInterfaces.flatMap(_.getInetAddresses.toSeq).toVector
   }
-
 
 }

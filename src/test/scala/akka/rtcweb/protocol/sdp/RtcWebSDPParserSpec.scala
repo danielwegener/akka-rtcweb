@@ -8,10 +8,11 @@ import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
 import akka.rtcweb.protocol.sdp.sctp.SctpPort
 import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
+import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.collection.immutable.Seq
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
 
@@ -102,6 +103,7 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
           |a=setup:actpass
           |a=mid:data
           |a=sctpmap:5000 webrtc-datachannel 1024
+          |a=sctp-port:5000
         |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")))
 
@@ -124,14 +126,13 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
       result.encryptionKey should be(Some(PromptEncryptionKey))
       result.mediaDescriptions should not be 'empty
       result.mediaDescriptions(0).media should be(Media.audio)
-      result.mediaDescriptions(0).connectionInformation should be(Nil)
+      result.mediaDescriptions(0).connectionInformation should be(None)
       result.mediaDescriptions(0).portRange should be(PortRange(49170))
       result.mediaDescriptions(0).protocol should be(MediaTransportProtocol.`RTP/AVP`)
       result.mediaDescriptions(0).mediaAttributes should be(Seq(
         PropertyAttribute("allowed_here_because_chrome_misplaces_it"),
         MediaStreamIdentifier("foo"),
         PropertyAttribute("custom")))
-      result.mediaDescriptions(3).mediaAttributes should contain(SctpPort(5000))
 
       result.mediaDescriptions(1).mediaAttributes should contain {
         Candidate("1738249477", 1, Transport.UDP, Priority(2122260223L), InetSocketAddress.createUnresolved("192.168.43.1", 40678), CandidateType.HostCandidate, None, List("generation" -> "0"))
@@ -142,6 +143,8 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
 
       result.mediaDescriptions(1).mediaAttributes should contain(IceUfrag("wAYPGvXiff8UghxF8"))
       result.mediaDescriptions(1).mediaAttributes should contain(IcePwd("KAo7HueRkuhnYvI3xhT5uVCTc"))
+
+      result.mediaDescriptions(3).mediaAttributes should contain(SctpPort(5000))
 
     }
 
@@ -229,11 +232,11 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
           |a=setup:actpass
           |a=mid:data
           |a=fmtp:webrtc-datachannel max-message-size=100000
-          |a=sctp-port 5000
+          |a=sctp-port:5000
           |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")
 
-      val sd = new TestParser(input(sdtext)).parseSessionDescription().get
+      val sd = new TestParser(input(sdtext)).parseSessionDescription().recover{ case p:ParseError => fail(p.formatTraces)}.get
       new RtcWebSDPRenderer().render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
 
     }

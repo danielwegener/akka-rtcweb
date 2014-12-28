@@ -9,7 +9,7 @@ import scodec.bits.{ ByteOrdering, BitVector, HexStringSyntax }
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 
-import scalaz.{\/, -\/, \/-}
+import scalaz.{ \/, -\/, \/- }
 
 sealed trait StunAttributeType
 
@@ -105,7 +105,6 @@ object `ERROR-CODE` {
     { "Class" | uint(3) } ::
       { "Number" | uint8 }
   }.xmap[Int]({ case clazz :: number :: HNil => clazz * 100 + number }, { code => code / 100 :: code % 100 :: HNil })
-
 
 }
 
@@ -219,7 +218,6 @@ object `XOR-MAPPED-ADDRESS` {
       uint16.decode(xPortRaw.xor(MAGIC_COOKIE_MSBS)).map { case (_, a) => (rest, a) }
     }
   }
-
 
 }
 

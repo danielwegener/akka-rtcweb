@@ -1,6 +1,6 @@
 package akka.rtcweb.protocol.ice.stun
 
-import org.scalatest.{Matchers, WordSpecLike}
+import org.scalatest.{ Matchers, WordSpecLike }
 import scodec.bits._
 import scalaz.\/-
 
