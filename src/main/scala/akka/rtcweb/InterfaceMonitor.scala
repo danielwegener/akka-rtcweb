@@ -3,11 +3,9 @@ package akka.rtcweb
 import java.net.NetworkInterface
 
 import akka.actor.Actor
+
 import scala.collection.JavaConverters._
-
 import scala.concurrent.duration._
-import scala.util.Try
-
 
 object InterfaceMonitor {
 
@@ -17,11 +15,11 @@ object InterfaceMonitor {
 
 }
 
-class InterfaceMonitor(updateInterval:FiniteDuration) extends Actor {
+class InterfaceMonitor(updateInterval: FiniteDuration) extends Actor {
 
-  import InterfaceMonitor._
+  import akka.rtcweb.InterfaceMonitor._
 
-
+  implicit val executor = context.system.dispatcher
 
   override def receive: Receive = {
     case Tick =>
@@ -30,12 +28,8 @@ class InterfaceMonitor(updateInterval:FiniteDuration) extends Actor {
       val onlineInterfaces = allInterfaces.filter(_.isUp)
       val allAddresses = ifs.flatMap(_.getInetAddresses.asScala.toList)
 
-
-
   }
 
   private def scheduleNextTick() = context.system.scheduler.scheduleOnce(updateInterval, self, Tick)
-
-
 
 }

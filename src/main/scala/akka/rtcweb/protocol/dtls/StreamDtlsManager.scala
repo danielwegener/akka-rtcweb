@@ -1,24 +1,15 @@
 package akka.rtcweb.protocol.dtls
 
-import akka.actor.{ Status, Props, ActorLogging, Actor }
-import akka.io.IO
-import akka.stream.FlowMaterializer
-import akka.stream.io.{ StreamUdp }
-import akka.util.Timeout
-import scala.concurrent.duration._
-import akka.pattern.ask
-
-import scala.util.{ Failure, Success }
+import akka.actor.{ Actor, ActorLogging, Props }
 
 class StreamDtlsManager extends Actor with ActorLogging {
-  import context.dispatcher
 
   /**
    * stolen from [akka.http.HttpManager#receive].
    * @return
    */
   override def receive: Receive = {
-    case StreamDtls.Bind(materializerSettings, endpoint, options, settings) ⇒
+    case StreamDtls.Bind(endpoint, options, settings) ⇒
       log.debug("Binding to {}", endpoint)
       val commander = sender()
 

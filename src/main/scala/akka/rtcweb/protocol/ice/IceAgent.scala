@@ -18,14 +18,14 @@ import scala.concurrent.forkjoin.ThreadLocalRandom
 
 object IceAgent {
 
-  def props(listener:ActorRef, iceServers: Vector[StunServerDescription]) = Props(new IceAgent(listener, iceServers))
+  def props(listener: ActorRef, iceServers: Vector[StunServerDescription]) = Props(new IceAgent(listener, iceServers))
 
   final case class OnIceCandidate(candidates: Seq[InetSocketAddress])
   object GatherCandidates
 
 }
 
-class IceAgent private (listener:ActorRef, iceServers: Vector[StunServerDescription]) extends Actor with ActorLogging {
+class IceAgent private (listener: ActorRef, iceServers: Vector[StunServerDescription]) extends Actor with ActorLogging {
 
   require(iceServers.nonEmpty, "iceServers must not be empty")
 

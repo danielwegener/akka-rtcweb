@@ -4,14 +4,10 @@ import java.net.InetSocketAddress
 
 import akka.actor.{ ExtendedActorSystem, ExtensionKey }
 import akka.io.Inet
-import akka.rtcweb.protocol.dtls.handshake.SessionId
 import akka.rtcweb.protocol.dtls.record.DtlsPlaintext
-import akka.stream.MaterializerSettings
-import akka.stream.io.StreamUdp.UdpPacket
 import akka.util.ByteString
-
 import com.typesafe.config.Config
-import org.reactivestreams.{ Processor, Subscriber, Publisher }
+import org.reactivestreams.{ Processor, Publisher, Subscriber }
 
 import scala.collection.immutable
 
@@ -27,7 +23,7 @@ object StreamDtls extends ExtensionKey[StreamDtlsExt] {
    * @param localAddress the socket address to bind to; use port zero for automatic assignment (i.e. an ephemeral port)
    * @param options Please refer to [[akka.io.UdpSO]] for a list of all supported options.
    */
-  final case class Bind(settings: MaterializerSettings, localAddress: InetSocketAddress,
+  final case class Bind(localAddress: InetSocketAddress,
     options: immutable.Traversable[Inet.SocketOption] = Nil,
     serverSettings: Option[ServerSettings] = None)
 
@@ -53,10 +49,10 @@ object StreamDtls extends ExtensionKey[StreamDtlsExt] {
 
 class StreamDtlsExt(system: ExtendedActorSystem) extends akka.io.IO.Extension {
   val Settings = new Settings(system.settings.config getConfig "akka.rtcweb.dtls")
+  val manager = system.actorOf(props = StreamDtlsManager.props(Settings), name = "IO-DTLS")
+
   class Settings private[StreamDtlsExt] (config: Config) {
     val ManagerDispatcher = config getString "manager-dispatcher"
   }
-
-  val manager = system.actorOf(props = StreamDtlsManager.props(Settings), name = "IO-DTLS")
 }
 

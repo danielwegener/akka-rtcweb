@@ -8,7 +8,6 @@ import java.net.{ InetSocketAddress, URLEncoder }
 import akka.actor._
 import akka.io.Inet.SocketOption
 import akka.io.{ IO, Udp }
-import akka.stream.MaterializerSettings
 import akka.stream.impl.ActorProcessor
 import akka.stream.io.StreamUdp.UdpPacket
 import akka.stream.io.StreamUdpManager.ExposedProcessor
@@ -20,7 +19,9 @@ import scala.collection._
 object StreamUdp extends ExtensionId[StreamUdpExt] with ExtensionIdProvider {
 
   override def lookup = StreamUdp
+
   override def createExtension(system: ExtendedActorSystem): StreamUdpExt = new StreamUdpExt(system)
+
   override def get(system: ActorSystem): StreamUdpExt = super.get(system)
 
   /**
@@ -56,7 +57,7 @@ object StreamUdp extends ExtensionId[StreamUdpExt] with ExtensionIdProvider {
    * @param localAddress the socket address to bind to; use port zero for automatic assignment (i.e. an ephemeral port)
    * @param options Please refer to [[akka.io.UdpSO]] for a list of all supported options.
    */
-  case class Bind(settings: MaterializerSettings,
+  case class Bind(
     localAddress: InetSocketAddress,
     options: immutable.Traversable[SocketOption] = Nil)
 
@@ -73,7 +74,9 @@ private[akka] class StreamUdpExt(system: ExtendedActorSystem) extends IO.Extensi
  * INTERNAL API
  */
 private[akka] object StreamUdpManager {
+
   private[akka] case class ExposedProcessor(processor: Processor[UdpPacket, UdpPacket])
+
 }
 
 /**
@@ -82,18 +85,19 @@ private[akka] object StreamUdpManager {
 private[akka] class StreamUdpManager extends Actor {
 
   var nameCounter = 0
+
+  def receive: Receive = {
+    case StreamUdp.Bind(localAddress, options) ⇒
+      val publisherActor = context.actorOf(UdpActor.props(
+        Udp.Bind(context.system.deadLetters, localAddress, options),
+        requester = sender()
+      ), name = encName("udp-server", localAddress))
+      publisherActor ! ExposedProcessor(ActorProcessor[UdpPacket, UdpPacket](publisherActor))
+  }
+
   def encName(prefix: String, address: InetSocketAddress) = {
     nameCounter += 1
     s"$prefix-$nameCounter-${URLEncoder.encode(address.toString, "utf-8")}"
-  }
-
-  def receive: Receive = {
-    case StreamUdp.Bind(settings, localAddress, options) ⇒
-      val publisherActor = context.actorOf(UdpActor.props(
-        Udp.Bind(context.system.deadLetters, localAddress, options),
-        requester = sender(),
-        settings), name = encName("udp-server", localAddress))
-      publisherActor ! ExposedProcessor(ActorProcessor[UdpPacket, UdpPacket](publisherActor))
   }
 }
 

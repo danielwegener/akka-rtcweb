@@ -6,7 +6,6 @@ package akka.stream.io
 import akka.actor._
 import akka.io.Udp._
 import akka.io.{ IO, Udp }
-import akka.stream.MaterializerSettings
 import akka.stream.impl._
 import akka.stream.io.StreamUdp.{ UdpConnection, UdpPacket }
 import akka.stream.io.StreamUdpManager.ExposedProcessor
@@ -19,8 +18,8 @@ import scala.util.control.NoStackTrace
  * INTERNAL API
  */
 private[akka] object UdpActor {
-  def props(bindCmd: Udp.Bind, requester: ActorRef, settings: MaterializerSettings): Props =
-    Props(new UdpActor(bindCmd, requester, settings)).withDispatcher(settings.dispatcher)
+  def props(bindCmd: Udp.Bind, requester: ActorRef): Props =
+    Props(new UdpActor(bindCmd, requester))
 
   class UdpStreamException(msg: String) extends RuntimeException(msg) with NoStackTrace
 
@@ -30,7 +29,7 @@ private[akka] object UdpActor {
 /**
  * INTERNAL API
  */
-private[akka] class UdpActor(bindCmd: Udp.Bind, requester: ActorRef, _settings: MaterializerSettings) extends UdpStreamActor(_settings) {
+private[akka] class UdpActor(bindCmd: Udp.Bind, requester: ActorRef) extends UdpStreamActor() {
   import context.system
 
   val initSteps = new SubReceive(waitingExposedProcessor)
@@ -60,8 +59,8 @@ private[akka] class UdpActor(bindCmd: Udp.Bind, requester: ActorRef, _settings: 
 /**
  * INTERNAL API
  */
-private[akka] abstract class UdpStreamActor(val settings: MaterializerSettings) extends Actor {
-  val primaryInputs: Inputs = new BatchingInputBuffer(settings.initialInputBufferSize, writePump) {
+private[akka] abstract class UdpStreamActor() extends Actor {
+  val primaryInputs: Inputs = new BatchingInputBuffer(???, writePump) {
     override def inputOnError(e: Throwable): Unit = fail(e)
   }
 
