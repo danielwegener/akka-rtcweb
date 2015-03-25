@@ -12,6 +12,9 @@ import akka.testkit.{ TestProbe, DefaultTimeout, TestKit, TestActorRef }
 import org.scalatest._
 import scala.concurrent.duration._
 
+/**
+ * @see [[https://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08]]
+ */
 class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with FreeSpecLike with GivenWhenThen with Matchers with BeforeAndAfterAll with Inspectors with OptionValues {
 
   val listenerProbe = TestProbe()

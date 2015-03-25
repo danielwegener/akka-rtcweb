@@ -1,7 +1,5 @@
 package akka.rtcweb.protocol.sdp.sctp.renderer
 
-
-
 import akka.rtcweb.protocol.sdp.renderer.Rendering
 import akka.rtcweb.protocol.sdp.sctp.{ Fmtp, SctpPort, SctpExtensionAttribute }
 

@@ -18,14 +18,14 @@ import scala.concurrent.forkjoin.ThreadLocalRandom
 
 object IceAgent {
 
-  def props(iceServers: Vector[StunServerDescription]) = Props(new IceAgent(iceServers))
+  def props(listener:ActorRef, iceServers: Vector[StunServerDescription]) = Props(new IceAgent(listener, iceServers))
 
   final case class OnIceCandidate(candidates: Seq[InetSocketAddress])
   object GatherCandidates
 
 }
 
-class IceAgent private (iceServers: Vector[StunServerDescription]) extends Actor with ActorLogging {
+class IceAgent private (listener:ActorRef, iceServers: Vector[StunServerDescription]) extends Actor with ActorLogging {
 
   require(iceServers.nonEmpty, "iceServers must not be empty")
 
@@ -43,7 +43,7 @@ class IceAgent private (iceServers: Vector[StunServerDescription]) extends Actor
       val decoded = StunMessage.codec.complete.decodeValue(ByteVector.view(data.asByteBuffer).bits)
       log.info(s"Received a decoded stun message: $decoded")
     case GatherCandidates =>
-      sender() ! OnIceCandidate(localAddresses.map(address => new InetSocketAddress(address, port)))
+      listener ! OnIceCandidate(localAddresses.map(address => new InetSocketAddress(address, port)))
       iceServers.foreach { server =>
         val stunBindingRequest = StunMessage(stun.Class.request, stun.Method.Binding, generateTransactionId())
         val byteBuffer = ByteString.fromByteBuffer(StunMessage.codec.encodeValid(stunBindingRequest).toByteBuffer).compact

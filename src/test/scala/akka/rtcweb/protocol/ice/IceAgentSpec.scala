@@ -33,9 +33,9 @@ class IceAgentSpec extends TestKitBase
   "IceAgent" should {
 
     "go on a discovery" in {
-      val unitRef = TestActorRef[IceAgent](IceAgent.props(Vector(StunServerDescription(new InetSocketAddress("74.125.136.127", 19302)))))
+      val unitRef = TestActorRef[IceAgent](IceAgent.props(testActor, Vector(StunServerDescription(new InetSocketAddress("74.125.136.127", 19302)))))
 
-      IO(Udp).!(Udp.Bind(unitRef, new InetSocketAddress("::", 0)))(unitRef)
+      IO(Udp) ! Udp.Bind(unitRef, new InetSocketAddress("::", 0))
       Thread.sleep(1000)
       unitRef ! IceAgent.GatherCandidates
       expectMsgClass(5 seconds, classOf[OnIceCandidate])

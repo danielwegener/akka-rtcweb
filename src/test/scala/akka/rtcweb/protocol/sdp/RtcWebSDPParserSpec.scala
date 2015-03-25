@@ -12,7 +12,7 @@ import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{ Matchers, WordSpecLike }
 
 import scala.collection.immutable.Seq
-import scala.util.{Failure, Try}
+import scala.util.{ Failure, Try }
 
 class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
 
@@ -236,7 +236,7 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
           |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")
 
-      val sd = new TestParser(input(sdtext)).parseSessionDescription().recover{ case p:ParseError => fail(p.formatTraces)}.get
+      val sd = new TestParser(input(sdtext)).parseSessionDescription().recover { case p: ParseError => fail(p.formatTraces) }.get
       new RtcWebSDPRenderer().render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
 
     }
