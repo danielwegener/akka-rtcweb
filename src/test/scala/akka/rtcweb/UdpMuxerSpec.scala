@@ -1,13 +1,15 @@
 package akka.rtcweb
 
-import java.net.{ InetAddress, InetSocketAddress }
-import akka.testkit.CallingThreadDispatcher
-import akka.actor.{ Terminated, ActorSystem }
+import java.net.{InetAddress, InetSocketAddress}
+
+import akka.actor.{ActorSystem, Terminated}
 import akka.io.Udp
 import akka.testkit._
 import akka.util.ByteString
 import org.scalatest._
+
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class UdpMuxerSpec extends TestKitBase
     with WordSpecLike with Matchers with BeforeAndAfterAll

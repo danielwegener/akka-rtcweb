@@ -2,31 +2,21 @@ package akka.rtcweb.protocol.dtls
 
 import java.net.InetSocketAddress
 import java.nio.channels.DatagramChannel
-import akka.actor.ActorSystem
-import org.scalatest.{ WordSpecLike, MustMatchers }
 
-import scala.concurrent.duration._
+import akka.actor.ActorSystem
 import akka.io.IO
 import akka.stream.io.StreamUdp
-import akka.stream.scaladsl.Flow
-import akka.stream.{ StreamSubscriptionTimeoutTerminationMode, StreamSubscriptionTimeoutSettings, FlowMaterializer, MaterializerSettings }
 import akka.testkit.TestProbe
 import akka.util.ByteString
+import org.scalatest.{MustMatchers, WordSpecLike}
 
-import scala.concurrent.{ Await, Future }
 import scala.language.postfixOps
 
-class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
+class DtlsFlowSpec extends WordSpecLike with MustMatchers {
 
-  val settings = MaterializerSettings(
-    initialInputBufferSize = 4,
-    maxInputBufferSize = 4,
-    dispatcher = "akka.test.stream-dispatcher",
-    subscriptionTimeoutSettings = StreamSubscriptionTimeoutSettings(StreamSubscriptionTimeoutTerminationMode.WarnTermination, 10 seconds),
-    fileIODispatcher = "akka.test.fileio-dispatcher")
+
 
   implicit val actorSystem = ActorSystem("dtls-flow-spec")
-  implicit val materializer = FlowMaterializer(None)
 
   def temporaryServerAddress: InetSocketAddress = {
     val serverSocket = DatagramChannel.open().socket()
@@ -38,7 +28,7 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
 
   def connect: StreamDtls.DtlsConnection = {
     val connectProbe = TestProbe()
-    connectProbe.send(IO(StreamDtls), StreamDtls.Bind(settings, new InetSocketAddress("127.0.0.1", 0)))
+    connectProbe.send(IO(StreamDtls), StreamDtls.Bind(new InetSocketAddress("127.0.0.1", 0)))
     connectProbe.expectMsgType[StreamDtls.DtlsConnection]
   }
 
@@ -49,7 +39,7 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers { // extends AkkaSpec
 
   def bind(serverAddress: InetSocketAddress = temporaryServerAddress): StreamUdp.UdpConnection = {
     val bindProbe = TestProbe()
-    bindProbe.send(IO(StreamDtls), StreamDtls.Bind(settings, serverAddress))
+    bindProbe.send(IO(StreamDtls), StreamDtls.Bind(serverAddress))
     bindProbe.expectMsgType[StreamUdp.UdpConnection]
   }
 
