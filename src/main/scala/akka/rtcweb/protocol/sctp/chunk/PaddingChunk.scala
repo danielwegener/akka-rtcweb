@@ -32,7 +32,7 @@ object PaddingChunk {
    */
   implicit val codec = {
     val x = "Initiation" | {
-      constant(uint8.encodeValid(0x84)) ~>
+      constant(uint8.encode(0x84).require) ~>
         ignore(8) ~>
         uint16 >>:~ { length =>
           ignore(length - 4).hlist

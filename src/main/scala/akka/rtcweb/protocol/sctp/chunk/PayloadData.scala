@@ -1,11 +1,11 @@
 package akka.rtcweb.protocol.sctp.chunk
 
 import akka.rtcweb.protocol.sctp.chunk.PayloadData.PayloadProtocolIdentifier
+import scodec.Attempt.{ Failure, Successful }
 import scodec.Codec
 import scodec.bits.ByteVector
 import scodec.Err
 import scodec.codecs._
-import scalaz.{ \/-, -\/ }
 
 private[sctp] object PayloadData {
 
@@ -30,7 +30,7 @@ private[sctp] object PayloadData {
    * }}}
    */
   implicit val codec: Codec[PayloadData] = {
-    constant(ChunkType.codec.encodeValid(ChunkType.DATA)) ~>
+    constant(ChunkType.codec.encode(ChunkType.DATA).require) ~>
       ignore(5) ~>
       ("U bit" | bool) ::
       ("B bit" | bool) ::
@@ -54,8 +54,8 @@ private[sctp] object PayloadData {
       `WebRTC String Empty` -> 56,
       `WebRTC Binary Empty` -> 57
     ), uint8.as[Unspecified].widen(identity, {
-      case b: Unspecified => \/-(b)
-      case b => -\/(Err(s"$b is not Unspecified"))
+      case b: Unspecified => Successful(b)
+      case b => Failure(Err(s"$b is not Unspecified"))
     })
     )
 

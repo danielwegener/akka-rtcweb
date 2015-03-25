@@ -35,7 +35,7 @@ object HeartbeatRequest {
    */
   implicit val codec: Codec[HeartbeatRequest] =
     {
-      constant(ChunkType.codec.encodeValid(ChunkType.HEARTBEAT)) :~>:
+      constant(ChunkType.codec.encode(ChunkType.HEARTBEAT).require) :~>:
         ignore(8) :~>:
         variableSizeBytes("Heartbeat Length" | uint16,
           "Heartbeat Information TLV" | bytes

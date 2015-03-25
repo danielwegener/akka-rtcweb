@@ -36,7 +36,7 @@ private[sctp] object Initiation {
    */
   implicit val codec: Codec[Initiation] = {
     "Initiation" | {
-      constant(ChunkType.codec.encodeValid(ChunkType.INIT)) :~>:
+      constant(ChunkType.codec.encode(ChunkType.INIT).require) :~>:
         ignore(8) :~>:
         variableSizeBytes("Chunk Length" | uint16,
           ("Initiate Tag" | nonZero(uint32)) ::
@@ -170,7 +170,7 @@ private[sctp] object Initiation {
      */
     implicit val codec: Codec[`IPv4 Address`] = {
       "IPv4 Address" |
-        ("Length" | constant(uint16.encodeValid(8))) ~>
+        ("Length" | constant(uint16.encode(8).require)) ~>
         ("IPv4 Address" | bytes(4))
     }.as[`IPv4 Address`]
   }
@@ -193,7 +193,7 @@ private[sctp] object Initiation {
      */
     implicit val codec: Codec[`IPv6 Address`] = {
       "IPv6 Address" |
-        ("Length" | constant(uint16.encodeValid(20))) ~>
+        ("Length" | constant(uint16.encode(20).require)) ~>
         ("IPv6 Address" | bytes(16))
     }.as[`IPv6 Address`]
   }
@@ -211,7 +211,7 @@ private[sctp] object Initiation {
      * }}}
      */
     implicit val codec: Codec[`Cookie Preservative`] = {
-      ("Length" | constant(uint16.encodeValid(8))) ~>
+      ("Length" | constant(uint16.encode(8).require)) ~>
         ("Suggested Cookie Life-Span Increment" | duration(uint32, MILLISECONDS))
     }.as[`Cookie Preservative`]
   }
@@ -270,7 +270,7 @@ private[sctp] object Initiation {
      * }}}
      */
     implicit val codec: Codec[`Forward-TSN-Supported`.type] = {
-      ("Parameter Length" | constant(uint16.encodeValid(4))) ~>
+      ("Parameter Length" | constant(uint16.encode(4).require)) ~>
         provide(`Forward-TSN-Supported`)
     }
 
@@ -480,7 +480,7 @@ private[sctp] object InitAck {
    * }}}
    */
   implicit val codec: Codec[InitAck] = {
-    constant(ChunkType.codec.encodeValid(ChunkType.`INIT ACK`)) :~>:
+    constant(ChunkType.codec.encode(ChunkType.`INIT ACK`).require) :~>:
       ignore(8) :~>:
       variableSizeBytes("Chunk Length" | uint16,
         ("Initiate Tag" | nonZero(uint32)) ::

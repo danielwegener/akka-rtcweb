@@ -2,7 +2,8 @@ package akka.rtcweb.protocol.scodec
 
 import java.net.{ InetAddress, InetSocketAddress }
 
-import scodec.{ Encoder, Err, Codec }
+import scodec.Attempt.{ Failure, Successful }
+import scodec._
 import scodec.bits.{ ByteVector, BitVector }
 import scodec.bits.BitVector._
 import scodec.codecs._
@@ -11,7 +12,6 @@ import shapeless.ops.hlist._
 
 import scala.concurrent.duration.{ FiniteDuration, TimeUnit }
 import scala.math.Ordering
-import scalaz.{ \/, -\/, \/- }
 
 /**
  * Additional Combinators for SCodec
@@ -45,10 +45,12 @@ object SCodecContrib {
   final def xor[A](codec: Codec[A], or: BitVector): Codec[A] = {
 
     new Codec[A] {
-      override def decode(bits: BitVector): \/[Err, (BitVector, A)] =
+      override def decode(bits: BitVector): Attempt[DecodeResult[A]] =
         codec.decode(bits.xor(or.take(bits.length).padLeft(bits.length))).
-          map { case (rest, decoded) => (bits.drop(bits.length - rest.length), decoded) }
-      override def encode(value: A): \/[Err, BitVector] = codec.encode(value).map(_.xor(or))
+          map { case DecodeResult(decoded, rest) => DecodeResult(decoded, bits.drop(bits.length - rest.length)) }
+      override def encode(value: A): Attempt[BitVector] = codec.encode(value).map(_.xor(or))
+
+      override def sizeBound: SizeBound = SizeBound.choice(List(codec.sizeBound, SizeBound.exact(or.size)))
     }.withToString(s"xor($codec ^ $or)")
   }
 
@@ -57,7 +59,7 @@ object SCodecContrib {
    * the specified bits and returning an error otherwise.
    * @group combinators
    */
-  final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encodeValid(constantValue))
+  final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encode(constantValue).require)
 
   def multiVariableSizes[SC <: HList, S <: HList, VC <: HList, V <: HList, ZippedLandVCs <: HList, ZippedVandVCs <: HList, SizeLimitedValueCodecs <: HList, EncodedValues <: HList, EncodedValuesUnified <: HList](sizeCodecs: SC, valueCodecs: VC)(implicit scToHListCodec: ToHListCodec.Aux[SC, S],
     vcToHListCodec: ToHListCodec.Aux[VC, V],
@@ -72,9 +74,9 @@ object SCodecContrib {
     private val sizeCodec: Codec[S] = scToHListCodec(sizeCodecs)
     private val valueCodec: Codec[V] = vcToHListCodec(valueCodecs)
 
-    override def decode(bits: BitVector): Err \/ (BitVector, V) = {
+    override def decode(bits: BitVector): Attempt[DecodeResult[V]] = {
       sizeCodec.decode(bits).flatMap {
-        case (rem, sizes) =>
+        case DecodeResult(sizes, rem) =>
           val sizeLimitedValueCodecs = (sizes zip valueCodecs).map(zipper)
           val sequenced = slvcToHListCodec(sizeLimitedValueCodecs)
           sequenced.decode(rem)
@@ -83,7 +85,7 @@ object SCodecContrib {
 
     import shapeless.test._
 
-    override def encode(v: V): Err \/ BitVector = {
+    override def encode(v: V): Attempt[BitVector] = {
       // encode all values, zip with em over length codecs encoded their lengths and concat bits(length)  ++ bits(values)
       val encodedValues: EncodedValues = (v zip valueCodecs).map(valueEncoder)
       //val encodedValuesSimple = encodedValues.toList.collect{case a: \/[Err, BitVector] => a}
@@ -114,10 +116,10 @@ object SCodecContrib {
    */
   final def cstring(codec: Codec[String]): Codec[String] = codec.exmap[String](
     {
-      case a if !a.isEmpty && a.indexOf('\0') + 1 == a.length => \/-[String](a.dropRight(1))
-      case a => -\/(Err(s"[$a] is not terminated by a nul character or contains multiple nuls"))
+      case a if !a.isEmpty && a.indexOf('\0') + 1 == a.length => Successful[String](a.dropRight(1))
+      case a => Failure(Err(s"[$a] is not terminated by a nul character or contains multiple nuls"))
     },
-    f => \/-(f + '\0')
+    f => Successful(f + '\0')
   )
 
   /**
@@ -158,17 +160,17 @@ object SCodecContrib {
      * @return
      */
     final def validate(error: PartialFunction[A, Err]): Codec[A] = {
-      def unwrap(a: A): Err \/ A = error.lift(a) match {
-        case Some(msg) => \/.left[Err, A](msg)
-        case None => \/.right(a)
+      def unwrap(a: A): Attempt[A] = error.lift(a) match {
+        case Some(msg) => Failure(msg)
+        case None => Successful(a)
       }
       codec.exmap(unwrap, unwrap)
     }
 
     def lt[B >: A](b: B)(implicit ordering: Ordering[B]): Codec[A] = codec.exmap(
       {
-        case v if ordering.lt(v, b) => \/.right(v)
-        case v => \/.right(v)
+        case v if ordering.lt(v, b) => Successful(v)
+        case v => Successful(v)
       }, ???
     )
 
@@ -191,16 +193,18 @@ private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingMod
     gap = paddingGap(encA.length, paddingModulo)
   } yield encA ++ low(gap)
 
-  def paddingGap(length: Long, alignSteps: Int): Long = (alignSteps - length % alignSteps) % alignSteps
-
   override def decode(buffer: BitVector) =
     valueCodec.decode(buffer) match {
-      case e @ -\/(_) => e
-      case \/-((rest, res)) => {
+      case e @ Failure(_) => e
+      case Successful(DecodeResult(res, rest)) => {
         val gap = paddingGap(buffer.size - rest.size, paddingModulo)
-        \/-((rest.drop(gap), res))
+        Successful(DecodeResult(res, rest.drop(gap)))
       }
     }
 
+  def paddingGap(length: Long, alignSteps: Int): Long = (alignSteps - length % alignSteps) % alignSteps
+
   override def toString = s"alignBits($valueCodec, $paddingModulo)"
+
+  override def sizeBound: SizeBound = SizeBound.choice(Vector(valueCodec.sizeBound, SizeBound.exact(paddingModulo)))
 }

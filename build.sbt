@@ -17,7 +17,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-parsing-experimental" % "1.0-M4",
   "com.typesafe.akka" %% "akka-http-experimental" % "1.0-M4",
   //"org.typelevel" %% "scodec-core" % "1.3.1",
-  "org.typelevel" %% "scodec-core" % "1.6.0",
+  "org.scodec" %% "scodec-core" % "1.7.1",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.7" % Test,
   "org.scalatest" %% "scalatest" % "2.2.1"   % Test // ApacheV2
 )

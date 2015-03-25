@@ -4,9 +4,6 @@ import scodec._
 import scodec.bits._
 import codecs._
 import shapeless._
-import akka.rtcweb.protocol.scodec.SCodecContrib._
-
-import scalaz.{ -\/, \/- }
 
 /**
  * STUN messages are encoded in binary using network-oriented format
@@ -75,7 +72,7 @@ object StunMessage {
   final val stunMessageTypeCodec = stunMessageTypeBitCodec.exmap[Class :: Method :: HNil](
     {
       case methodBits :: classBits :: HNil => Class.codec.decode(classBits).flatMap {
-        case (_, clazz) => Method.codec.decode(methodBits).map { case (_, method) => clazz :: method :: HNil }
+        case DecodeResult(clazz, _) => Method.codec.decode(methodBits).map { case DecodeResult(method, _) => clazz :: method :: HNil }
       }
     },
     {

@@ -1,13 +1,10 @@
 package akka.rtcweb.protocol.dtls
 
-import scodec._
-import scodec.bits._
-import codecs._
-import scalaz.\/
-
-import javax.crypto.{ Mac, Cipher }
+import javax.crypto.{ Cipher, Mac }
 
 import akka.rtcweb.protocol.dtls.handshake._
+import scodec._
+import scodec.codecs._
 
 private[dtls] case object SecurityParameters
 
@@ -67,16 +64,16 @@ private[dtls] sealed trait BulkCipherAlgorithm { def cipher(): Cipher }
 
 private[dtls] object BulkCipherAlgorithm {
 
-  case object `null` extends BulkCipherAlgorithm { def cipher() = ??? }
-  case object rc4 extends BulkCipherAlgorithm { def cipher() = ??? }
-  case object `3des` extends BulkCipherAlgorithm { def cipher() = Cipher.getInstance("DESede") }
-  case object aes extends BulkCipherAlgorithm { def cipher() = Cipher.getInstance("AES") }
-
   implicit val codec: Codec[BulkCipherAlgorithm] = "BulkCipherAlgorithm" | mappedEnum(uint8,
     `null` -> 0,
     rc4 -> 1,
     `3des` -> 2,
     aes -> 3)
+  case object `null` extends BulkCipherAlgorithm { def cipher() = ??? }
+  case object rc4 extends BulkCipherAlgorithm { def cipher() = ??? }
+  case object `3des` extends BulkCipherAlgorithm { def cipher() = Cipher.getInstance("DESede") }
+
+  case object aes extends BulkCipherAlgorithm { def cipher() = Cipher.getInstance("AES") }
 
 }
 

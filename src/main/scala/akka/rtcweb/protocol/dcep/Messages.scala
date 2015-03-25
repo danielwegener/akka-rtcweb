@@ -1,9 +1,9 @@
 package akka.rtcweb.protocol.dcep
 
+import scodec.Attempt.{ Failure, Successful }
 import scodec._
 import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
-import scalaz._
 import shapeless._
 
 /**
@@ -104,12 +104,12 @@ private[dcep] object Priority {
     mappedEnum[Priority, Int](uint16,
       `below normal` -> 128,
       `normal` -> 256,
-      `high` -> 256,
+      `high` -> 512,
       `extra high` -> 1024
     ),
     uint16.as[Ordinal].widen[Priority](identity, {
-      case a: Ordinal => \/-(a)
-      case _ => -\/(Err("Is not an Ordinal"))
+      case a: Ordinal => Successful(a)
+      case _ => Failure(Err("Is not an Ordinal"))
     })
   )
 

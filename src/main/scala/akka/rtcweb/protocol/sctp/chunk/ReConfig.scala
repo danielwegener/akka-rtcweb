@@ -13,9 +13,6 @@ private[sctp] case class ReConfig() extends SctpChunk
 
 object ReConfig {
 
-  sealed trait ReconfigurationParameter extends Parameter
-  //todo: Reconfiguration Parameters
-
   /**
    * {{{
    * 0                   1                   2                   3
@@ -36,7 +33,7 @@ object ReConfig {
    */
   implicit val codec: Codec[ReConfig] = {
     "RE-CONFIG" | {
-      ("Type" | constant(ChunkType.codec.encodeValid(ChunkType.`RE-CONFIG`))) :~>:
+      ("Type" | constant(ChunkType.codec.encode(ChunkType.`RE-CONFIG`).require)) :~>:
         ("Chunk Flags" | ignore(8)) :~>:
         variableSizeBytes("Chunk Length" | uint16,
           constant(BitVector.empty), 32)
@@ -44,4 +41,7 @@ object ReConfig {
     }.dropUnits.as[ReConfig]
 
   }
+  //todo: Reconfiguration Parameters
+
+  sealed trait ReconfigurationParameter extends Parameter
 }

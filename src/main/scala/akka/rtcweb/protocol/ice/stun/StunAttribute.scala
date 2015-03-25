@@ -1,15 +1,14 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.{ InetAddress, InetSocketAddress }
+import java.net.{InetAddress, InetSocketAddress}
 
 import akka.rtcweb.protocol.scodec.SCodecContrib
-import shapeless._
-import scodec._
-import scodec.bits.{ ByteOrdering, BitVector, HexStringSyntax }
-import scodec.codecs._
 import akka.rtcweb.protocol.scodec.SCodecContrib._
-
-import scalaz.{ \/, -\/, \/- }
+import scodec.Attempt.{Failure, Successful}
+import scodec._
+import scodec.bits.{BitVector, ByteOrdering, HexStringSyntax}
+import scodec.codecs._
+import shapeless._
 
 sealed trait StunAttributeType
 
@@ -32,8 +31,8 @@ object StunAttributeType {
       FINGERPRINT -> hex"0x8028".toBitVector
     )
   }, codecs.bits(16).as[UNKNOWN].widen[StunAttributeType](identity, {
-    case a: UNKNOWN => \/-(a)
-    case _ => -\/(Err("Is not an UNKNOWN"))
+    case a: UNKNOWN => Successful(a)
+    case _ => Failure(Err("Is not an UNKNOWN"))
   }))
 
   final case class UNKNOWN(code: BitVector) extends StunAttributeType {
@@ -212,11 +211,13 @@ object `XOR-MAPPED-ADDRESS` {
   private val MAGIC_COOKIE_MSBS = StunMessage.MAGIC_COOKIE.take(16)
 
   final def xPortCodec: Codec[Int] = new Codec[Int] {
-    def encode(b: Int): Err \/ BitVector = uint16.encode(b).map(_.xor(StunMessage.MAGIC_COOKIE))
-    def decode(buffer: BitVector): Err \/ (BitVector, Int) = {
+    override def encode(b: Int): Attempt[BitVector] = uint16.encode(b).map(_.xor(StunMessage.MAGIC_COOKIE))
+    override def decode(buffer: BitVector): Attempt[DecodeResult[Int]] = {
       val (xPortRaw, rest) = buffer.splitAt(16)
-      uint16.decode(xPortRaw.xor(MAGIC_COOKIE_MSBS)).map { case (_, a) => (rest, a) }
+      uint16.decode(xPortRaw.xor(MAGIC_COOKIE_MSBS)).map { case DecodeResult(a, _) => DecodeResult[Int](a, rest) }
     }
+
+    override def sizeBound: SizeBound = SizeBound.exact(16)
   }
 
 }

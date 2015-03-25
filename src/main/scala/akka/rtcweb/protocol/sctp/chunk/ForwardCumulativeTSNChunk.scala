@@ -52,7 +52,7 @@ private[sctp] object ForwardCumulativeTSNChunk {
    */
   implicit val codec: Codec[ForwardCumulativeTSNChunk] = {
     "Forward Cumulative TSN" | {
-      constant(ChunkType.codec.encodeValid(ChunkType.`FORWARD TSN`)) :~>:
+      constant(ChunkType.codec.encode(ChunkType.`FORWARD TSN`).require) :~>:
         ignore(8) :~>:
         variableSizeBytes("Length" | uint16,
           ("New Cumulative TSN" | uint32) ::
