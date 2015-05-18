@@ -1,12 +1,12 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{ InetAddress, InetSocketAddress }
 
 import akka.rtcweb.protocol.scodec.SCodecContrib
 import akka.rtcweb.protocol.scodec.SCodecContrib._
-import scodec.Attempt.{Failure, Successful}
+import scodec.Attempt.{ Failure, Successful }
 import scodec._
-import scodec.bits.{BitVector, ByteOrdering, HexStringSyntax}
+import scodec.bits.{ BitVector, ByteOrdering, HexStringSyntax }
 import scodec.codecs._
 import shapeless._
 
@@ -87,7 +87,7 @@ object `ERROR-CODE` {
    * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    * }}}
    */
-  implicit val codec: Codec[`ERROR-CODE`] = {
+  implicit val codec = {
     StunAttribute.withAttributeHeader(constantValue[StunAttributeType](StunAttributeType.`ERROR-CODE`),
       ignore(20) ::
         classNumberCodec ::
@@ -272,12 +272,12 @@ object StunAttribute {
 
   def withAttributeHeader[A, D](discriminator: Codec[Unit], valueCodec: Codec[A]): Codec[A] = {
     blockalignBits(
-      discriminator ::
+      discriminator ~>
         variableSizeBytes[A]({
           "Length" | uint16
         },
           valueCodec
         ), 32)
-  }.dropUnits.as[A]
+  }
 
 }

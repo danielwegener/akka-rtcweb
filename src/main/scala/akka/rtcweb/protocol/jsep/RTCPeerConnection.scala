@@ -1,14 +1,13 @@
 package akka.rtcweb.protocol.jsep
 
-import java.net.{ InetSocketAddress, InetAddress }
+import java.net.InetSocketAddress
 
-import akka.actor.{ Props, ActorRef, Actor }
+import akka.actor.{ Actor, ActorRef, Props }
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ ICECandidatePolicy, PeerConnectionConfiguration }
 import akka.rtcweb.protocol.sdp._
-import collection.immutable.Seq
-import scala.concurrent.duration._
 
-import scala.concurrent.duration.FiniteDuration
+import scala.collection.immutable.Seq
+import scala.concurrent.duration.{ FiniteDuration, _ }
 import scala.util.Random
 
 object RTCPeerConnection {
@@ -548,7 +547,7 @@ final class RTCPeerConnection private[jsep] (private val config: PeerConnectionC
       val config = dataChannelInit.copy(id = validChannelId)
       val dataChannelActorProps = RTCDataChannel.props(listener, config)
       val dataChannelActor = context.actorOf(dataChannelActorProps)
-      dataChannels += validChannelId -> (config, label, dataChannelActor)
+      dataChannels += validChannelId -> ((config, label, dataChannelActor))
   }
 
   private def createOffer = {

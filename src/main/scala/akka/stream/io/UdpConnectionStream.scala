@@ -34,7 +34,7 @@ private[akka] class UdpActor(bindCmd: Udp.Bind, requester: ActorRef) extends Udp
 
   val initSteps = new SubReceive(waitingExposedProcessor)
 
-  override def receive = initSteps orElse super.receive
+  override def receive = ??? //initSteps orElse super.receive
 
   def waitingExposedProcessor: Receive = {
     case ExposedProcessor(processor) ⇒
@@ -73,7 +73,7 @@ private[akka] abstract class UdpStreamActor() extends Actor {
     }*/ ???
 
   override def receive =
-    primaryInputs.subreceive orElse primaryOutputs.subreceive orElse udpInputs.subreceive orElse udpOutputs.subreceive
+    ??? //primaryInputs.subreceive orElse primaryOutputs.subreceive orElse udpInputs.subreceive orElse udpOutputs.subreceive
 
   def fail(e: Throwable): Unit = {
     udpInputs.cancel()

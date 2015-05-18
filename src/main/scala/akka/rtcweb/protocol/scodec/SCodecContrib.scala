@@ -1,11 +1,11 @@
 package akka.rtcweb.protocol.scodec
 
-import java.net.{ InetAddress, InetSocketAddress }
+import java.net.InetAddress
 
 import scodec.Attempt.{ Failure, Successful }
 import scodec._
-import scodec.bits.{ ByteVector, BitVector }
 import scodec.bits.BitVector._
+import scodec.bits.{ BitVector, ByteVector }
 import scodec.codecs._
 import shapeless._
 import shapeless.ops.hlist._
@@ -83,8 +83,6 @@ object SCodecContrib {
       }
     }
 
-    import shapeless.test._
-
     override def encode(v: V): Attempt[BitVector] = {
       // encode all values, zip with em over length codecs encoded their lengths and concat bits(length)  ++ bits(values)
       val encodedValues: EncodedValues = (v zip valueCodecs).map(valueEncoder)
@@ -100,15 +98,14 @@ object SCodecContrib {
 
       Console.println(this)
       Console.println(encodedValues)
-      //Console.println(encodedValuesSimple)
       ???
-      //Console.println(this)
-      //Console.println(encodedValues)
 
     }
 
     private def fail(a: Any, msg: String): Err =
       Err(s"[$a] is too long to be encoded: $msg")
+
+    override def sizeBound: SizeBound = ???
   }
 
   /**
@@ -116,10 +113,10 @@ object SCodecContrib {
    */
   final def cstring(codec: Codec[String]): Codec[String] = codec.exmap[String](
     {
-      case a if !a.isEmpty && a.indexOf('\0') + 1 == a.length => Successful[String](a.dropRight(1))
+      case a if !a.isEmpty && a.indexOf('\u0000') + 1 == a.length => Successful[String](a.dropRight(1))
       case a => Failure(Err(s"[$a] is not terminated by a nul character or contains multiple nuls"))
     },
-    f => Successful(f + '\0')
+    f => Successful(f + '\u0000')
   )
 
   /**

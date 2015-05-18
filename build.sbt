@@ -16,14 +16,21 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M4",
   "com.typesafe.akka" %% "akka-parsing-experimental" % "1.0-M4",
   "com.typesafe.akka" %% "akka-http-experimental" % "1.0-M4",
-  //"org.typelevel" %% "scodec-core" % "1.3.1",
   "org.scodec" %% "scodec-core" % "1.7.1",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.7" % Test,
   "org.scalatest" %% "scalatest" % "2.2.1"   % Test // ApacheV2
 )
 
+scalacOptions ++= List(
+  "-unchecked",
+  "-deprecation",
+  "-language:_",
+  "-encoding", "UTF-8",
+  "-Xlint",
+  "-Xfatal-warnings"
+)
+
+licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
+homepage := Some(url("https://github.com/danielwegener/akka-rtcweb"))
+
 scalariformSettings
-
-//scalaJSSettings
-
-net.virtualvoid.sbt.graph.Plugin.graphSettings

@@ -24,7 +24,7 @@ class UdpMuxer private (private val receivers: Seq[(ByteString => Boolean, Actor
       receivers.find(_._1(data)).foreach(_._2 ! received)
     case send @ Udp.Send(data, remote, ack) => socket ! Udp.Send(data, remote, ack)
     case Udp.Unbind => socket ! Udp.Unbind
-    case unbound @ Udp.Unbound =>
+    case unbound if unbound == Udp.Unbound =>
       receivers.foreach(_._2 ! unbound)
       context.stop(self)
   }

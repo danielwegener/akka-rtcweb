@@ -2,8 +2,6 @@ package akka.rtcweb.protocol.sdp.sctp
 
 import akka.rtcweb.protocol.sdp.ExtensionAttribute
 
-import java.net.InetSocketAddress
-
 sealed trait SctpExtensionAttribute extends ExtensionAttribute
 
 /**
@@ -94,7 +92,7 @@ final case class Fmtp(associationUsage: String, maxMessageSize: Long) extends Sc
  * zero or larger than 65535 MUST NOT be established.
  * @see [[https://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-06#section-5.1]]
  */
-@deprecated(since = "draft-ietf-mmusic-sctp-sdp-07")
+//@deprecated(since = "draft-ietf-mmusic-sctp-sdp-07")
 final case class Sctpmap(number: Long, app: String) extends SctpExtensionAttribute {
   override def key: String = "sctpmap"
 }
