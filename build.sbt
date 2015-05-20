@@ -15,12 +15,12 @@ resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repos
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-M4",
-  "com.typesafe.akka" %% "akka-parsing-experimental" % "1.0-M4",
-  "com.typesafe.akka" %% "akka-http-experimental" % "1.0-M4",
+  "com.typesafe.akka" %% "akka-stream-experimental" % "1.0-RC2",
+  "com.typesafe.akka" %% "akka-parsing-experimental" % "1.0-RC2",
+  "com.typesafe.akka" %% "akka-http-scala-experimental" % "1.0-RC2",
   "org.scodec" %% "scodec-core" % "1.7.1",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.7" % Test,
-  "org.scalatest" %% "scalatest" % "2.2.1"   % Test, // ApacheV2,
+  "org.scalatest" %% "scalatest" % "2.2.5"   % Test, // ApacheV2,
   "org.specs2" %% "specs2-core" % "3.6" % Test
 )
 
