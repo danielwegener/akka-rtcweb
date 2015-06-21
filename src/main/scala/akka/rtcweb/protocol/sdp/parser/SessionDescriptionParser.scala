@@ -22,7 +22,7 @@ private[sdp] class PlainSessionDescriptionParserImpl(val input: ParserInput) ext
 
 object SessionDescriptionParser {
 
-  def parse(payload: String): SessionDescription = new PlainSessionDescriptionParserImpl(ParserInput(payload)).parseSessionDescription().get
+  def parse(payload: String): Try[SessionDescription] = new PlainSessionDescriptionParserImpl(ParserInput(payload)).parseSessionDescription()
 }
 
 private[protocol] trait SessionAttributeExtensionRule {

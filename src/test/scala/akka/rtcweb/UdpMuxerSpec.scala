@@ -9,7 +9,6 @@ import akka.util.ByteString
 import org.scalatest._
 
 import scala.concurrent.duration._
-import scala.language.postfixOps
 
 class UdpMuxerSpec extends TestKitBase
     with WordSpecLike with Matchers with BeforeAndAfterAll

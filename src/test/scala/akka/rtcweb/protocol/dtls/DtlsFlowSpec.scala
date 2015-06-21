@@ -10,8 +10,6 @@ import akka.testkit.TestProbe
 import akka.util.ByteString
 import org.scalatest.{ MustMatchers, WordSpecLike }
 
-import scala.language.postfixOps
-
 class DtlsFlowSpec extends WordSpecLike with MustMatchers {
 
   implicit val actorSystem = ActorSystem("dtls-flow-spec")
@@ -47,7 +45,7 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers {
       val server = echoServer(serverAddress)
       val conn = connect
 
-      val testInput = Iterator.fill(20)(ByteString('A'), serverAddress)
+      val testInput = Iterator.fill(20)(() => (ByteString('A'), serverAddress))
       val expectedOutput = ByteString(Array.fill[Byte](10)('A'))
 
       // send 20 but just read 10 as UDP is unreliable

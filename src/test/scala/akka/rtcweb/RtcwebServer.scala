@@ -1,32 +1,36 @@
 package akka.rtcweb
 
 import akka.actor.ActorSystem
-import akka.http._
-import akka.http.model._
-import akka.http.unmarshalling.{ Unmarshal, Unmarshaller }
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.server.Directives
+import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
+import akka.http.scaladsl.util.FastFuture
 import akka.rtcweb.protocol.RtcWebSDPRenderer
 import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.stream.ActorFlowMaterializer
-import akka.stream.scaladsl.Sink
 import akka.util.Timeout
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 import scala.io.Source
 
-object RtcwebServer extends App {
+object RtcwebServer extends App with Directives {
 
   implicit val system = ActorSystem("RtcwebServer")
+  private implicit val materializer = ActorFlowMaterializer()(system)
 
   import akka.rtcweb.RtcwebServer.system.dispatcher
   implicit val askTimeout: Timeout = 500.millis
-  val sdpMediaType = MediaType.custom("application/sdp")
+  val sdpMediaType = MediaType.custom("application/sdp", MediaType.Encoding.Fixed(HttpCharsets.`UTF-8`))
 
   //(IO(StreamDtls) ? StreamDtls.Bind(materializer.settings, InetSocketAddress.createUnresolved("127.0.0.1", 4242))).mapTo[StreamDtls.DtlsConnection]
   val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
+
   val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
-  implicit val toSessionDescriptionUnmarshaller = Unmarshaller((SessionDescriptionParser.parse _).andThen(a => Future.apply(a)))
+  implicit val toSessionDescriptionUnmarshaller = Unmarshaller(_ => (SessionDescriptionParser.parse _).andThen(FastFuture.apply))
+
   val renderer = new RtcWebSDPRenderer
   val api = {
     (get | post) {
@@ -37,9 +41,9 @@ object RtcwebServer extends App {
           extractLog { log =>
             extract(_.request.entity) { entity =>
 
-              val r = Unmarshal(entity).to[String].flatMap[SessionDescription](s => Future(SessionDescriptionParser.parse(s)))
+              val sd = Unmarshal(entity).to[String].flatMap(toSessionDescriptionUnmarshaller.apply)
 
-              val result = Await.result(r, Duration.Inf)
+              val result = Await.result(sd, Duration.Inf)
               log.info("received and parsed: " + result.toString)
               val response = renderer.render(result)
               log.info("returning: " + response)
@@ -55,11 +59,8 @@ object RtcwebServer extends App {
         }
     }
   }
-  import akka.http.server.Directives._
-  val binding = Http().bind(interface = "127.0.0.1", port = 8080).to(Sink.foreach { conn ⇒
-    val mat = conn.flow.join(api).run()
-  }).run()
-  private implicit val materializer = ActorFlowMaterializer()(system)
+
+  Http().bindAndHandle(api, "127.0.0.1", 8080)
 
   println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
 

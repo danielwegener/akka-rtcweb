@@ -246,7 +246,7 @@ private[sctp] object Initiation {
      * }}}
      */
     implicit val codec: Codec[`Host Name Address`] = {
-      variableSizeBytes("Length" | uint16, "Host Name" | ascii.cstring, 4)
+      variableSizeBytes("Length" | uint16, "Host Name" | cstring, 4)
     }.as[`Host Name Address`]
   }
 

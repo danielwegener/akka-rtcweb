@@ -110,17 +110,6 @@ object SCodecContrib {
   }
 
   /**
-   * A string terminated by a `null` byte
-   */
-  final def cstring(codec: Codec[String]): Codec[String] = codec.exmap[String](
-    {
-      case a if !a.isEmpty && a.indexOf('\u0000') + 1 == a.length => Successful[String](a.dropRight(1))
-      case a => Failure(Err(s"[$a] is not terminated by a nul character or contains multiple nuls"))
-    },
-    f => Successful(f + '\u0000')
-  )
-
-  /**
    * Codec that supports bit of the form `value ++ (value.size%padding)*0`.
    * @param blockWidth width of the padding bytes (the maximum number of appended zero-bytes + 1)
    * @group combinators
@@ -145,12 +134,6 @@ object SCodecContrib {
     new WithPaddingCodec(value, blockWidth)
 
   implicit class AwesomeCodecOps[A](val codec: Codec[A]) extends AnyVal {
-
-    /**
-     * A string terminated by a `null` byte
-     * todo: really terminate!
-     */
-    final def cstring(implicit ev: A =:= String, ve: String =:= A): Codec[String] = SCodecContrib.cstring(codec.xmap(ev, ve))
 
     /**
      * Adds a validation to this coded that fails when the partial function applies.

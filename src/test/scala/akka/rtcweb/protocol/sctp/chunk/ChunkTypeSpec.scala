@@ -1,28 +1,21 @@
 package akka.rtcweb.protocol.sctp.chunk
 
 import org.scalatest.{ Inside, Matchers, WordSpec }
+import scodec.Attempt.Successful
+import scodec.DecodeResult
 import scodec.bits.BitVector
-
-import scalaz.\/-
 
 class ChunkTypeSpec extends WordSpec with Matchers with Inside {
 
   "ChunkType" should {
     "be decodable" in {
-      inside(ChunkType.codec.decode(BitVector.fromInt(0, 8))) {
-        case \/-((rest, chunkType)) =>
-          rest should be(BitVector.empty)
-          chunkType should be(ChunkType.DATA)
-      }
+      ChunkType.codec.decode(BitVector.fromInt(0, 8)) shouldBe
+        Successful(DecodeResult(ChunkType.DATA, BitVector.empty))
     }
 
     "decode unknown chunkTypes" in {
-      inside(ChunkType.codec.decode(BitVector.fromInt(42, 8))) {
-        case \/-((rest, chunkType)) =>
-          rest should be(BitVector.empty)
-          chunkType should be(ChunkType.UNKNOWN(42))
-      }
+      ChunkType.codec.decode(BitVector.fromInt(42, 8)) shouldBe
+        Successful(DecodeResult(ChunkType.UNKNOWN(42), BitVector.empty))
     }
   }
-
 }

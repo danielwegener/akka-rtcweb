@@ -2,9 +2,10 @@ package akka.rtcweb.protocol.sctp.chunk
 
 import akka.rtcweb.protocol.sctp.chunk.Initiation._
 import org.scalatest.{ Matchers, Inside, WordSpec }
+import scodec.Attempt.Successful
+import scodec.DecodeResult
 import scodec.bits._
 import scala.concurrent.duration._
-import scalaz.{ \/-, -\/ }
 
 class InitiationSpec extends WordSpec with Matchers with Inside {
 
@@ -21,10 +22,8 @@ class InitiationSpec extends WordSpec with Matchers with Inside {
       ))
 
       val decoded = Initiation.codec.encode(in).flatMap(Initiation.codec.decode)
-      inside(decoded) {
-        case \/-((BitVector.empty, out)) => in should be(out)
-        case -\/(e) => fail(e.message)
-      }
+
+      decoded should be(Successful(DecodeResult(in, BitVector.empty)))
 
     }
   }

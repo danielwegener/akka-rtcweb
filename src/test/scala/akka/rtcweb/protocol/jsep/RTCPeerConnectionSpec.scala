@@ -2,6 +2,8 @@ package akka.rtcweb.protocol.jsep
 
 import java.net.InetSocketAddress
 
+import org.specs2.execute.Result
+
 import akka.actor.ActorSystem
 import akka.rtcweb.protocol.RtcWebSDPRenderer
 import akka.rtcweb.protocol.ice.{ Setup, Fingerprint, IcePwd, IceUfrag }
@@ -16,7 +18,7 @@ import org.specs2._
 /**
  * @see [[https://tools.ietf.org/html/draft-ietf-rtcweb-jsep-09]]
  */
-class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with Specification  {
+class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")) with DefaultTimeout with SpecificationLike {
 
   lazy val initialOffer = {
     unitRef ! CreateDataChannel(dataChannelProbe.ref, "my-data-channel")
@@ -32,7 +34,7 @@ class RTCPeerConnectionSpec extends TestKit(ActorSystem("RTCPeerConnectionSpec")
   val unit = unitRef.underlyingActor
   val sdpRenderer = new RtcWebSDPRenderer
 
-def suite = s2"""
+  def suite = s2"""
   |
   |
   |
@@ -1782,7 +1784,7 @@ def suite = s2"""
   |
   |   o  "a=key-mgmt"
   |
-  |   o  "a=ice-lite"
+  |   o  "a=ice-lite" $excludeIncompatibleAttributes
   |
   |   Note that when BUNDLE is used, any additional attributes that are
   |   added MUST follow the advice in [I-D.ietf-mmusic-sdp-mux-attributes]
@@ -4167,7 +4169,7 @@ def suite = s2"""
   }
 
   def protocolMustBeUdpTls = forall(initialOffer.mediaDescriptions) {
-    _.protocol must be oneOf(MediaTransportProtocol.`UDP/TLS/RTP/SAVPF`, MediaTransportProtocol.`UDP/TLS/RTP/SAVP`)
+    _.protocol must be oneOf (MediaTransportProtocol.`UDP/TLS/RTP/SAVPF`, MediaTransportProtocol.`UDP/TLS/RTP/SAVP`)
   }
 
   def cLineMustContainDummyValue = forall(initialOffer.mediaDescriptions) { m =>
@@ -4191,7 +4193,7 @@ def suite = s2"""
   def mAttributesContainsMsidLine = pending("no SRTP support yet")
 
   def mAttributesContainsSendrcvLine = forall(initialOffer.mediaDescriptions) { m =>
-    val sendrcv = m.mediaAttributes.collectFirst { case e@PropertyAttribute("sendrecv") => e }
+    val sendrcv = m.mediaAttributes.collectFirst { case e @ PropertyAttribute("sendrecv") => e }
     sendrcv must be(Some(PropertyAttribute("sendrecv")))
   }
 
@@ -4204,20 +4206,20 @@ def suite = s2"""
   def mRtpmapForEachSupportecFEC = pending("no FEC support yet (irrelevant for data channels)")
 
   def iceUfragAndIcePasswdLines = forall(initialOffer.mediaDescriptions) { m =>
-      val iceUfrag = m.mediaAttributes.collectFirst { case IceUfrag(e) => e }
-      iceUfrag must beSome
-      iceUfrag.get must have size(be >= 4 and be <= 255)
-      val icePwd = m.mediaAttributes.collectFirst { case IcePwd(e) => e }
-      icePwd must beSome
-      icePwd.get must have size(be >= 22 and be <= 255)
-    }
+    val iceUfrag = m.mediaAttributes.collectFirst { case IceUfrag(e) => e }
+    iceUfrag must beSome
+    iceUfrag.get must have size (be >= 4 and be <= 255)
+    val icePwd = m.mediaAttributes.collectFirst { case IcePwd(e) => e }
+    icePwd must beSome
+    icePwd.get must have size (be >= 22 and be <= 255)
+  }
 
   def iceUfragAndIcePasswdAtSessionLevel = pending("ensure that ice ufrag is atleast present at session level")
 
   def iceOptionsLineWithTrickleOption = pending("trickle not yet supported. but it should be.")
 
   def fingerprintLine = forall(initialOffer.mediaDescriptions) { m =>
-    val fingerprint = m.mediaAttributes.collectFirst { case e@Fingerprint(_, _) => e }
+    val fingerprint = m.mediaAttributes.collectFirst { case e @ Fingerprint(_, _) => e }
     fingerprint must beSome
     pending("todo: check it matches the used in the certificate signature")
   }
@@ -4244,7 +4246,7 @@ def suite = s2"""
 
   def imageAttrOpenIssue = pending("Waiting for the working group to fix that :)")
 
-  def maxBundlePolicy = {
+  def maxBundlePolicy: Result = {
     if (bundlePolicy == BundlePolicy.`max-bundle` || bundlePolicy == BundlePolicy.balanced) {
       forall(initialOffer.mediaDescriptions.tail) { m =>
         m.mediaAttributes should contain(PropertyAttribute("bundle-only"))
@@ -4254,7 +4256,7 @@ def suite = s2"""
     }
   }
 
-  def dataMediaDescriptor = {
+  def dataMediaDescriptor: Result = {
 
     if (true /* TODO: ensure create dataChannel has been called */ ) {
       val m = initialOffer.mediaDescriptions.find(_.media == Media.application)
@@ -4273,72 +4275,67 @@ def suite = s2"""
   def dataMediaDescriptorFMTPortNumber = todo
 
   def sessionLevelGroupAttribute = {
-    val mediaIdentifiersFromGroup = initialOffer.sessionAttributes.collectFirst { case e@Group(Semantics.UnknownSemanticsExtension("BUNDLE"), mids) => mids }
+    val mediaIdentifiersFromGroup = initialOffer.sessionAttributes.collectFirst { case e @ Group(Semantics.UnknownSemanticsExtension("BUNDLE"), mids) => mids }
     val midsFromMedia = initialOffer.mediaDescriptions.flatMap { md => md.mediaAttributes.collectFirst { case MediaStreamIdentifier(tag) => tag } }
     todo
   }
 
   def additionalAttributesMustFollowAdvice = todo
 
-  override def afterAll() {
-    shutdown()
+  def excludeIncompatibleAttributes = forall(initialOffer.mediaDescriptions) { m =>
+    m should not be (PropertyAttribute("crypto"))
+    m should not be (PropertyAttribute("key-mgmt"))
+    m should not be (PropertyAttribute("ice-lite"))
   }
 
-  def excludeIncompatibleAttributes = forall(initialOffer.mediaDescriptions) {
-    _ should not beLike {
-      case PropertyAttribute("crypto") => failure
-      case PropertyAttribute("key-mgmt") => failure
-      case PropertyAttribute("ice-lite") => failure
-    }
-  }
+  /* cleanup */
+  step(shutdown())
 
-
-
-
-    "5.2.2.  Subsequent Offers" - {
-
-      info("""When createOffer is called a second (or later) time, or is called
-        |after a local description has already been installed, the processing
-        |is somewhat different than for an initial offer.""".stripMargin)
-
-      """If the initial offer was not applied using setLocalDescription,
-        |meaning the PeerConnection is still in the "stable" state, the steps
-        |for generating an initial offer should be followed, subject to the
-        |following restriction:""".stripMargin in {
-
-        val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true)
-        unitRef ! CreateOffer(rtcOfferOptions)
-        lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
-        unitRef ! CreateOffer(rtcOfferOptions)
-        lazy val subsequentOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
-
-        """The fields of the "o=" line MUST stay the same except for the
-            |<session-version> field, which MUST increment if the session
-            |description changes in any way, including the addition of ICE
-            |candidates.""".stripMargin in {
-          if (initialOffer != subsequentOffer) {
-            subsequentOffer.origin.`sess-id` shouldBe initialOffer.origin.`sess-id`
-            subsequentOffer.origin.`unicast-address` shouldBe initialOffer.origin.`unicast-address`
-            subsequentOffer.origin.addrtype shouldBe initialOffer.origin.addrtype
-            subsequentOffer.origin.nettype shouldBe initialOffer.origin.nettype
-            subsequentOffer.origin.username shouldBe initialOffer.origin.username
-            subsequentOffer.origin.`sess-version` shouldNot be(initialOffer.origin.`sess-version` + 1)
-          }
-        }
-
-      }
-
-      """ If the initial offer was applied using setLocalDescription, but an
-        |answer from the remote side has not yet been applied, meaning the
-        |PeerConnection is still in the "local-offer" state, an offer is
-        |generated by following the steps in the "stable" state above, along
-        |with these exceptions:""".stripMargin in {
-        //TODO: continue
-      }
-
-    }
-
-  }
+  //TODO: translate
+  /**
+   * "5.2.2.  Subsequent Offers" - {
+   *
+   * info("""When createOffer is called a second (or later) time, or is called
+   * |after a local description has already been installed, the processing
+   * |is somewhat different than for an initial offer.""".stripMargin)
+   *
+   * """If the initial offer was not applied using setLocalDescription,
+   * |meaning the PeerConnection is still in the "stable" state, the steps
+   * |for generating an initial offer should be followed, subject to the
+   * |following restriction:""".stripMargin in {
+   *
+   * val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = true)
+   * unitRef ! CreateOffer(rtcOfferOptions)
+   * lazy val initialOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+   * unitRef ! CreateOffer(rtcOfferOptions)
+   * lazy val subsequentOffer = listenerProbe.expectMsgClass(1 second, classOf[SessionDescription])
+   *
+   * """The fields of the "o=" line MUST stay the same except for the
+   * |<session-version> field, which MUST increment if the session
+   * |description changes in any way, including the addition of ICE
+   * |candidates.""".stripMargin in {
+   * if (initialOffer != subsequentOffer) {
+   * subsequentOffer.origin.`sess-id` shouldBe initialOffer.origin.`sess-id`
+   * subsequentOffer.origin.`unicast-address` shouldBe initialOffer.origin.`unicast-address`
+   * subsequentOffer.origin.addrtype shouldBe initialOffer.origin.addrtype
+   * subsequentOffer.origin.nettype shouldBe initialOffer.origin.nettype
+   * subsequentOffer.origin.username shouldBe initialOffer.origin.username
+   * subsequentOffer.origin.`sess-version` shouldNot be(initialOffer.origin.`sess-version` + 1)
+   * }
+   * }
+   *
+   * }
+   *
+   * """ If the initial offer was applied using setLocalDescription, but an
+   * |answer from the remote side has not yet been applied, meaning the
+   * |PeerConnection is still in the "local-offer" state, an offer is
+   * |generated by following the steps in the "stable" state above, along
+   * |with these exceptions:""".stripMargin in {
+   * //TODO: continue
+   * }
+   *
+   * }
+   */
 
 }
 
