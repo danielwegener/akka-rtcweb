@@ -77,9 +77,9 @@ private[akka] abstract class UdpStreamActor() extends Actor {
 
   def fail(e: Throwable): Unit = {
     udpInputs.cancel()
-    udpOutputs.cancel(e)
+    udpOutputs.error(e)
     primaryInputs.cancel()
-    primaryOutputs.cancel(e)
+    primaryOutputs.error(e)
   }
 
   def tryShutdown(): Unit = if (primaryInputs.isClosed && udpInputs.isClosed && udpOutputs.isClosed) context.stop(self)
@@ -150,7 +150,11 @@ private[akka] abstract class UdpStreamActor() extends Actor {
 
     override def isClosed: Boolean = closed
 
-    override def cancel(e: Throwable): Unit = {
+    override def error(e: Throwable): Unit = {
+      closed = true
+    }
+
+    override def cancel(): Unit = {
       closed = true
     }
 
