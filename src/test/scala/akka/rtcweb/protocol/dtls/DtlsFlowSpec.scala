@@ -8,13 +8,11 @@ import akka.io.IO
 import akka.stream.io.StreamUdp
 import akka.testkit.TestProbe
 import akka.util.ByteString
-import org.scalatest.{MustMatchers, WordSpecLike}
+import org.scalatest.{ MustMatchers, WordSpecLike }
 
 import scala.language.postfixOps
 
 class DtlsFlowSpec extends WordSpecLike with MustMatchers {
-
-
 
   implicit val actorSystem = ActorSystem("dtls-flow-spec")
 

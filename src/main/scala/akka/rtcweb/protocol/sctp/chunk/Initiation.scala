@@ -152,7 +152,18 @@ private[sctp] object Initiation {
    * further details).
    * @see [[https://tools.ietf.org/html/rfc3758#section-3.1 rfc3758 Protocol Changes to support PR-SCTP]]
    */
-  case class `Forward-TSN-Supported`() extends InitiationParameter
+  final case class `Forward-TSN-Supported`() extends InitiationParameter
+
+  /**
+   *  This parameter value MUST contain all the necessary state and
+   * parameter information required for the sender of this INIT ACK to
+   * create the association, along with a Message Authentication Code
+   * (MAC).  See Section 5.1.3 for details on State Cookie definition.
+   */
+  final case class `State Cookie`(data: ByteVector) extends InitiationParameter
+
+  final case class `Unrecognized Parameter`(unrecognizedParameters: Vector[InitiationParameter])
+    extends InitiationParameter
 
   object `IPv4 Address` {
     implicit val discriminator: Discriminator[InitiationParameter, `IPv4 Address`, Int] = Discriminator(5)
@@ -197,6 +208,7 @@ private[sctp] object Initiation {
         ("IPv6 Address" | bytes(16))
     }.as[`IPv6 Address`]
   }
+
   object `Cookie Preservative` {
     implicit val discriminator: Discriminator[InitiationParameter, `Cookie Preservative`, Int] = Discriminator(9)
     /**
@@ -307,6 +319,44 @@ private[sctp] object Initiation {
         "Address Type" | vector(`Address Type`.codec),
         4)
     }.as[`Supported Address Types`]
+  }
+
+  object `State Cookie` {
+    implicit val discriminator: Discriminator[InitiationParameter, `State Cookie`, Int] = Discriminator(7)
+
+    implicit val codec: Codec[`State Cookie`] = {
+      variableSizeBytes("Length" | uint16,
+        "Parameter Value" | bytes,
+        4)
+    }.as[`State Cookie`]
+  }
+
+  object `Unrecognized Parameter` {
+
+    implicit val discriminator: Discriminator[InitiationParameter, `Unrecognized Parameter`, Int] = Discriminator(8)
+
+    /**
+     * Unrecognized Parameter:
+     *
+     * Parameter Type Value: 8
+     *
+     * Parameter Length: Variable size.
+     *
+     * Parameter Value:
+     *
+     * This parameter is returned to the originator of the INIT chunk
+     * when the INIT contains an unrecognized parameter that has a value
+     * that indicates it should be reported to the sender.  This
+     * parameter value field will contain unrecognized parameters copied
+     * from the INIT chunk complete with Parameter Type, Length, and
+     * Value fields.
+     */
+    implicit val codec: Codec[`Unrecognized Parameter`] = {
+      variableSizeBytes("Parameter Length" | uint16,
+        "Parameter Value" | vector[InitiationParameter](InitiationParameter.codec),
+        4)
+    }.as[`Unrecognized Parameter`]
+
   }
 
   object InitiationParameter {
@@ -431,7 +481,6 @@ private[sctp] final case class Initiation(
  * valid range is from 0 to 4294967295.  This field MAY be set to the
  * value of the Initiate Tag field.
  *
- * @param optionalParameters
  */
 private[sctp] final case class InitAck(
     initiateTag: Long,
@@ -442,7 +491,7 @@ private[sctp] final case class InitAck(
     optionalParameters: Vector[Initiation.InitiationParameter]) extends SctpChunk {
 
   require(optionalParameters.count(_.isInstanceOf[Initiation.`Host Name Address`]) <= 1, "The INIT ACK chunks MUST NOT contain more than one Host Name Address parameter.")
-  require(optionalParameters.count(_.isInstanceOf[InitAck.`State Cookie`]) == 1, "InitAck must have exactly one State Cookie as optional Parameter.")
+  require(optionalParameters.count(_.isInstanceOf[Initiation.`State Cookie`]) == 1, "InitAck must have exactly one State Cookie as optional Parameter.")
 
 }
 
@@ -490,55 +539,5 @@ private[sctp] object InitAck {
           ("Initial TSN" | uint32) ::
           ("Optional Parameters" | vector(InitiationParameter.codec)), 2)
   }.as[InitAck]
-
-  /**
-   *  This parameter value MUST contain all the necessary state and
-   * parameter information required for the sender of this INIT ACK to
-   * create the association, along with a Message Authentication Code
-   * (MAC).  See Section 5.1.3 for details on State Cookie definition.
-   */
-  final case class `State Cookie`(
-    data: ByteVector) extends InitiationParameter
-
-  final case class `Unrecognized Parameter`(
-    unrecognizedParameters: Vector[InitiationParameter]) extends InitiationParameter
-
-  object `State Cookie` {
-    implicit val discriminator: Discriminator[InitiationParameter, `State Cookie`, Int] = Discriminator(7)
-
-    implicit val codec: Codec[`State Cookie`] = {
-      variableSizeBytes("Length" | uint16,
-        "Parameter Value" | bytes,
-        4)
-    }.as[`State Cookie`]
-  }
-
-  object `Unrecognized Parameter` {
-
-    implicit val discriminator: Discriminator[InitiationParameter, `State Cookie`, Int] = Discriminator(8)
-
-    /**
-     * Unrecognized Parameter:
-     *
-     * Parameter Type Value: 8
-     *
-     * Parameter Length: Variable size.
-     *
-     * Parameter Value:
-     *
-     * This parameter is returned to the originator of the INIT chunk
-     * when the INIT contains an unrecognized parameter that has a value
-     * that indicates it should be reported to the sender.  This
-     * parameter value field will contain unrecognized parameters copied
-     * from the INIT chunk complete with Parameter Type, Length, and
-     * Value fields.
-     */
-    implicit val codec: Codec[`Unrecognized Parameter`] = {
-      variableSizeBytes("Parameter Length" | uint16,
-        "Parameter Value" | vector[InitiationParameter](InitiationParameter.codec),
-        4)
-    }.as[`Unrecognized Parameter`]
-
-  }
 
 }

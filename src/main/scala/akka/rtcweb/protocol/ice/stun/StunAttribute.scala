@@ -77,6 +77,17 @@ final case class `ERROR-CODE`(errorCode: Int, reasonPhrase: String) extends Stun
 object `ERROR-CODE` {
 
   /**
+   * The Class represents
+   * the hundreds digit of the error code.  The value MUST be between 3
+   * and 6.  The Number represents the error code modulo 100, and its
+   * value MUST be between 0 and 99.
+   */
+  private val classNumberCodec: Codec[Int] = {
+    { "Class" | uint(3) } ::
+      { "Number" | uint8 }
+  }.xmap[Int]({ case clazz :: number :: HNil => clazz * 100 + number }, { code => code / 100 :: code % 100 :: HNil })
+
+  /**
    * {{{
    *  0                   1                   2                   3
    * 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -94,16 +105,6 @@ object `ERROR-CODE` {
         { "ReasonPhrase" | utf8 })
   }.dropUnits.as[`ERROR-CODE`]
   implicit val discriminator: Discriminator[StunAttribute, `ERROR-CODE`, StunAttributeType] = Discriminator(StunAttributeType.`ERROR-CODE`)
-  /**
-   * The Class represents
-   * the hundreds digit of the error code.  The value MUST be between 3
-   * and 6.  The Number represents the error code modulo 100, and its
-   * value MUST be between 0 and 99.
-   */
-  private val classNumberCodec = {
-    { "Class" | uint(3) } ::
-      { "Number" | uint8 }
-  }.xmap[Int]({ case clazz :: number :: HNil => clazz * 100 + number }, { code => code / 100 :: code % 100 :: HNil })
 
 }
 

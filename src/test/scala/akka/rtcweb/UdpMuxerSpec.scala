@@ -1,8 +1,8 @@
 package akka.rtcweb
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{ InetAddress, InetSocketAddress }
 
-import akka.actor.{ActorSystem, Terminated}
+import akka.actor.{ ActorSystem, Terminated }
 import akka.io.Udp
 import akka.testkit._
 import akka.util.ByteString

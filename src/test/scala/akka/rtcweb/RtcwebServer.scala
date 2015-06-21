@@ -3,7 +3,7 @@ package akka.rtcweb
 import akka.actor.ActorSystem
 import akka.http._
 import akka.http.model._
-import akka.http.unmarshalling.{Unmarshal, Unmarshaller}
+import akka.http.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.rtcweb.protocol.RtcWebSDPRenderer
 import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
@@ -12,7 +12,7 @@ import akka.stream.scaladsl.Sink
 import akka.util.Timeout
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{ Await, Future }
 import scala.io.Source
 
 object RtcwebServer extends App {

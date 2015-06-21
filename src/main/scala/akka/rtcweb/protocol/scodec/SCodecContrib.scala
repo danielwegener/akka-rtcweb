@@ -28,22 +28,23 @@ object SCodecContrib {
    */
   final def duration[A: Numeric](discriminatorCodec: Codec[A], unit: TimeUnit) = discriminatorCodec.xmap[FiniteDuration](
     a => FiniteDuration.apply(implicitly[Numeric[A]].toLong(a), unit),
-    a => implicitly[Numeric[A]].fromInt(a.toUnit(unit).toInt))
+    a => implicitly[Numeric[A]].fromInt(a.toUnit(unit).toInt)).withToString(s"duration($unit)")
 
-  final def ipv4Address: Codec[InetAddress] = {
-    bytes(4).xmap(bits => InetAddress.getByAddress(bits.toArray),
+  final val ipv4Address: Codec[InetAddress] = {
+    bytes(4).xmap[InetAddress](
+      bits => InetAddress.getByAddress(bits.toArray),
       f => ByteVector(f.getAddress)
     )
-  }
+  }.withToString("ipv4Address")
 
-  final def ipv6Address: Codec[InetAddress] = {
-    bytes(32).xmap(bits => InetAddress.getByAddress(bits.toArray),
+  final val ipv6Address: Codec[InetAddress] = {
+    bytes(32).xmap[InetAddress](
+      bits => InetAddress.getByAddress(bits.toArray),
       f => ByteVector(f.getAddress)
     )
-  }
+  }.withToString("ipv6Address")
 
   final def xor[A](codec: Codec[A], or: BitVector): Codec[A] = {
-
     new Codec[A] {
       override def decode(bits: BitVector): Attempt[DecodeResult[A]] =
         codec.decode(bits.xor(or.take(bits.length).padLeft(bits.length))).
