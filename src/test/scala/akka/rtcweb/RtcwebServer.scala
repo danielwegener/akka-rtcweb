@@ -4,32 +4,31 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives
-import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
+import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.http.scaladsl.util.FastFuture
 import akka.rtcweb.protocol.RtcWebSDPRenderer
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.stream.ActorFlowMaterializer
+import akka.stream.io.InterfaceMonitor
 import akka.util.Timeout
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
-import scala.io.{ StdIn, Source }
+import scala.io.{Source, StdIn}
+import scala.language.postfixOps
 
 object RtcwebServer extends Directives {
 
   implicit val system = ActorSystem("RtcwebServer")
-  private implicit val materializer = ActorFlowMaterializer()(system)
+  implicit val askTimeout: Timeout = 500.millis
 
   import akka.rtcweb.RtcwebServer.system.dispatcher
-  implicit val askTimeout: Timeout = 500.millis
   val sdpMediaType = MediaType.custom("application/sdp", MediaType.Encoding.Fixed(HttpCharsets.`UTF-8`))
-
   //(IO(StreamDtls) ? StreamDtls.Bind(materializer.settings, InetSocketAddress.createUnresolved("127.0.0.1", 4242))).mapTo[StreamDtls.DtlsConnection]
   val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
-
+  val interfaceMonitor = system.actorOf(InterfaceMonitor.props(1 seconds))
   val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
   implicit val toSessionDescriptionUnmarshaller = Unmarshaller(_ => (SessionDescriptionParser.parse _).andThen(FastFuture.apply))
-
   val renderer = new RtcWebSDPRenderer
   val api = {
     (get | post) {
@@ -58,6 +57,7 @@ object RtcwebServer extends Directives {
         }
     }
   }
+  private implicit val materializer = ActorFlowMaterializer()(system)
 
   def main(args: Array[String]) = {
     Http().bindAndHandle(api, "127.0.0.1", 8080)
