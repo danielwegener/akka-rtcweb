@@ -1,3 +1,5 @@
+> WORK IN PROGRESS!
+
 # akka-rtcweb-experimental
 
 This project aims to provide an akka server-side implementation of the rtcweb protocol stack focused on the RTCDataChannels ([High Performance Browser Networking, Ch. 8](http://chimera.labs.oreilly.com/books/1230000000545/ch18.html) by [@igrigorik](https://twitter.com/igrigorik/) gives a very good introduction on this topic). This is achieved by implementing [draft-ietf-rtcweb-gateways-00: WebRTC Gateways](https://tools.ietf.org/html/draft-ietf-rtcweb-gateways-00) with the following details:
