@@ -13,9 +13,9 @@ import scala.concurrent.duration._
 class UdpMuxerSpec extends TestKitBase
     with WordSpecLike with Matchers with BeforeAndAfterAll
     with Inspectors with OptionValues {
+  implicit val system = ActorSystem()
   10.milliseconds.dilated
 
-  implicit lazy val system = ActorSystem()
 
   val udpSender = new InetSocketAddress(InetAddress.getLoopbackAddress, 1337)
 

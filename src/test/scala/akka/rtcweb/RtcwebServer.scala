@@ -2,18 +2,20 @@ package akka.rtcweb
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.marshalling.{Marshalling, PredefinedToEntityMarshallers, ToResponseMarshallable, Marshaller}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives
-import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import akka.http.scaladsl.unmarshalling.{PredefinedFromEntityUnmarshallers, Unmarshal, Unmarshaller}
 import akka.http.scaladsl.util.FastFuture
 import akka.rtcweb.protocol.RtcWebSDPRenderer
+import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.stream.ActorFlowMaterializer
 import akka.stream.io.InterfaceMonitor
 import akka.util.Timeout
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 import scala.io.{Source, StdIn}
 import scala.language.postfixOps
 
@@ -21,15 +23,23 @@ object RtcwebServer extends Directives {
 
   implicit val system = ActorSystem("RtcwebServer")
   implicit val askTimeout: Timeout = 500.millis
+  implicit val executionContext: ExecutionContext = system.dispatcher
+  implicit val materializer = ActorFlowMaterializer()(system)
 
-  import akka.rtcweb.RtcwebServer.system.dispatcher
   val sdpMediaType = MediaType.custom("application/sdp", MediaType.Encoding.Fixed(HttpCharsets.`UTF-8`))
   //(IO(StreamDtls) ? StreamDtls.Bind(materializer.settings, InetSocketAddress.createUnresolved("127.0.0.1", 4242))).mapTo[StreamDtls.DtlsConnection]
   val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
   val interfaceMonitor = system.actorOf(InterfaceMonitor.props(1 seconds))
   val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
-  implicit val toSessionDescriptionUnmarshaller = Unmarshaller(_ => (SessionDescriptionParser.parse _).andThen(FastFuture.apply))
+
+  implicit val sdum = PredefinedFromEntityUnmarshallers.stringUnmarshaller.flatMap(_ => sd => FastFuture.apply(SessionDescriptionParser.parse(sd)))
+
+
   val renderer = new RtcWebSDPRenderer
+  implicit val sessionDescriptionToStringMarshaller =
+    PredefinedToEntityMarshallers.stringMarshaller(sdpMediaType).wrap(sdpMediaType)(renderer.render)
+
+
   val api = {
     (get | post) {
       path("") {
@@ -37,15 +47,11 @@ object RtcwebServer extends Directives {
       } ~
         path("offer") {
           extractLog { log =>
-            extract(_.request.entity) { entity =>
+            entity[SessionDescription](Unmarshaller.EnhancedFromEntityUnmarshaller(sdum))[SessionDescription] { sd:SessionDescription =>
 
-              val sd = Unmarshal(entity).to[String].flatMap(toSessionDescriptionUnmarshaller.apply)
-
-              val result = Await.result(sd, Duration.Inf)
-              log.info("received and parsed: " + result.toString)
-              val response = renderer.render(result)
-              log.info("returning: " + response)
-              complete(HttpResponse(entity = response))
+              log.info("received and parsed: " + sd.toString)
+              log.info("returning: " + sd)
+              complete(sd)
             }
           }
         } ~
@@ -57,7 +63,7 @@ object RtcwebServer extends Directives {
         }
     }
   }
-  private implicit val materializer = ActorFlowMaterializer()(system)
+
 
   def main(args: Array[String]) = {
     Http().bindAndHandle(api, "127.0.0.1", 8080)
