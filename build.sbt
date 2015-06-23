@@ -15,10 +15,12 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-testkit-experimental" % "1.0-RC3" % "test",
   "com.typesafe.akka" %% "akka-parsing-experimental" % "1.0-RC3",
   "com.typesafe.akka" %% "akka-http-experimental" % "1.0-RC3",
+  "com.typesafe.akka" %% "akka-slf4j" % "2.3.11",
   "org.scodec" %% "scodec-core" % "1.8.0",
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.7" % Test,
+  "com.typesafe.akka" %% "akka-testkit" % "2.3.11" % Test,
   "org.scalatest" %% "scalatest" % "2.2.5"   % Test, // ApacheV2,
-  "org.specs2" %% "specs2-core" % "3.6" % Test
+  "org.specs2" %% "specs2-core" % "3.6" % Test,
+  "org.slf4j" % "slf4j-simple" % "1.7.7" % Test
 )
 
 scalacOptions ++= List(
