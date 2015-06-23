@@ -90,18 +90,20 @@ object StunMessage {
           { "Transaction ID" | fixedSizeBits(96, bytes) } ::
           { "Attributes" | vector(StunAttribute.codec) }, -16)
 
-  }.dropUnits.as[StunMessage]
+  }.as[StunMessage]
 
 }
 
 /**
  *
- * @param stunMessageType
- * @param length The message length MUST contain the size, in bytes, of the message
+ * The message length MUST contain the size, in bytes, of the message
  * not including the 20-byte STUN header.  Since all STUN attributes are
  * padded to a multiple of 4 bytes, the last 2 bits of this field are
  * always zero.  This provides another way to distinguish STUN packets
  * from packets of other protocols.
+ *
+ * @param stunMessageType
+ *
  * @param transactionId The transaction ID is a 96-bit identifier, used to uniquely identify
  * STUN transactions.  For request/response transactions, the
  * transaction ID is chosen by the STUN client for the request and
@@ -151,5 +153,4 @@ object Method {
     Binding -> bin"0b000000000001"
   )
   case object Binding extends Method
-
 }

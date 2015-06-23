@@ -7,16 +7,15 @@ import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.unmarshalling.{ Unmarshal, Unmarshaller }
 import akka.http.scaladsl.util.FastFuture
 import akka.rtcweb.protocol.RtcWebSDPRenderer
-import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.stream.ActorFlowMaterializer
 import akka.util.Timeout
 
 import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
-import scala.io.Source
+import scala.io.{ StdIn, Source }
 
-object RtcwebServer extends App with Directives {
+object RtcwebServer extends Directives {
 
   implicit val system = ActorSystem("RtcwebServer")
   private implicit val materializer = ActorFlowMaterializer()(system)
@@ -60,11 +59,14 @@ object RtcwebServer extends App with Directives {
     }
   }
 
-  Http().bindAndHandle(api, "127.0.0.1", 8080)
+  def main(args: Array[String]) = {
+    Http().bindAndHandle(api, "127.0.0.1", 8080)
 
-  println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+    println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
 
-  Console.readLine()
-  system.shutdown()
+    StdIn.readLine()
+    system.shutdown()
+
+  }
 
 }

@@ -97,8 +97,6 @@ object SCodecContrib {
 
       //typed[List[Err \/ BitVector]](encodedValuesSimple)
 
-      Console.println(this)
-      Console.println(encodedValues)
       ???
 
     }
