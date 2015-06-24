@@ -7,6 +7,7 @@ import akka.io.Udp
 import akka.rtcweb.protocol.ice.IceAgent.{ GatherCandidates, OnIceCandidate }
 import akka.rtcweb.protocol.ice.stun.{ Method, StunMessage, Class }
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.StunServerDescription
+import akka.stream.io.InterfaceMonitorExtension
 import akka.util.ByteString
 import scodec.Attempt.{ Failure, Successful }
 import scodec.DecodeResult
@@ -44,6 +45,7 @@ object IceAgent {
 
 class IceAgent private[ice] (listener: ActorRef, iceServers: Vector[StunServerDescription]) extends Actor with ActorLogging {
 
+  InterfaceMonitorExtension(context.system).register
   require(iceServers.nonEmpty, "iceServers must not be empty")
 
   var outstandingTransactionIds: Vector[(ByteVector, StunServerDescription)] = Vector.empty
