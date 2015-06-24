@@ -36,5 +36,5 @@ class StreamDtlsManager extends Actor with ActorLogging {
 
 private[dtls] object StreamDtlsManager {
   def props(dtlsSettings: StreamDtlsExt#Settings) =
-    Props(classOf[StreamDtlsManager], dtlsSettings) withDispatcher dtlsSettings.ManagerDispatcher
+    Props(new StreamDtlsManager()) withDispatcher dtlsSettings.ManagerDispatcher
 }

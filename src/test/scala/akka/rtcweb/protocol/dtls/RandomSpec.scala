@@ -1,13 +1,14 @@
 package akka.rtcweb.protocol.dtls
 
 import akka.rtcweb.protocol.dtls.handshake.Random
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.specs2.mutable.Specification
 
-class RandomSpec extends WordSpecLike with Matchers {
+class RandomSpec extends Specification {
 
-  "A Random" must {
+  "A Random" should {
     "be makeable" in {
       val random = Random.make
+      success
     }
 
   }

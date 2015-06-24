@@ -8,9 +8,11 @@ import akka.io.IO
 import akka.stream.io.StreamUdp
 import akka.testkit.TestProbe
 import akka.util.ByteString
-import org.scalatest.{ MustMatchers, WordSpecLike }
+import org.specs2.mutable.Specification
 
-class DtlsFlowSpec extends WordSpecLike with MustMatchers {
+class DtlsFlowSpec extends Specification {
+
+  sequential
 
   implicit val actorSystem = ActorSystem("dtls-flow-spec")
 
@@ -39,7 +41,7 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers {
     bindProbe.expectMsgType[StreamUdp.UdpConnection]
   }
 
-  "DTLS listen stream" must {
+  "DTLS listen stream" should {
     "be able to implement echo" in {
       val serverAddress = temporaryServerAddress
       val server = echoServer(serverAddress)
@@ -57,7 +59,10 @@ class DtlsFlowSpec extends WordSpecLike with MustMatchers {
       //  fold(ByteString.empty)((acc, in) ⇒ acc ++ in).toFuture()
 
       //Await.result(resultFuture, 3.seconds) must be(expectedOutput)
+      pending("does not compile")
     }
   }
+
+  step(actorSystem.shutdown())
 
 }

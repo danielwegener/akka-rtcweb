@@ -1,17 +1,18 @@
 package akka.rtcweb.protocol.dtls
 
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.specs2.mutable.Specification
 
-class BulkCipherAlgorithmSpec extends WordSpecLike with Matchers {
+class BulkCipherAlgorithmSpec extends Specification {
 
-  "A BulkCipherAlgorithm" must {
+  "A BulkCipherAlgorithm" should {
     "support aes" in {
-      BulkCipherAlgorithm.aes.cipher() should not be null
+      BulkCipherAlgorithm.aes.cipher() should not beNull
     }
     "support 3des" in {
-      BulkCipherAlgorithm.`3des`.cipher() should not be null
+      BulkCipherAlgorithm.`3des`.cipher() should not beNull
     }
-    "support rc4" ignore {
+    "support rc4" in {
+      pending
       //BulkCipherAlgorithm.rc4.cipher() should not be null
     }
 

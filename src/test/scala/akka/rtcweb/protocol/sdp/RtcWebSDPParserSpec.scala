@@ -8,13 +8,12 @@ import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
 import akka.rtcweb.protocol.sdp.sctp.SctpPort
 import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
-import org.scalatest.exceptions.TestFailedException
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.specs2.mutable.Specification
 
 import scala.collection.immutable.Seq
 import scala.util.{ Failure, Try }
 
-class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
+class RtcWebSDPParserSpec extends Specification {
 
   def input(str: String) = new StringBasedParserInput(str)
 
@@ -107,29 +106,31 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
         |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")))
 
-      val result = parser.parseSessionDescription().recover { case e @ ParseError(position, traces) => fail(s"\n${parser.formatErrorProblem(e)}:\n${parser.formatErrorLine(e)}:\n${e.formatTraces}", e) }.get
+      val resultTry = parser.parseSessionDescription()
+      resultTry should beSuccessfulTry
+      val result = resultTry.get
 
-      result.origin should be(Origin(Some("jdoe"), "5817373415835868156", 2L, NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("127.0.0.1", 0)))
-      result.protocolVersion should be(ProtocolVersion.`0`)
-      result.sessionName should be(Some("SDP Seminar"))
-      result.sessionInformation should be(Some("A Seminar on the session description protocol"))
-      result.descriptionUri should be(Some("http://www.example.com/seminars/sdp.pdf"))
-      result.emailAddresses should contain only "j.doe@example.com (Jane Doe)"
-      result.phoneNumbers should contain only "+4917624822132"
-      result.connectionInformation should be(Some(ConnectionData(NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("224.2.17.12/127", 0))))
-      result.bandwidthInformation should be(Some(BandwidthInformation(BandwidthType.AS, 1024)))
-      result.timings should contain only Timing(Some(2873397496L), Some(2873404696L),
+      result.origin shouldEqual (Origin(Some("jdoe"), "5817373415835868156", 2L, NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("127.0.0.1", 0)))
+      result.protocolVersion shouldEqual (ProtocolVersion.`0`)
+      result.sessionName shouldEqual (Some("SDP Seminar"))
+      result.sessionInformation shouldEqual (Some("A Seminar on the session description protocol"))
+      result.descriptionUri shouldEqual (Some("http://www.example.com/seminars/sdp.pdf"))
+      result.emailAddresses should contain(exactly("j.doe@example.com (Jane Doe)"))
+      result.phoneNumbers should contain(exactly("+4917624822132"))
+      result.connectionInformation shouldEqual (Some(ConnectionData(NetworkType.IN, AddressType.IP4, InetSocketAddress.createUnresolved("224.2.17.12/127", 0))))
+      result.bandwidthInformation shouldEqual (Some(BandwidthInformation(BandwidthType.AS, 1024)))
+      result.timings should contain(exactly(Timing(Some(2873397496L), Some(2873404696L),
         repeatings = Some(RepeatTimes(TimeSpan(604800L, TimeUnit.Days), TimeSpan(3600L), Seq(TimeSpan.ZERO, TimeSpan(90000L, TimeUnit.Minutes)))),
         zoneAdjustments = Seq(TimeZoneAdjustment(0, TimeSpan(0L, TimeUnit.Days)))
-      )
-      result.sessionAttributes should contain only (PropertyAttribute("recvonly"), ValueAttribute("foo", "bar"))
-      result.encryptionKey should be(Some(PromptEncryptionKey))
-      result.mediaDescriptions should not be 'empty
+      )))
+      result.sessionAttributes should contain(exactly[Attribute](PropertyAttribute("recvonly"), ValueAttribute("foo", "bar")))
+      result.encryptionKey shouldEqual (Some(PromptEncryptionKey))
+      result.mediaDescriptions should not be empty
       result.mediaDescriptions(0).media should be(Media.audio)
       result.mediaDescriptions(0).connectionInformation should be(None)
-      result.mediaDescriptions(0).portRange should be(PortRange(49170))
-      result.mediaDescriptions(0).protocol should be(MediaTransportProtocol.`RTP/AVP`)
-      result.mediaDescriptions(0).mediaAttributes should be(Seq(
+      result.mediaDescriptions(0).portRange shouldEqual (PortRange(49170))
+      result.mediaDescriptions(0).protocol shouldEqual (MediaTransportProtocol.`RTP/AVP`)
+      result.mediaDescriptions(0).mediaAttributes shouldEqual (Seq(
         PropertyAttribute("allowed_here_because_chrome_misplaces_it"),
         MediaStreamIdentifier("foo"),
         PropertyAttribute("custom")))
@@ -236,8 +237,8 @@ class RtcWebSDPParserSpec extends WordSpecLike with Matchers {
           |""".stripMargin //a=sctpmap:5000 webrtc-datachannel 1024 seem to be outdated spec used by chromium
           .replace("\n", "\r\n")
 
-      val sd = new TestParser(input(sdtext)).parseSessionDescription().recover { case p: ParseError => fail(p.formatTraces) }.get
-      new RtcWebSDPRenderer().render(sd) should be(sdtext.replace("b=AS:1337\r\n", ""))
+      val sd = new TestParser(input(sdtext)).parseSessionDescription().get
+      new RtcWebSDPRenderer().render(sd) shouldEqual (sdtext.replace("b=AS:1337\r\n", ""))
 
     }
 

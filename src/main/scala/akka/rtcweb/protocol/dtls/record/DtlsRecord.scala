@@ -1,11 +1,9 @@
 package akka.rtcweb.protocol.dtls.record
 
 import akka.rtcweb.protocol.dtls.ProtocolVersion
-import akka.util.ByteString
-
 import scodec._
 import scodec.bits._
-import codecs._
+import scodec.codecs._
 
 /**
  *
@@ -91,5 +89,5 @@ object DtlsCiphertext {
       ("epoch" | uint16) ::
       ("sequence_number" | ulong(48)) ::
       variableSizeBytes("length" | uint16, "fragment" | bytes)
-  }.as[DtlsCompressed]
+  }.as[DtlsCiphertext]
 }

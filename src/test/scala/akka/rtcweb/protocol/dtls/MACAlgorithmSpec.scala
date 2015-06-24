@@ -1,10 +1,10 @@
 package akka.rtcweb.protocol.dtls
 
-import org.scalatest.{ Matchers, WordSpecLike }
+import org.specs2.mutable.Specification
 
-class MACAlgorithmSpec extends WordSpecLike with Matchers {
+class MACAlgorithmSpec extends Specification {
 
-  "A MACAlgorithm" must {
+  "A MACAlgorithm" should {
     "support hmac_md5" in {
       MACAlgorithm.hmac_md5.instance !== null
     }
