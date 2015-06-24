@@ -11,6 +11,7 @@ import org.specs2.mutable.Specification
 import scala.concurrent.duration._
 
 class UdpMuxerSpec extends Specification with TestKitBase {
+  sequential
   implicit val system = ActorSystem()
   10.milliseconds.dilated
 

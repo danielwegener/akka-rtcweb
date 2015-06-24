@@ -1,11 +1,11 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.{ InetAddress, InetSocketAddress }
+import java.net.{InetAddress, InetSocketAddress}
 
 import akka.rtcweb.protocol.scodec.SCodecContrib
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import scodec._
-import scodec.bits.{ BitVector, ByteOrdering, HexStringSyntax }
+import scodec.bits.{BitVector, ByteOrdering, HexStringSyntax}
 import scodec.codecs._
 import shapeless._
 
@@ -58,29 +58,17 @@ object StunAttributeType {
   }
 
   case object `MAPPED-ADDRESS` extends StunAttributeType
-
   case object USERNAME extends StunAttributeType
-
   case object `MESSAGE-INTEGRITY` extends StunAttributeType
-
   case object `ERROR-CODE` extends StunAttributeType
-
   case object `UNKNOWN-ATTRIBUTES` extends StunAttributeType
-
   case object REALM extends StunAttributeType
-
   case object NONCE extends StunAttributeType
-
   case object `XOR-MAPPED-ADDRESS` extends StunAttributeType
-
   case object SOFTWARE extends StunAttributeType
-
   case object `ALTERNATE-SERVER` extends StunAttributeType
-
   case object PRIORITY extends StunAttributeType
-
   case object `USE-CANDIDATE` extends StunAttributeType
-
   case object FINGERPRINT extends StunAttributeType
 
 }

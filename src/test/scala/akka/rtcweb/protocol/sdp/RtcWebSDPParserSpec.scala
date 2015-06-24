@@ -3,7 +3,7 @@ package akka.rtcweb.protocol.sdp
 import java.net.InetSocketAddress
 
 import akka.parboiled2.ParserInput.StringBasedParserInput
-import akka.parboiled2.{ ParseError, Parser }
+import akka.parboiled2.Parser
 import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
 import akka.rtcweb.protocol.sdp.sctp.SctpPort
@@ -11,7 +11,7 @@ import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.Seq
-import scala.util.{ Failure, Try }
+import scala.util.Try
 
 class RtcWebSDPParserSpec extends Specification {
 
