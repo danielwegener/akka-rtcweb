@@ -47,8 +47,7 @@ object RtcwebServer extends Directives {
       } ~
         path("offer") {
           extractLog { log =>
-            entity[SessionDescription](Unmarshaller.EnhancedFromEntityUnmarshaller(sdum))[SessionDescription] { sd:SessionDescription =>
-
+            entity(as[SessionDescription]) { sd =>
               log.info("received and parsed: " + sd.toString)
               log.info("returning: " + sd)
               complete(sd)
