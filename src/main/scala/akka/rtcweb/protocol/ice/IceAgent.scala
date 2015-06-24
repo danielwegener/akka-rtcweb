@@ -5,34 +5,25 @@ import java.net.{ InetAddress, InetSocketAddress, NetworkInterface }
 import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
 import akka.io.Udp
 import akka.rtcweb.protocol.ice.IceAgent.{ AgentRole, GatherCandidates, OnIceCandidate }
-import akka.rtcweb.protocol.ice.stun.{ Method, StunMessage, Class }
+import akka.rtcweb.protocol.ice.stun.{ Class, HostCandidate, Method, StunMessage }
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.StunServerDescription
 import akka.stream.io.InterfaceMonitor.NetworkInterfaceRepr
 import akka.stream.io.{ InterfaceMonitor, InterfaceMonitorExtension }
 import akka.util.ByteString
 import scodec.Attempt.{ Failure, Successful }
 import scodec.DecodeResult
-import scodec.bits.{ ByteVector }
+import scodec.bits.ByteVector
 
 import scala.collection.JavaConversions._
-import scala.collection.immutable.Seq
 import scala.concurrent.forkjoin.ThreadLocalRandom
 
 object IceAgent {
 
   def props(role: AgentRole, listener: ActorRef, iceServers: Vector[StunServerDescription]) = Props(new IceAgent(role, listener, iceServers))
 
-  sealed trait Candidate { def address: InetSocketAddress; def base: HostCandidate }
-
   sealed trait AgentRole
 
-  final case class OnIceCandidate(candidates: Seq[InetSocketAddress])
-
-  final case class HostCandidate(address: InetSocketAddress) extends Candidate { override def base: HostCandidate = this }
-
-  final case class ServerReflexiveCandidate(address: InetSocketAddress, base: HostCandidate) extends Candidate
-
-  final case class PeerReflexiveCandidate(address: InetSocketAddress, base: HostCandidate) extends Candidate
+  final case class OnIceCandidate(candidates: Vector[stun.Candidate])
 
   object GatherCandidates
   object AgentRole {
@@ -58,7 +49,7 @@ class IceAgent private[ice] (agentRole: AgentRole, listener: ActorRef, iceServer
       context.become(ready(sender(), Vector(localAddress.getAddress), localAddress.getPort))
   }
 
-  def ready(socket: ActorRef, localAddresses: Seq[InetAddress], port: Int): Receive = {
+  def ready(socket: ActorRef, localAddresses: Vector[InetAddress], port: Int): Receive = {
     case Udp.Received(data, sender) =>
       val decoded = StunMessage.codec.complete.decode(ByteVector.view(data.asByteBuffer).bits)
       decoded match {
@@ -69,7 +60,7 @@ class IceAgent private[ice] (agentRole: AgentRole, listener: ActorRef, iceServer
       }
 
     case GatherCandidates =>
-      listener ! OnIceCandidate(localAddresses.map(address => new InetSocketAddress(address, port)))
+      listener ! OnIceCandidate(localAddresses.map(address => new InetSocketAddress(address, port)).map(HostCandidate.apply))
       iceServers.foreach { server =>
         val transactionId = mkTransactionId()
         val stunBindingRequest = StunMessage(stun.Class.request, stun.Method.Binding, transactionId)
@@ -86,7 +77,7 @@ class IceAgent private[ice] (agentRole: AgentRole, listener: ActorRef, iceServer
     ByteVector(buffer)
   }
 
-  private def localAddresses(): Seq[InetAddress] = NetworkInterface.getNetworkInterfaces.
+  private def localAddresses(): Vector[InetAddress] = NetworkInterface.getNetworkInterfaces.
     toSeq.flatMap(_.getInetAddresses.toSeq).distinct.toVector
 
 }

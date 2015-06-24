@@ -1,11 +1,11 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.{InetAddress, InetSocketAddress}
+import java.net.{ InetAddress, InetSocketAddress }
 
 import akka.rtcweb.protocol.scodec.SCodecContrib
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import scodec._
-import scodec.bits.{BitVector, ByteOrdering, ByteVector, HexStringSyntax}
+import scodec.bits.{ BitVector, ByteOrdering, ByteVector, HexStringSyntax }
 import scodec.codecs._
 import shapeless._
 
@@ -131,8 +131,7 @@ object `ERROR-CODE` {
   sealed trait Code
   object Code {
 
-
-    implicit val codec:Codec[`ERROR-CODE`.Code] = mappedEnum(classNumberCodec,
+    implicit val codec: Codec[`ERROR-CODE`.Code] = mappedEnum(classNumberCodec,
       `Try Alternate` -> 300,
       `Bad Request` -> 400,
       Unauthorized -> 401,
@@ -142,51 +141,62 @@ object `ERROR-CODE` {
       `Server Error` -> 500
     )
 
-
-    /** Try Alternate: The client should contact an alternate server for
-        this request.  This error response MUST only be sent if the
-        request included a USERNAME attribute and a valid MESSAGE-
-        INTEGRITY attribute; otherwise, it MUST NOT be sent and error
-        code 400 (Bad Request) is suggested.  This error response MUST
-        be protected with the MESSAGE-INTEGRITY attribute, and receivers
-        MUST validate the MESSAGE-INTEGRITY of this response before
-        redirecting themselves to an alternate server.
+    /**
+     * Try Alternate: The client should contact an alternate server for
+     * this request.  This error response MUST only be sent if the
+     * request included a USERNAME attribute and a valid MESSAGE-
+     * INTEGRITY attribute; otherwise, it MUST NOT be sent and error
+     * code 400 (Bad Request) is suggested.  This error response MUST
+     * be protected with the MESSAGE-INTEGRITY attribute, and receivers
+     * MUST validate the MESSAGE-INTEGRITY of this response before
+     * redirecting themselves to an alternate server.
      */
     case object `Try Alternate` extends Code
 
-    /** Bad Request: The request was malformed.  The client SHOULD NOT
-        retry the request without modification from the previous
-        attempt.  The server may not be able to generate a valid
-        MESSAGE-INTEGRITY for this error, so the client MUST NOT expect
-        a valid MESSAGE-INTEGRITY attribute on this response.
+    /**
+     * Bad Request: The request was malformed.  The client SHOULD NOT
+     * retry the request without modification from the previous
+     * attempt.  The server may not be able to generate a valid
+     * MESSAGE-INTEGRITY for this error, so the client MUST NOT expect
+     * a valid MESSAGE-INTEGRITY attribute on this response.
      */
     case object `Bad Request` extends Code
 
-    /** Unauthorized: The request did not contain the correct
-        credentials to proceed.  The client should retry the request
-        with proper credentials. */
+    /**
+     * Unauthorized: The request did not contain the correct
+     * credentials to proceed.  The client should retry the request
+     * with proper credentials.
+     */
     case object Unauthorized extends Code
 
-    /** Unknown Attribute: The server received a STUN packet containing
-        a comprehension-required attribute that it did not understand.
-        The server MUST put this unknown attribute in the UNKNOWN-
-        ATTRIBUTE attribute of its error response. */
+    /**
+     * Unknown Attribute: The server received a STUN packet containing
+     * a comprehension-required attribute that it did not understand.
+     * The server MUST put this unknown attribute in the UNKNOWN-
+     * ATTRIBUTE attribute of its error response.
+     */
     case object `Unknown Attribute` extends Code
 
-    /** The NONCE used by the client was no longer valid.
-    The client should retry, using the NONCE provided in the
-      response. */
+    /**
+     * The NONCE used by the client was no longer valid.
+     * The client should retry, using the NONCE provided in the
+     * response.
+     */
     case object `Stale Nonce` extends Code
-    /** Server Error: The server has suffered a temporary error.  The
-        client should try again. */
+    /**
+     * Server Error: The server has suffered a temporary error.  The
+     * client should try again.
+     */
     case object `Server Error` extends Code
 
-    /** The Binding request contained either the ICE-
-      CONTROLLING or ICE-CONTROLLED attribute, indicating a role that
-      conflicted with the server.  The server ran a tie-breaker based on
-      the tie-breaker value in the request and determined that the
-      client needs to switch roles.
-      @see [[https://tools.ietf.org/html/rfc5245#section-19.2]]*/
+    /**
+     * The Binding request contained either the ICE-
+     * CONTROLLING or ICE-CONTROLLED attribute, indicating a role that
+     * conflicted with the server.  The server ran a tie-breaker based on
+     * the tie-breaker value in the request and determined that the
+     * client needs to switch roles.
+     * @see [[https://tools.ietf.org/html/rfc5245#section-19.2]]
+     */
     case object `Role Conflict` extends Code
   }
 
@@ -203,7 +213,6 @@ object `ERROR-CODE` {
       "Number" | uint8
     }
   }.xmap[Int]({ case clazz :: number :: HNil => clazz * 100 + number }, { code => code / 100 :: code % 100 :: HNil })
-
 
   /**
    * {{{
@@ -224,7 +233,6 @@ object `ERROR-CODE` {
         })
   }.as[`ERROR-CODE`]
   implicit val discriminator: Discriminator[StunAttribute, `ERROR-CODE`, StunAttributeType] = Discriminator(StunAttributeType.`ERROR-CODE`)
-
 
 }
 
