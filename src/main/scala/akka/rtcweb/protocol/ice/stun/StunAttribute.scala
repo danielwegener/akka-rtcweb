@@ -5,7 +5,7 @@ import java.net.{InetAddress, InetSocketAddress}
 import akka.rtcweb.protocol.scodec.SCodecContrib
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import scodec._
-import scodec.bits.{BitVector, ByteOrdering, HexStringSyntax}
+import scodec.bits.{BitVector, ByteOrdering, ByteVector, HexStringSyntax}
 import scodec.codecs._
 import shapeless._
 
@@ -39,8 +39,10 @@ object StunAttributeType {
       `ALTERNATE-SERVER` -> hex"0x8023".bits,
       PRIORITY -> hex"0x0024".bits,
       `USE-CANDIDATE` -> hex"0x0025".bits,
-      SOFTWARE -> hex"0x8022".toBitVector,
-      FINGERPRINT -> hex"0x8028".bits
+      SOFTWARE -> hex"0x8022".bits,
+      FINGERPRINT -> hex"0x8028".bits,
+      `ICE-CONTROLLED` -> hex"0x8029".bits,
+      `ICE-CONTROLLING` -> hex"0x802A".bits
     )
   }, codecs.bits(16).as[UNKNOWN].widenOpt[StunAttributeType](identity, {
     case a: UNKNOWN => Some(a)
@@ -70,6 +72,8 @@ object StunAttributeType {
   case object PRIORITY extends StunAttributeType
   case object `USE-CANDIDATE` extends StunAttributeType
   case object FINGERPRINT extends StunAttributeType
+  case object `ICE-CONTROLLED` extends StunAttributeType
+  case object `ICE-CONTROLLING` extends StunAttributeType
 
 }
 
@@ -118,9 +122,73 @@ object `UNKNOWN-ATTRIBUTES` {
  *
  * @see [[https://tools.ietf.org/html/rfc5389#section-15.6]]
  */
-final case class `ERROR-CODE`(errorCode: Int, reasonPhrase: String) extends StunAttribute
+final case class `ERROR-CODE`(errorCode: `ERROR-CODE`.Code, reasonPhrase: String) extends StunAttribute {
+  require(reasonPhrase.length < 128, "reasonPhrase must be less than 128 characters")
+}
 
 object `ERROR-CODE` {
+
+  sealed trait Code
+  object Code {
+
+
+    implicit val codec:Codec[`ERROR-CODE`.Code] = mappedEnum(classNumberCodec,
+      `Try Alternate` -> 300,
+      `Bad Request` -> 400,
+      Unauthorized -> 401,
+      `Unknown Attribute` -> 420,
+      `Stale Nonce` -> 438,
+      `Role Conflict` -> 487,
+      `Server Error` -> 500
+    )
+
+
+    /** Try Alternate: The client should contact an alternate server for
+        this request.  This error response MUST only be sent if the
+        request included a USERNAME attribute and a valid MESSAGE-
+        INTEGRITY attribute; otherwise, it MUST NOT be sent and error
+        code 400 (Bad Request) is suggested.  This error response MUST
+        be protected with the MESSAGE-INTEGRITY attribute, and receivers
+        MUST validate the MESSAGE-INTEGRITY of this response before
+        redirecting themselves to an alternate server.
+     */
+    case object `Try Alternate` extends Code
+
+    /** Bad Request: The request was malformed.  The client SHOULD NOT
+        retry the request without modification from the previous
+        attempt.  The server may not be able to generate a valid
+        MESSAGE-INTEGRITY for this error, so the client MUST NOT expect
+        a valid MESSAGE-INTEGRITY attribute on this response.
+     */
+    case object `Bad Request` extends Code
+
+    /** Unauthorized: The request did not contain the correct
+        credentials to proceed.  The client should retry the request
+        with proper credentials. */
+    case object Unauthorized extends Code
+
+    /** Unknown Attribute: The server received a STUN packet containing
+        a comprehension-required attribute that it did not understand.
+        The server MUST put this unknown attribute in the UNKNOWN-
+        ATTRIBUTE attribute of its error response. */
+    case object `Unknown Attribute` extends Code
+
+    /** The NONCE used by the client was no longer valid.
+    The client should retry, using the NONCE provided in the
+      response. */
+    case object `Stale Nonce` extends Code
+    /** Server Error: The server has suffered a temporary error.  The
+        client should try again. */
+    case object `Server Error` extends Code
+
+    /** The Binding request contained either the ICE-
+      CONTROLLING or ICE-CONTROLLED attribute, indicating a role that
+      conflicted with the server.  The server ran a tie-breaker based on
+      the tie-breaker value in the request and determined that the
+      client needs to switch roles.
+      @see [[https://tools.ietf.org/html/rfc5245#section-19.2]]*/
+    case object `Role Conflict` extends Code
+  }
 
   /**
    * The Class represents
@@ -136,6 +204,7 @@ object `ERROR-CODE` {
     }
   }.xmap[Int]({ case clazz :: number :: HNil => clazz * 100 + number }, { code => code / 100 :: code % 100 :: HNil })
 
+
   /**
    * {{{
    * 0                   1                   2                   3
@@ -150,7 +219,7 @@ object `ERROR-CODE` {
   implicit val codec = {
     StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`ERROR-CODE`),
       ignore(21) ::
-        classNumberCodec :: {
+        Code.codec :: {
           "ReasonPhrase" | utf8
         })
   }.as[`ERROR-CODE`]
@@ -200,16 +269,6 @@ object `MAPPED-ADDRESS` {
   implicit val discriminator: Discriminator[StunAttribute, `MAPPED-ADDRESS`, StunAttributeType] = Discriminator(StunAttributeType.`MAPPED-ADDRESS`)
 }
 
-/** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
-final case class `USE-CANDIDATE`() extends StunAttribute
-
-object `USE-CANDIDATE` {
-  implicit val codec: Codec[`USE-CANDIDATE`] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`USE-CANDIDATE`),
-    ignore(0).hlist
-  ).dropUnits.as[`USE-CANDIDATE`]
-  implicit val discriminator: Discriminator[StunAttribute, `USE-CANDIDATE`, StunAttributeType] = Discriminator(StunAttributeType.`USE-CANDIDATE`)
-}
-
 final case class `XOR-MAPPED-ADDRESS`(family: Family, port: Int, address: InetAddress) extends StunAttribute {
   lazy val inetSocketAddress = new InetSocketAddress(address, port)
 }
@@ -249,7 +308,7 @@ object `XOR-MAPPED-ADDRESS` {
   }.as[`XOR-MAPPED-ADDRESS`]
 
   implicit val discriminator: Discriminator[StunAttribute, `XOR-MAPPED-ADDRESS`, StunAttributeType] = Discriminator(StunAttributeType.`XOR-MAPPED-ADDRESS`)
-  private val MAGIC_COOKIE_MSBS = StunMessage.MAGIC_COOKIE.take(16)
+  private final val MAGIC_COOKIE_MSBS = StunMessage.MAGIC_COOKIE.take(16)
 
   final def xPortCodec: Codec[Int] = new Codec[Int] {
     override def encode(b: Int): Attempt[BitVector] = uint16.encode(b).map(_.xor(StunMessage.MAGIC_COOKIE))
@@ -262,6 +321,46 @@ object `XOR-MAPPED-ADDRESS` {
     override def sizeBound: SizeBound = SizeBound.exact(16)
   }
 
+}
+
+/** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
+final case class `USE-CANDIDATE`() extends StunAttribute
+
+object `USE-CANDIDATE` {
+  implicit val codec: Codec[`USE-CANDIDATE`] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`USE-CANDIDATE`),
+    ignore(0)
+  ).hlist.as[`USE-CANDIDATE`]
+  implicit val discriminator: Discriminator[StunAttribute, `USE-CANDIDATE`, StunAttributeType] = Discriminator(StunAttributeType.`USE-CANDIDATE`)
+}
+
+/** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
+final case class PRIORITY(byteVector: Long) extends StunAttribute
+
+object PRIORITY {
+  implicit val codec: Codec[PRIORITY] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.PRIORITY),
+    uint32
+  ).hlist.as[PRIORITY]
+  implicit val discriminator: Discriminator[StunAttribute, PRIORITY, StunAttributeType] = Discriminator(StunAttributeType.PRIORITY)
+}
+
+/** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
+final case class `ICE-CONTROLLED`(byteVector: ByteVector) extends StunAttribute
+
+object `ICE-CONTROLLED` {
+  implicit val codec: Codec[`ICE-CONTROLLED`] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`ICE-CONTROLLED`),
+    bytes(8)
+  ).hlist.as[`ICE-CONTROLLED`]
+  implicit val discriminator: Discriminator[StunAttribute, `USE-CANDIDATE`, StunAttributeType] = Discriminator(StunAttributeType.`USE-CANDIDATE`)
+}
+
+/** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
+final case class `ICE-CONTROLLING`(byteVector: ByteVector) extends StunAttribute
+
+object `ICE-CONTROLLING` {
+  implicit val codec: Codec[`ICE-CONTROLLING`] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`ICE-CONTROLLING`),
+    bytes(8)
+  ).hlist.as[`ICE-CONTROLLING`]
+  implicit val discriminator: Discriminator[StunAttribute, `USE-CANDIDATE`, StunAttributeType] = Discriminator(StunAttributeType.`ICE-CONTROLLING`)
 }
 
 /**

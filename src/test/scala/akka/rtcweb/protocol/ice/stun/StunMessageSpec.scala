@@ -3,6 +3,7 @@ package akka.rtcweb.protocol.ice.stun
 import java.net.InetAddress
 
 import akka.rtcweb.CodecSpec
+import akka.rtcweb.protocol.ice.stun.`ERROR-CODE`.Code
 import scodec.Attempt.Successful
 import scodec.DecodeResult
 import scodec.bits._
@@ -18,10 +19,12 @@ class StunMessageSpec extends org.specs2.mutable.Specification with CodecSpec {
           `MAPPED-ADDRESS`(Family.IPv4, 42, InetAddress.getLoopbackAddress),
           `ALTERNATE-SERVER`(Family.IPv4, 43, InetAddress.getLoopbackAddress),
           `XOR-MAPPED-ADDRESS`(Family.IPv4, 42, InetAddress.getLoopbackAddress),
-          `ERROR-CODE`(1, "bad is bad"),
-          `USE-CANDIDATE`(),
+          `ERROR-CODE`(Code.`Server Error`, "bad is bad"),
           `UNKNOWN-ATTRIBUTES`(Vector(StunAttributeType.NONCE, StunAttributeType.UNKNOWN(hex"0x4242".bits))),
-          SOFTWARE("MY AWESOME SOFTWARE 1.0")
+          SOFTWARE("MY AWESOME SOFTWARE 1.0"),
+          `USE-CANDIDATE`(),
+          PRIORITY(Integer.MAX_VALUE),
+          `ICE-CONTROLLING`(hex"0x1223344556677889")
         )))
     }
 
