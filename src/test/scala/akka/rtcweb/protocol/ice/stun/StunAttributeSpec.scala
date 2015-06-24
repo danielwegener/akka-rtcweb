@@ -4,7 +4,6 @@ import org.scalatest.{ Matchers, WordSpecLike }
 import scodec.Attempt.Successful
 import scodec.DecodeResult
 import scodec.bits._
-import scalaz.\/-
 
 class StunAttributeSpec extends WordSpecLike with Matchers {
 
@@ -18,7 +17,6 @@ class StunAttributeSpec extends WordSpecLike with Matchers {
       `XOR-MAPPED-ADDRESS`.xPortCodec.decode(hex"e7420001".bits) should be(Successful(DecodeResult(50768, hex"0001".bits)))
       `XOR-MAPPED-ADDRESS`.xPortCodec.decode(hex"e732".bits) should be(Successful(DecodeResult(50720, BitVector.empty)))
     }
-
   }
 
 }

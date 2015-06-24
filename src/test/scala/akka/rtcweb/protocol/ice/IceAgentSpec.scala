@@ -4,13 +4,13 @@ import java.net.{ InetAddress, InetSocketAddress }
 
 import akka.actor.ActorSystem
 import akka.io.Udp
-import akka.rtcweb.protocol.ice.IceAgent.OnIceCandidate
+import akka.rtcweb.protocol.ice.IceAgent.{ AgentRole, OnIceCandidate }
 import akka.rtcweb.protocol.ice.stun.StunMessage
 import akka.rtcweb.protocol.ice.stun.Class
 import akka.rtcweb.protocol.ice.stun.Method
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.StunServerDescription
 import akka.testkit._
-import akka.util.{ByteString, Timeout}
+import akka.util.{ ByteString, Timeout }
 import org.scalatest._
 import scodec.bits.BitVector
 
@@ -36,7 +36,7 @@ class IceAgentSpec extends TestKitBase
     "go on a discovery" in {
       val remoteHost = new InetSocketAddress("10.11.12.13", 4040)
 
-      val unitRef = TestActorRef[IceAgent](IceAgent.props(testActor, Vector(StunServerDescription(remoteHost))))
+      val unitRef = TestActorRef[IceAgent](IceAgent.props(AgentRole.Controlling, testActor, Vector(StunServerDescription(remoteHost))))
       val udpTestProbe = TestProbe()
       val clientTestProbe = TestProbe()
       val localPort = new InetSocketAddress("::", 4242)

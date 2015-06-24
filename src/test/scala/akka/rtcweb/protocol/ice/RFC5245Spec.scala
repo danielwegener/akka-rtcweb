@@ -1,17 +1,17 @@
 package akka.rtcweb.protocol.ice
 
-import akka.actor.{Props, ActorSystem}
-import akka.testkit.{TestProbe, TestActorRef, TestKitBase}
+import akka.actor.{ Props, ActorSystem }
+import akka.rtcweb.protocol.ice.IceAgent.AgentRole
+import akka.testkit.{ TestProbe, TestActorRef, TestKitBase }
 import org.specs2.Specification
 
 class RFC5245Spec extends Specification with TestKitBase {
-
 
   override implicit val system: ActorSystem = ActorSystem("RFC5245Spec")
 
   val listener = TestProbe()
 
-  val unitRef = TestActorRef(Props(new IceAgent(listener.ref, Vector.empty)))
+  val unitRef = TestActorRef(Props(new IceAgent(AgentRole.Controlling, listener.ref, Vector.empty)))
 
   def is =
     s2"""
@@ -156,10 +156,5 @@ class RFC5245Spec extends Specification with TestKitBase {
         |
         |4.1.1.3.  Computing Foundations
       """.stripMargin
-
-
-
-
-
 
 }

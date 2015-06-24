@@ -9,6 +9,7 @@ import akka.util.ByteString
 import scala.collection.JavaConversions.enumerationAsScalaIterator
 import scala.collection.JavaConverters._
 import scala.concurrent.duration.{ Duration, FiniteDuration }
+import scala.language.postfixOps
 import scala.reflect.ClassTag
 
 object InterfaceMonitor {
@@ -22,6 +23,8 @@ object InterfaceMonitor {
   final case class Register(listener: ActorRef) extends InterfaceMonitorApi
 
   final case class UnRegister(listener: ActorRef) extends InterfaceMonitorApi
+
+  final case class Delta(myKnowledge: Set[NetworkInterfaceRepr])
 
   final case class NetworkInterfaceRepr(name: String, hardwareAddress: ByteString, address: InetAddress, prefixLength: Short)
 
@@ -53,6 +56,7 @@ class InterfaceMonitor private[io] (interval: FiniteDuration) extends Actor with
     case UnRegister(listener) =>
       context.unwatch(listener)
       listeners -= listener
+    case Delta(oldKnowledge) => sender() ! computeChanges(oldKnowledge, knownInterfaces)
     case Terminated(listener) => listeners -= listener
     case Tick => onTick()
     case _ =>
@@ -64,14 +68,16 @@ class InterfaceMonitor private[io] (interval: FiniteDuration) extends Actor with
       .filter(_.isUp)
       .flatMap(i => i.getInterfaceAddresses.asScala.map(a => (i, a)))
       .map { case (i, a) => NetworkInterfaceRepr(i.getName, Option(i.getHardwareAddress).map(ByteString.apply).getOrElse(ByteString.empty), a.getAddress, a.getNetworkPrefixLength) }.toSet
-    val upgoingInterfaces = currentInterfaces -- knownInterfaces
-    val downgoingInterfaces = knownInterfaces -- currentInterfaces
 
-    val changes = InterfaceStateChanges(upgoingInterfaces.toSeq.map(IfUp.apply) ++ downgoingInterfaces.toSeq.map(IfDown.apply))
+    val (ups, downs) = computeChanges(knownInterfaces, currentInterfaces)
+    val changes = InterfaceStateChanges(ups ++ downs)
     listeners.foreach(_ ! changes)
     changes.changes.foreach { change => log.debug(s"Interface state change: $change") }
     knownInterfaces = currentInterfaces
   }
+
+  def computeChanges(old: Set[NetworkInterfaceRepr], current: Set[NetworkInterfaceRepr]): (Seq[IfUp], Seq[IfDown]) =
+    ((old -- current).toSeq.map(IfUp.apply), (current -- old).toSeq.map(IfDown.apply))
 
   override def postStop(): Unit = tick.cancel()
 

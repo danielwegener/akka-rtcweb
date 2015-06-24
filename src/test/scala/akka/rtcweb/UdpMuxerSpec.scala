@@ -16,7 +16,6 @@ class UdpMuxerSpec extends TestKitBase
   implicit val system = ActorSystem()
   10.milliseconds.dilated
 
-
   val udpSender = new InetSocketAddress(InetAddress.getLoopbackAddress, 1337)
 
   override def afterAll() {

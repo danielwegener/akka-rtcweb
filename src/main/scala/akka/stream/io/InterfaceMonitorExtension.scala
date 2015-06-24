@@ -15,7 +15,10 @@ object InterfaceMonitorExtension extends ExtensionId[InterfaceMonitorExtensionIm
 
 }
 
-class InterfaceMonitorExtensionImpl(system: ExtendedActorSystem, interval:FiniteDuration) extends Extension {
-  private val ref  = system.systemActorOf(InterfaceMonitor.props(interval), "InterfaceMonitor")
-  def register(implicit ctx:ActorContext) = ref.tell(InterfaceMonitor.Register,ctx.self)
+class InterfaceMonitorExtensionImpl(system: ExtendedActorSystem, interval: FiniteDuration) extends Extension {
+  private val ref = system.systemActorOf(InterfaceMonitor.props(interval), "InterfaceMonitor")
+  def register(implicit ctx: ActorContext) = ref.tell(InterfaceMonitor.Register, ctx.self)
+
+  def manager: ActorRef = ref
+
 }

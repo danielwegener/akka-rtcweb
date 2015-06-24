@@ -47,6 +47,7 @@ The following protocols and RFCs are (partially) covered (you need to love netwo
 
 - [draft-ietf-rtcweb-data-channel-12: WebRTC Data Channels](https://tools.ietf.org/html/draft-ietf-rtcweb-data-channel-12)
     - [rfc5245: Interactive Connectivity Establishment (ICE): A Protocol for Network Address Translator (NAT) Traversal for Offer/Answer Protocols](https://tools.ietf.org/html/rfc5245#section-4.3)
+        - [rfc5389: Session Traversal Utilities for NAT (STUN)](https://tools.ietf.org/html/rfc5389)
     - [rfc4347: Datagram Transport Layer Security Version](https://tools.ietf.org/html/rfc4347) (Describes how TLS is projected on UDP.)
 - [draft-ietf-tsvwg-sctp-dtls-encaps-05: DTLS Encapsulation of SCTP Packets](https://tools.ietf.org/html/draft-ietf-tsvwg-sctp-dtls-encaps-05) (Describes how SCTP runs on top of DTLS)
 - [rfc4960: SCTP - Stream Control Transmission Protocol](https://tools.ietf.org/html/rfc4960) with [rfc4960: Stream Control Transmission Protocol (SCTP) Partial Reliability Extension](https://tools.ietf.org/html/rfc3758) (Describes how SCTP works)
