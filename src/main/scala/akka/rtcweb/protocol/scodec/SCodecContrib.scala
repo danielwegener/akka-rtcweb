@@ -62,6 +62,9 @@ object SCodecContrib {
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encode(constantValue).require)
 
+  def boundedSize[A](size:Long, boundedCodec:Codec[A]):Codec[A] = new BoundedSizeCodec[A](size, boundedCodec)
+  def boundedSizeBytes[A](size:Long, boundedCodec:Codec[A]):Codec[A] = new BoundedSizeCodec[A](size*8, boundedCodec)
+
   def multiVariableSizes[SC <: HList, S <: HList, VC <: HList, V <: HList, ZippedLandVCs <: HList, ZippedVandVCs <: HList, SizeLimitedValueCodecs <: HList, EncodedValues <: HList, EncodedValuesUnified <: HList](sizeCodecs: SC, valueCodecs: VC)(implicit scToHListCodec: ToHListCodec.Aux[SC, S],
     vcToHListCodec: ToHListCodec.Aux[VC, V],
     zipSandVCs: Zip.Aux[S :: VC :: HNil, ZippedLandVCs],
@@ -187,3 +190,27 @@ private[rtcweb] final class WithPaddingCodec[A](valueCodec: Codec[A], paddingMod
 
   override def sizeBound: SizeBound = SizeBound.choice(Vector(valueCodec.sizeBound, SizeBound.exact(paddingModulo)))
 }
+
+private[scodec] final class BoundedSizeCodec[A](size: Long, codec: Codec[A]) extends Codec[A] {
+  require(codec.sizeBound.upperBound.forall(_ <= size), "cannot sizeBound a codec that has a greater upper size-bound than this codec")
+
+  override def sizeBound = codec.sizeBound `|` SizeBound.atMost(size)
+
+  override def encode(a: A) = for {
+    encoded <- codec.encode(a)
+    result <- {
+      if (encoded.size > size)
+        Attempt.failure(Err(s"[$a] requires ${encoded.size} bits but field is bounded in size of $size bits"))
+      else
+        Attempt.successful(encoded)
+    }
+  } yield result
+
+  override def decode(buffer: BitVector) = {
+    codec.decode(buffer.take(size)).map(dr => DecodeResult(dr.value, dr.remainder ++ buffer.drop(size)))
+
+  }
+
+  override def toString = s"boundedSizeBits($size, $codec)"
+}
+

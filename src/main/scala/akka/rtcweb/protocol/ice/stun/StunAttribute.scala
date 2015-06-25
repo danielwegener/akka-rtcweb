@@ -37,8 +37,6 @@ object StunAttributeType {
   }, codecs.bits(16).as[UNKNOWN].upcast[StunAttributeType])
 
   final case class UNKNOWN(code: BitVector) extends StunAttributeType {
-    require(code.length == 16, "code must be 4 bytes (16 bits) long")
-
     /**
      * Tells whether a stun implementation is required to understand this StunAttribute
      * @see [[https://tools.ietf.org/html/rfc5389#section-15]]
@@ -81,7 +79,7 @@ final case class SOFTWARE(description: String) extends StunAttribute {
 object SOFTWARE {
 
   implicit val codec: Codec[SOFTWARE] =
-    StunAttribute.withAttributeHeader(constantValue(StunAttributeType.SOFTWARE), utf8).as[SOFTWARE]
+    StunAttribute.withAttributeHeader(constantValue(StunAttributeType.SOFTWARE), boundedSizeBytes(763, utf8)).as[SOFTWARE]
 
   implicit val discriminator: Discriminator[StunAttribute, SOFTWARE, StunAttributeType] = Discriminator(StunAttributeType.SOFTWARE)
 }
@@ -120,7 +118,7 @@ object `UNKNOWN-ATTRIBUTES` {
  * @see [[https://tools.ietf.org/html/rfc5389#section-15.6]]
  */
 final case class `ERROR-CODE`(errorCode: `ERROR-CODE`.Code, reasonPhrase: String) extends StunAttribute {
-  require(reasonPhrase.length < 128, "reasonPhrase must be less than 128 characters")
+
 }
 
 object `ERROR-CODE` {
@@ -147,8 +145,8 @@ object `ERROR-CODE` {
      * request included a USERNAME attribute and a valid MESSAGE-
      * INTEGRITY attribute; otherwise, it MUST NOT be sent and error
      * code 400 (Bad Request) is suggested.  This error response MUST
-     * be protected with the MESSAGE-INTEGRITY attribute, and receivers
-     * MUST validate the MESSAGE-INTEGRITY of this response before
+     * be protected with the [[`MESSAGE-INTEGRITY`]] attribute, and receivers
+     * MUST validate the [[`MESSAGE-INTEGRITY`]] of this response before
      * redirecting themselves to an alternate server.
      */
     case object `Try Alternate` extends Code
@@ -229,11 +227,95 @@ object `ERROR-CODE` {
     StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`ERROR-CODE`),
       ignore(21) ::
         Code.codec :: {
-          "ReasonPhrase" | utf8
+          "ReasonPhrase" | boundedSizeBytes(763, utf8)
         })
   }.as[`ERROR-CODE`]
   implicit val discriminator: Discriminator[StunAttribute, `ERROR-CODE`, StunAttributeType] = Discriminator(StunAttributeType.`ERROR-CODE`)
 
+}
+
+/** The USERNAME attribute is used for message integrity.  It identifies
+   the username and password combination used in the message-integrity
+   check.
+
+   The value of USERNAME is a variable-length value.  It MUST contain a
+   UTF-8 [RFC3629] encoded sequence of less than 513 bytes, and MUST
+   have been processed using SASLprep [RFC4013]. */
+final case class USERNAME(username:String) extends StunAttribute
+
+object USERNAME {
+  //TODO: SASLprep
+  implicit val codec: Codec[USERNAME] =
+    StunAttribute.withAttributeHeader(constantValue(StunAttributeType.USERNAME),
+      boundedSizeBytes(513, utf8).as[USERNAME])
+  implicit val discriminator: Discriminator[StunAttribute, USERNAME, StunAttributeType] = Discriminator(StunAttributeType.USERNAME)
+}
+
+/** The REALM attribute may be present in requests and responses.  It
+   contains text that meets the grammar for "realm-value" as described
+   in RFC 3261 [RFC3261] but without the double quotes and their
+   surrounding whitespace.  That is, it is an unquoted realm-value (and
+   is therefore a sequence of qdtext or quoted-pair).  It MUST be a
+   UTF-8 [RFC3629] encoded sequence of less than 128 characters (which
+   can be as long as 763 bytes), and MUST have been processed using
+   SASLprep [RFC4013].
+
+   Presence of the REALM attribute in a request indicates that long-term
+   credentials are being used for authentication.  Presence in certain
+   error responses indicates that the server wishes the client to use a
+   long-term credential for authentication.
+    @see [[https://tools.ietf.org/html/rfc5389#section-15.7]]*/
+final case class REALM(realmValue:String) extends StunAttribute
+
+object REALM {
+  //TODO: SASLprep
+  implicit val codec: Codec[REALM] =
+    StunAttribute.withAttributeHeader(constantValue(StunAttributeType.REALM),
+      boundedSizeBytes(763, utf8).as[REALM])
+  implicit val discriminator: Discriminator[StunAttribute, REALM, StunAttributeType] = Discriminator(StunAttributeType.REALM)
+}
+
+
+/** The MESSAGE-INTEGRITY attribute contains an HMAC-SHA1 [RFC2104] of
+  * the STUN message.  The MESSAGE-INTEGRITY attribute can be present in
+  * any STUN message type.  Since it uses the SHA1 hash, the HMAC will be
+  * 20 bytes.  The text used as input to HMAC is the STUN message,
+  * including the header, up to and including the attribute preceding the
+  * MESSAGE-INTEGRITY attribute.  With the exception of the FINGERPRINT
+  * attribute, which appears after MESSAGE-INTEGRITY, agents MUST ignore
+  * all other attributes that follow MESSAGE-INTEGRITY.
+  *
+  * The key for the HMAC depends on whether long-term or short-term
+  * credentials are in use.  For long-term credentials, the key is 16
+  * bytes:
+  *
+  *         {{{ key = MD5(username ":" realm ":" SASLprep(password)) }}}
+  *
+  * That is, the 16-byte key is formed by taking the MD5 hash of the
+  * result of concatenating the following five fields: (1) the username,
+  * with any quotes and trailing nulls removed, as taken from the
+  * USERNAME attribute (in which case SASLprep has already been applied);
+  * (2) a single colon; (3) the realm, with any quotes and trailing nulls
+  * removed; (4) a single colon; and (5) the password, with any trailing
+  * nulls removed and after processing using SASLprep.  For example, if
+  * the username was 'user', the realm was 'realm', and the password was
+  * 'pass', then the 16-byte HMAC key would be the result of performing
+  * an MD5 hash on the string 'user:realm:pass', the resulting hash being
+  * 0x8493fbc53ba582fb4c044c456bdc40eb.
+  *
+  * For short-term credentials:
+  *
+  * {{{                     key = SASLprep(password)}}}
+  *  @see [[https://tools.ietf.org/html/rfc5389#section-15.4]]*/
+final case class `MESSAGE-INTEGRITY`(sha1:ByteVector) extends StunAttribute
+
+object `MESSAGE-INTEGRITY` {
+  //TODO: SASLprep
+  implicit val codec: Codec[`MESSAGE-INTEGRITY`] =
+    StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`MESSAGE-INTEGRITY`),
+      bytes(20).as[`MESSAGE-INTEGRITY`])
+
+  implicit val discriminator: Discriminator[StunAttribute, `MESSAGE-INTEGRITY`, StunAttributeType] = Discriminator(StunAttributeType.`MESSAGE-INTEGRITY`)
 }
 
 /**
