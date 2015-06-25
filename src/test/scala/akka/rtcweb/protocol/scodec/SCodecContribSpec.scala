@@ -3,7 +3,7 @@ package akka.rtcweb.protocol.scodec
 import akka.rtcweb.CodecSpec
 import org.specs2.mutable.Specification
 import scodec.Attempt.Successful
-import scodec.{Attempt, DecodeResult}
+import scodec.{ Attempt, DecodeResult }
 import scodec.bits.BitVector.{ empty => emptyVector }
 import scodec.bits.BitVector._
 import scodec.bits._
@@ -66,14 +66,13 @@ class SCodecContribSpec extends Specification with CodecSpec {
     }
   }
 
-
   "sizeBounded" should {
     "not be creatable for codecs with known bigger upper size bounds" in {
-      boundedSize(1, scodec.codecs.bits(100) ) should throwA[IllegalArgumentException]
+      boundedSize(1, scodec.codecs.bits(100)) should throwA[IllegalArgumentException]
     }
 
     "sizeBound a string" in {
-      roundtrip(boundedSizeBytes(4, utf8 ), "1234")
+      roundtrip(boundedSizeBytes(4, utf8), "1234")
     }
 
     "do not decode too long things" in {
@@ -84,8 +83,6 @@ class SCodecContribSpec extends Specification with CodecSpec {
       boundedSizeBytes(4, utf8).decode(utf8.encode("abc").require) should beEqualTo(Attempt.successful(DecodeResult("abc", BitVector.empty)))
     }
 
-
   }
-
 
 }

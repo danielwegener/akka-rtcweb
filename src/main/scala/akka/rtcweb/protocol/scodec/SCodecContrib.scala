@@ -62,8 +62,8 @@ object SCodecContrib {
    */
   final def constantValue[A](constantValue: A)(implicit encoder: Encoder[A]): Codec[Unit] = scodec.codecs.constant(encoder.encode(constantValue).require)
 
-  def boundedSize[A](size:Long, boundedCodec:Codec[A]):Codec[A] = new BoundedSizeCodec[A](size, boundedCodec)
-  def boundedSizeBytes[A](size:Long, boundedCodec:Codec[A]):Codec[A] = new BoundedSizeCodec[A](size*8, boundedCodec)
+  def boundedSize[A](size: Long, boundedCodec: Codec[A]): Codec[A] = new BoundedSizeCodec[A](size, boundedCodec)
+  def boundedSizeBytes[A](size: Long, boundedCodec: Codec[A]): Codec[A] = new BoundedSizeCodec[A](size * 8, boundedCodec)
 
   def multiVariableSizes[SC <: HList, S <: HList, VC <: HList, V <: HList, ZippedLandVCs <: HList, ZippedVandVCs <: HList, SizeLimitedValueCodecs <: HList, EncodedValues <: HList, EncodedValuesUnified <: HList](sizeCodecs: SC, valueCodecs: VC)(implicit scToHListCodec: ToHListCodec.Aux[SC, S],
     vcToHListCodec: ToHListCodec.Aux[VC, V],

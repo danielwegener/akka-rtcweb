@@ -1,8 +1,8 @@
 package akka.rtcweb
 
 import org.specs2.SpecificationLike
-import org.specs2.execute.{Success, Result, Failure => TestFailure}
-import scodec.Attempt.{Failure, Successful}
+import org.specs2.execute.{ Success, Result, Failure => TestFailure }
+import scodec.Attempt.{ Failure, Successful }
 import scodec.bits.BitVector
 import scodec.{ DecodeResult, Attempt, Codec }
 import shapeless.Lazy
