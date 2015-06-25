@@ -1,26 +1,16 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.{ InetAddress, InetSocketAddress }
+import java.net.{InetAddress, InetSocketAddress}
 
 import akka.rtcweb.protocol.scodec.SCodecContrib
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import scodec._
-import scodec.bits.{ BitVector, ByteOrdering, ByteVector, HexStringSyntax }
+import scodec.bits.{BitVector, ByteOrdering, ByteVector, HexStringSyntax}
 import scodec.codecs._
 import shapeless._
 
 sealed trait StunAttributeType
 
-sealed trait Family
-
-object Family {
-  implicit val codec: Codec[Family] = mappedEnum(uint8, IPv4 -> 1, IPv6 -> 2)
-
-  case object IPv4 extends Family
-
-  case object IPv6 extends Family
-
-}
 
 /**
  * Known attribute types from [[https://tools.ietf.org/html/rfc5389#section-18.2]]
@@ -44,10 +34,7 @@ object StunAttributeType {
       `ICE-CONTROLLED` -> hex"0x8029".bits,
       `ICE-CONTROLLING` -> hex"0x802A".bits
     )
-  }, codecs.bits(16).as[UNKNOWN].widenOpt[StunAttributeType](identity, {
-    case a: UNKNOWN => Some(a)
-    case _ => None
-  }))
+  }, codecs.bits(16).as[UNKNOWN].upcast[StunAttributeType])
 
   final case class UNKNOWN(code: BitVector) extends StunAttributeType {
     require(code.length == 16, "code must be 4 bytes (16 bits) long")
@@ -75,6 +62,16 @@ object StunAttributeType {
   case object `ICE-CONTROLLED` extends StunAttributeType
   case object `ICE-CONTROLLING` extends StunAttributeType
 
+}
+
+sealed trait Family
+
+object Family {
+  implicit val codec: Codec[Family] = mappedEnum(uint8, IPv4 -> 1, IPv6 -> 2)
+
+  case object IPv4 extends Family
+
+  case object IPv6 extends Family
 }
 
 final case class SOFTWARE(description: String) extends StunAttribute {
@@ -131,7 +128,7 @@ object `ERROR-CODE` {
   sealed trait Code
   object Code {
 
-    implicit val codec: Codec[`ERROR-CODE`.Code] = mappedEnum(classNumberCodec,
+    implicit val codec: Codec[`ERROR-CODE`.Code] = choice(mappedEnum(classNumberCodec,
       `Try Alternate` -> 300,
       `Bad Request` -> 400,
       Unauthorized -> 401,
@@ -139,7 +136,10 @@ object `ERROR-CODE` {
       `Stale Nonce` -> 438,
       `Role Conflict` -> 487,
       `Server Error` -> 500
-    )
+    ), classNumberCodec.as[Code.UNKNOWN].upcast[`ERROR-CODE`.Code])
+
+    /** Failure case: ERROR-CODE is now known */
+    final case class UNKNOWN(number:Int) extends Code
 
     /**
      * Try Alternate: The client should contact an alternate server for

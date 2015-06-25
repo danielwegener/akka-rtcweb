@@ -19,7 +19,7 @@ class StunMessageSpec extends org.specs2.mutable.Specification with CodecSpec {
           `MAPPED-ADDRESS`(Family.IPv4, 42, InetAddress.getLoopbackAddress),
           `ALTERNATE-SERVER`(Family.IPv4, 43, InetAddress.getLoopbackAddress),
           `XOR-MAPPED-ADDRESS`(Family.IPv4, 42, InetAddress.getLoopbackAddress),
-          `ERROR-CODE`(Code.`Server Error`, "bad is bad"),
+          `ERROR-CODE`(Code.UNKNOWN(501), "bad is bad"),
           `UNKNOWN-ATTRIBUTES`(Vector(StunAttributeType.NONCE, StunAttributeType.UNKNOWN(hex"0x4242".bits))),
           SOFTWARE("MY AWESOME SOFTWARE 1.0"),
           `USE-CANDIDATE`(),
