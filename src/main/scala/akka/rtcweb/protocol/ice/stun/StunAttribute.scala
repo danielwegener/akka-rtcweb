@@ -331,6 +331,18 @@ object `XOR-MAPPED-ADDRESS` {
 
 }
 
+/** @see [[https://tools.ietf.org/html/rfc5389#section-15.5]]*/
+final case class FINGERPRINT(crc32:Long) extends StunAttribute
+
+object FINGERPRINT {
+
+  val dummy = FINGERPRINT(0L)
+  implicit val codec: Codec[FINGERPRINT] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.FINGERPRINT),
+    uint32
+  ).hlist.as[FINGERPRINT]
+  implicit val discriminator: Discriminator[StunAttribute, FINGERPRINT, StunAttributeType] = Discriminator(StunAttributeType.FINGERPRINT)
+}
+
 /** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
 final case class `USE-CANDIDATE`() extends StunAttribute
 

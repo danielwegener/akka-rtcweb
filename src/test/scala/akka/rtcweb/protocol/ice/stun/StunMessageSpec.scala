@@ -24,7 +24,8 @@ class StunMessageSpec extends org.specs2.mutable.Specification with CodecSpec {
           SOFTWARE("MY AWESOME SOFTWARE 1.0"),
           `USE-CANDIDATE`(),
           PRIORITY(Integer.MAX_VALUE),
-          `ICE-CONTROLLING`(hex"0x1223344556677889")
+          `ICE-CONTROLLING`(hex"0x1223344556677889"),
+          FINGERPRINT(123456789L)
         )))
     }
 
