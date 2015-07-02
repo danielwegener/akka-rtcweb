@@ -1,11 +1,11 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.{ InetAddress, InetSocketAddress }
+import java.net.{Inet4Address, InetAddress, InetSocketAddress}
 
 import akka.rtcweb.protocol.scodec.SCodecContrib
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import scodec._
-import scodec.bits.{ BitVector, ByteOrdering, ByteVector, HexStringSyntax }
+import scodec.bits.{BitVector, ByteOrdering, ByteVector, HexStringSyntax}
 import scodec.codecs._
 import shapeless._
 
@@ -64,6 +64,12 @@ object StunAttributeType {
 sealed trait Family
 
 object Family {
+
+  def fromAddress(inetAddress: InetAddress) = inetAddress match {
+    case _:Inet4Address => Family.IPv4
+    case _:InetAddress => Family.IPv6
+  }
+
   implicit val codec: Codec[Family] = mappedEnum(uint8, IPv4 -> 1, IPv6 -> 2)
 
   case object IPv4 extends Family
@@ -71,7 +77,7 @@ object Family {
   case object IPv6 extends Family
 }
 
-final case class SOFTWARE(description: String) extends StunAttribute {
+final case class SOFTWARE(description: String) extends StunAttribute(StunAttributeType.SOFTWARE) {
   require(description.length < 128, "description must be less than 128 characters")
 }
 
@@ -83,7 +89,7 @@ object SOFTWARE {
   implicit val discriminator: Discriminator[StunAttribute, SOFTWARE, StunAttributeType] = Discriminator(StunAttributeType.SOFTWARE)
 }
 
-final case class `UNKNOWN-ATTRIBUTES`(unknownAttributeTypes: Vector[StunAttributeType]) extends StunAttribute
+final case class `UNKNOWN-ATTRIBUTES`(unknownAttributeTypes: Vector[StunAttributeType]) extends StunAttribute(StunAttributeType.`UNKNOWN-ATTRIBUTES`)
 
 object `UNKNOWN-ATTRIBUTES` {
   /**
@@ -116,7 +122,7 @@ object `UNKNOWN-ATTRIBUTES` {
  *
  * @see [[https://tools.ietf.org/html/rfc5389#section-15.6]]
  */
-final case class `ERROR-CODE`(errorCode: `ERROR-CODE`.Code, reasonPhrase: String) extends StunAttribute {
+final case class `ERROR-CODE`(errorCode: `ERROR-CODE`.Code, reasonPhrase: String) extends StunAttribute(StunAttributeType.`ERROR-CODE`) {
 
 }
 
@@ -242,7 +248,7 @@ object `ERROR-CODE` {
  * UTF-8 [RFC3629] encoded sequence of less than 513 bytes, and MUST
  * have been processed using SASLprep [RFC4013].
  */
-final case class USERNAME(username: String) extends StunAttribute
+final case class USERNAME(username: String) extends StunAttribute(StunAttributeType.USERNAME)
 
 object USERNAME {
   //TODO: SASLprep
@@ -268,7 +274,7 @@ object USERNAME {
  * long-term credential for authentication.
  * @see [[https://tools.ietf.org/html/rfc5389#section-15.7]]
  */
-final case class REALM(realmValue: String) extends StunAttribute
+final case class REALM(realmValue: String) extends StunAttribute(StunAttributeType.REALM)
 
 object REALM {
   //TODO: SASLprep
@@ -311,7 +317,7 @@ object REALM {
  * {{{                     key = SASLprep(password)}}}
  *  @see [[https://tools.ietf.org/html/rfc5389#section-15.4]]
  */
-final case class `MESSAGE-INTEGRITY`(sha1: ByteVector) extends StunAttribute
+final case class `MESSAGE-INTEGRITY`(sha1: ByteVector) extends StunAttribute(StunAttributeType.`MESSAGE-INTEGRITY`)
 
 object `MESSAGE-INTEGRITY` {
   //TODO: SASLprep
@@ -331,7 +337,7 @@ object `MESSAGE-INTEGRITY` {
  * to that of the source IP address of the request.
  * @see [[https://tools.ietf.org/html/rfc5389#section-15.11]]
  */
-final case class `ALTERNATE-SERVER`(family: Family, port: Int, address: InetAddress) extends StunAttribute {
+final case class `ALTERNATE-SERVER`(family: Family, port: Int, address: InetAddress) extends StunAttribute(StunAttributeType.`ALTERNATE-SERVER`) {
   lazy val inetSocketAddress = new InetSocketAddress(address, port)
 }
 
@@ -351,7 +357,7 @@ object `ALTERNATE-SERVER` {
  * must be in network byte order.
  * @see [[https://tools.ietf.org/html/rfc5389#section-15.1]]
  */
-final case class `MAPPED-ADDRESS`(family: Family, port: Int, address: InetAddress) extends StunAttribute {
+final case class `MAPPED-ADDRESS`(family: Family, port: Int, address: InetAddress) extends StunAttribute(StunAttributeType.`MAPPED-ADDRESS`) {
   lazy val inetSocketAddress = new InetSocketAddress(address, port)
 }
 
@@ -363,7 +369,7 @@ object `MAPPED-ADDRESS` {
   implicit val discriminator: Discriminator[StunAttribute, `MAPPED-ADDRESS`, StunAttributeType] = Discriminator(StunAttributeType.`MAPPED-ADDRESS`)
 }
 
-final case class `XOR-MAPPED-ADDRESS`(family: Family, port: Int, address: InetAddress) extends StunAttribute {
+final case class `XOR-MAPPED-ADDRESS`(family: Family, port: Int, address: InetAddress) extends StunAttribute(StunAttributeType.`XOR-MAPPED-ADDRESS`) {
   lazy val inetSocketAddress = new InetSocketAddress(address, port)
 }
 
@@ -418,7 +424,7 @@ object `XOR-MAPPED-ADDRESS` {
 }
 
 /** @see [[https://tools.ietf.org/html/rfc5389#section-15.5]]*/
-final case class FINGERPRINT(crc32: Long) extends StunAttribute
+final case class FINGERPRINT(crc32: Long) extends StunAttribute(StunAttributeType.FINGERPRINT)
 
 object FINGERPRINT {
 
@@ -430,7 +436,7 @@ object FINGERPRINT {
 }
 
 /** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
-final case class `USE-CANDIDATE`() extends StunAttribute
+final case class `USE-CANDIDATE`() extends StunAttribute(StunAttributeType.`USE-CANDIDATE`)
 
 object `USE-CANDIDATE` {
   implicit val codec: Codec[`USE-CANDIDATE`] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`USE-CANDIDATE`),
@@ -440,7 +446,7 @@ object `USE-CANDIDATE` {
 }
 
 /** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
-final case class PRIORITY(byteVector: Long) extends StunAttribute
+final case class PRIORITY(byteVector: Long) extends StunAttribute(StunAttributeType.PRIORITY)
 
 object PRIORITY {
   implicit val codec: Codec[PRIORITY] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.PRIORITY),
@@ -450,7 +456,7 @@ object PRIORITY {
 }
 
 /** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
-final case class `ICE-CONTROLLED`(byteVector: ByteVector) extends StunAttribute
+final case class `ICE-CONTROLLED`(byteVector: ByteVector) extends StunAttribute(StunAttributeType.`ICE-CONTROLLED`)
 
 object `ICE-CONTROLLED` {
   implicit val codec: Codec[`ICE-CONTROLLED`] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`ICE-CONTROLLED`),
@@ -460,7 +466,7 @@ object `ICE-CONTROLLED` {
 }
 
 /** @see [[https://tools.ietf.org/html/rfc5245#section-19.1]]*/
-final case class `ICE-CONTROLLING`(byteVector: ByteVector) extends StunAttribute
+final case class `ICE-CONTROLLING`(byteVector: ByteVector) extends StunAttribute(StunAttributeType.`ICE-CONTROLLING`)
 
 object `ICE-CONTROLLING` {
   implicit val codec: Codec[`ICE-CONTROLLING`] = StunAttribute.withAttributeHeader(constantValue(StunAttributeType.`ICE-CONTROLLING`),
@@ -472,7 +478,7 @@ object `ICE-CONTROLLING` {
 /**
  * @see [[https://tools.ietf.org/html/rfc5389#section-15]]
  */
-sealed trait StunAttribute
+sealed abstract class StunAttribute(val attributeType: StunAttributeType)
 
 object StunAttribute {
 

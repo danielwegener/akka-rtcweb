@@ -8,6 +8,7 @@ import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.unmarshalling.PredefinedFromEntityUnmarshallers
 import akka.http.scaladsl.util.FastFuture
 import akka.rtcweb.protocol.RtcWebSDPRenderer
+import akka.rtcweb.protocol.ice.StunServer
 import akka.rtcweb.protocol.sdp.SessionDescription
 import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.stream.ActorMaterializer
@@ -33,6 +34,8 @@ object RtcwebServer extends Directives {
   val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
 
   implicit val sdum = PredefinedFromEntityUnmarshallers.stringUnmarshaller.flatMap(_ => sd => FastFuture.apply(SessionDescriptionParser.parse(sd)))
+
+  val stunServer = system.actorOf(StunServer.props())
 
   val renderer = new RtcWebSDPRenderer
   implicit val sessionDescriptionToStringMarshaller =

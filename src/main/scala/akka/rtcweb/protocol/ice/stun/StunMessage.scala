@@ -102,8 +102,6 @@ object StunMessage {
  * always zero.  This provides another way to distinguish STUN packets
  * from packets of other protocols.
  *
- * @param stunMessageType
- *
  * @param transactionId The transaction ID is a 96-bit identifier, used to uniquely identify
  * STUN transactions.  For request/response transactions, the
  * transaction ID is chosen by the STUN client for the request and
