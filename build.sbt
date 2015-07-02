@@ -1,8 +1,8 @@
 organization := "com.github.danielwegener"
 name := "akka-rtcweb-experimental"
 version := "0.1-SNAPSHOT"
-scalaVersion := "2.11.6"
-crossScalaVersions := Seq("2.10.5", "2.11.6")
+scalaVersion := "2.11.7"
+crossScalaVersions := Seq("2.10.5", "2.11.7")
 
 //fork in Test := true
 
@@ -18,8 +18,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-slf4j" % "2.3.11",
   "org.scodec" %% "scodec-core" % "1.8.0",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.11" % Test,
-  "org.specs2" %% "specs2-core" % "3.6" % Test,
-  "org.slf4j" % "slf4j-simple" % "1.7.7" % Test
+  "org.specs2" %% "specs2-core" % "3.6.2" % Test,
+  "org.slf4j" % "slf4j-simple" % "1.7.12" % Test
 )
 
 scalacOptions ++= List(
@@ -28,7 +28,11 @@ scalacOptions ++= List(
   "-language:_",
   "-encoding", "UTF-8",
   "-Xlint",
-  "-Xfatal-warnings"
+  "-Xfatal-warnings",
+  "-target:jvm-1.8",
+  "-Ybackend:GenBCode",
+  "-Ydelambdafy:method",
+  "-Yopt:l:classpath"
 )
 
 licenses += ("Apache-2.0", url("http://www.apache.org/licenses/LICENSE-2.0"))
