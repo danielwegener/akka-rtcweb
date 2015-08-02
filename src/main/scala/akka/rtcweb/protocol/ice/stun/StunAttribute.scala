@@ -1,11 +1,11 @@
 package akka.rtcweb.protocol.ice.stun
 
-import java.net.{Inet4Address, InetAddress, InetSocketAddress}
+import java.net.{ Inet4Address, InetAddress, InetSocketAddress }
 
 import akka.rtcweb.protocol.scodec.SCodecContrib
 import akka.rtcweb.protocol.scodec.SCodecContrib._
 import scodec._
-import scodec.bits.{BitVector, ByteOrdering, ByteVector, HexStringSyntax}
+import scodec.bits.{ BitVector, ByteOrdering, ByteVector, HexStringSyntax }
 import scodec.codecs._
 import shapeless._
 
@@ -66,8 +66,8 @@ sealed trait Family
 object Family {
 
   def fromAddress(inetAddress: InetAddress) = inetAddress match {
-    case _:Inet4Address => Family.IPv4
-    case _:InetAddress => Family.IPv6
+    case _: Inet4Address => Family.IPv4
+    case _: InetAddress => Family.IPv6
   }
 
   implicit val codec: Codec[Family] = mappedEnum(uint8, IPv4 -> 1, IPv6 -> 2)
