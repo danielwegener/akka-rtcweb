@@ -77,15 +77,13 @@ private[protocol] trait CommonRules { this: Parser with StringBuilding ⇒
   def ws(s: String) = rule { s ~ OWS }
 
   // def number = rule((capture((1 to 18).times(DIGIT)) ~ !DIGIT) ~> (_.toLong)) | (oneOrMore(DIGIT) ~ push(999999999999999999L))
-
   /** Positive long value that does not start with a 0 (zero) */
   def integer: Rule1[Long] = rule(
-    (capture(`POS-DIGIT` ~ (0 to 17).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
+    (capture(`POS-DIGIT` ~ (1 to 17).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
       | oneOrMore(DIGIT) ~ push(999999999999999999L)))
 
   def numberDifferentThanZero: Rule1[Option[Long]] = rule { (ch('0') ~ push(None)) | (number ~> ((n) ⇒ Option[Long](n))) }
 
-  // parses a potentially long series of digits and extracts its Long value capping at 999,999,999,999,999,999 in case of overflows
   // parses a potentially long series of digits and extracts its Long value capping at 999,999,999,999,999,999 in case of overflows
   def number: Rule1[Long] = rule(
     (capture((1 to 18).times(DIGIT)) ~ &(!DIGIT) ~> (_.toLong)
