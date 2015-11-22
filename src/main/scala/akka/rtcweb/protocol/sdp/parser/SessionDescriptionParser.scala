@@ -172,7 +172,9 @@ private[protocol] trait MediaParser {
       str("UDP/TLS/RTP/SAVP") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVP`) |
       str("SCTP") ~ push(MediaTransportProtocol.SCTP) |
       str("SCTP/DTLS") ~ push(MediaTransportProtocol.`SCTP/DTLS`) |
-      str("DTLS/SCTP") ~ push(MediaTransportProtocol.`DTLS/SCTP`)
+      str("DTLS/SCTP") ~ push(MediaTransportProtocol.`DTLS/SCTP`) |
+      str("UDP/DTLS/SCTP") ~ push(MediaTransportProtocol.`UDP/DTLS/SCTP`)
+      str("TCP/DTLS/SCTP") ~ push(MediaTransportProtocol.`TCP/DTLS/SCTP`)
   }
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */

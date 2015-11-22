@@ -180,7 +180,7 @@ class RTCPeerConnectionSpec extends Specification with TestKitBase with DefaultT
         * draft-ietf-mmusic-sctp-sdp-08 names the protocol identifier 'DTLS/SCTP'. Since it is in a newer version, we will use this */
       m must beSome
       val sctpmap = m.get.mediaAttributes.collectFirst { case e: Sctpmap => e }
-      m.get.protocol must be(MediaTransportProtocol.`DTLS/SCTP`)
+      m.get.protocol must be(MediaTransportProtocol.`UDP/DTLS/SCTP`)
       m.get.fmt must be(List(sctpmap.get.number.toString))
 
     } else {

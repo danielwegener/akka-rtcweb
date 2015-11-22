@@ -46,7 +46,9 @@ trait SessionDescriptionRenderer {
     case `UDP/TLS/RTP/SAVPF` => "UDP/TLS/RTP/SAVPF"
     case SCTP => "SCTP"
     case `SCTP/DTLS` => "SCTP/DTLS"
-    case `DTLS/SCTP` => "DTLS/SCTP"
+    case `DTLS/SCTP` => "SCTP/DTLS"
+    case `UDP/DTLS/SCTP` => "UDP/DTLS/SCTP"
+    case `TCP/DTLS/SCTP` => "TCP/DTLS/SCTP"
   }
 
   implicit val nettypeRenderer = Renderer.stringRenderer[NetworkType] {

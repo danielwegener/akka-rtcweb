@@ -559,7 +559,7 @@ final class RTCPeerConnection private[jsep] (private val config: PeerConnectionC
         MediaDescription(media = Media.application,
           mediaTitle = None,
           portRange = PortRange(9),
-          protocol = MediaTransportProtocol.`DTLS/SCTP`,
+          protocol = MediaTransportProtocol.`UDP/DTLS/SCTP`,
           mediaAttributes = attributes,
           fmt = Nil,
           connectionInformation = Some(
