@@ -20,7 +20,7 @@ trait IceExtensionAttributeRenderer {
     }
   }
   private implicit val inetSocketAddressRender = new Renderer[InetSocketAddress] {
-    override def render[R <: Rendering](r: R, addr: InetSocketAddress): r.type = r ~ addr.getHostName ~ SP ~ addr.getPort
+    override def render[R <: Rendering](r: R, addr: InetSocketAddress): r.type = r ~ addr.getHostString ~ SP ~ addr.getPort
   }
   private implicit val priorityRenderer = new Renderer[Priority] {
     override def render[R <: Rendering](r: R, value: Priority): r.type = r ~ value.priority
@@ -28,6 +28,7 @@ trait IceExtensionAttributeRenderer {
   private implicit val transportRenderer = new Renderer[Transport] {
     override def render[R <: Rendering](r: R, value: Transport): r.type = value match {
       case Transport.UDP => r ~ "UDP"
+      case Transport.TCP => r ~ "TCP"
       case Transport.UnknownTransportExtension(token) => r ~ token
     }
   }

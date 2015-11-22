@@ -57,7 +57,7 @@ private[ice] trait CandidateParser {
 
   /** {{{transport = "UDP" / transport-extension}}} */
   /** TODO: It seems to be a bug that some implementations send an udp instead of an UDP */
-  private def transport: Rule1[Transport] = rule { ((str("UDP") | str("udp")) ~ push(Transport.UDP)) | `transport-extension` }
+  private def transport: Rule1[Transport] = rule { ((str("UDP") | str("udp")) ~ push(Transport.UDP)) | ((str("TCP") | str("tcp")) ~ push(Transport.TCP)) | `transport-extension` }
 
   /** {{{transport-extension = token ; from RFC 3261}}} */
   private def `transport-extension`: Rule1[UnknownTransportExtension] = rule { token ~> (t => UnknownTransportExtension(t)) }

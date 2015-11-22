@@ -98,6 +98,7 @@ sealed trait Transport
 object Transport {
   final case class UnknownTransportExtension(token: String) extends Transport
   case object UDP extends Transport
+  case object TCP extends Transport
 }
 
 sealed trait CandidateType
