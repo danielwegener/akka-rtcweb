@@ -173,7 +173,7 @@ private[protocol] trait MediaParser {
       str("SCTP") ~ push(MediaTransportProtocol.SCTP) |
       str("SCTP/DTLS") ~ push(MediaTransportProtocol.`SCTP/DTLS`) |
       str("DTLS/SCTP") ~ push(MediaTransportProtocol.`DTLS/SCTP`) |
-      str("UDP/DTLS/SCTP") ~ push(MediaTransportProtocol.`UDP/DTLS/SCTP`)
+      str("UDP/DTLS/SCTP") ~ push(MediaTransportProtocol.`UDP/DTLS/SCTP`) |
       str("TCP/DTLS/SCTP") ~ push(MediaTransportProtocol.`TCP/DTLS/SCTP`)
   }
 
