@@ -93,7 +93,7 @@ object MediaTransportProtocol {
     * DTLS is either UDP or TCP.
     * @see [[http://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-08#section-4.2]]
     */
-  @deprecated(message = "Removed in draft-ietf-mmusic-sctp-sdp-10")
+  @deprecated(message = "Removed in draft-ietf-mmusic-sctp-sdp-10", since = "draft-ietf-mmusic-sctp-sdp-10")
   case object `DTLS/SCTP` extends MediaTransportProtocol
 
   /**
