@@ -20,7 +20,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-slf4j" % "2.3.11",
   "org.scodec" %% "scodec-core" % "1.8.3",
   "com.typesafe.akka" %% "akka-testkit" % "2.3.11" % Test,
-  "org.specs2" %% "specs2-core" % "3.6.2" % Test,
+  "org.specs2" %% "specs2-core" % "3.6.5" % Test,
   "org.slf4j" % "slf4j-simple" % "1.7.12" % Test
 )
 
