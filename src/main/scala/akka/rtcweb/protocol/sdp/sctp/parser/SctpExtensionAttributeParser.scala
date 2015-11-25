@@ -3,17 +3,17 @@ package akka.rtcweb.protocol.sdp.sctp.parser
 import akka.parboiled2.{ Parser, Rule1 }
 import akka.rtcweb.protocol.sdp.ExtensionAttribute
 import akka.rtcweb.protocol.sdp.parser.CommonRules
-import akka.rtcweb.protocol.sdp.sctp.{ Sctpmap, Fmtp, SctpPort }
+import akka.rtcweb.protocol.sdp.sctp.{SctpFmtp, Sctpmap, SctpFmtp$, SctpPort}
 
 trait SctpExtensionAttributeParser extends {
   this: Parser with CommonRules =>
 
-  def sctpMediaAttributeExtensions: Rule1[ExtensionAttribute] = rule { `sctp-port-attr` | `sctpmap-attr` }
+  def sctpMediaAttributeExtensions: Rule1[ExtensionAttribute] = rule { `sctp-port-attr` | `sctpmap-attr`  }
 
   import akka.rtcweb.protocol.sdp.parser.CharacterClasses._
 
   /** {{{sctp-port-attr  =  "a=sctp-port:" portnumber }}}  */
-  private def `sctp-port-attr` = rule { str("sctp-port:") ~ `port-number` ~> (pn => SctpPort(pn.toInt)) }
+  private def `sctp-port-attr` = rule { atomic("a=sctp-port:") ~ `port-number` ~> (pn => SctpPort(pn.toInt)) }
 
   /** {{{port-number     =  port}}} */
   private def `port-number` = rule { port }
@@ -21,14 +21,12 @@ trait SctpExtensionAttributeParser extends {
   /** port            =  1*DIGIT */
   private def `port` = rule { integer }
 
+  // FIXME: SCTP-FMTP should be parsed but reject non-SCTP FMTP formatted attributes
   /** {{{sctpmap-attr      =  "a=fmtp:" association-usage [max-message-size]}}} */
-  //private def `fmtp-attr`:Rule1[Fmtp] =  rule { "fmtp:" ~ `association-usage` ~ `max-message-size` ~> ((usage:String, mms:Long) => Fmtp(usage,mms)) }
-
-  /** {{{max-message-size  =  "max-message-size" EQUALS 1*DIGIT}}} */
-  //private def `max-message-size`:Rule1[Long] = rule { str("max-message-size=") ~ integer }
+  //private def `fmtp-attr`:Rule1[SctpFmtp] =  rule { (atomic("a=fmtp:") ~ `association-usage` ~ optional(SP ~`max-message-size`)) ~> ((usage:String, mms:Option[Long]) => SctpFmtp(usage,mms)) }
 
   /** association-usage = token */
-  //private def `association-usage`:Rule1[String] = rule { token }
+  private def `association-usage`:Rule1[String] = rule { token }
 
   /**
    * sctpmap-attr        =  "a=sctpmap:" sctpmap-number
@@ -53,9 +51,9 @@ trait SctpExtensionAttributeParser extends {
   private def `app` = token
 
   /** {{{max-message-size    =  "max-message-size" EQUALS 1*DIGIT}}} */
-  private def `max-message-size`: Rule1[Long] = rule { str("max-message-size=") ~ integer }
+  private def `max-message-size`: Rule1[Long] = rule { atomic("max-message-size=") ~ integer }
 
   /** {{{streams             =  "streams" EQUALS 1*DIGIT"}}} */
-  private def streams: Rule1[Long] = rule { str("streams=") ~ integer }
+  private def streams: Rule1[Long] = rule { atomic("streams=") ~ integer }
 
 }

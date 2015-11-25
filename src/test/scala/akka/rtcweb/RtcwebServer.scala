@@ -33,8 +33,7 @@ object RtcwebServer extends Directives {
   val interfaceMonitor = system.actorOf(InterfaceMonitor.props(1 seconds))
   val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
 
-  implicit val sdum = PredefinedFromEntityUnmarshallers.stringUnmarshaller.flatMap(_ => sd => FastFuture.apply(SessionDescriptionParser.parse(sd)))
-
+  implicit val sdum = PredefinedFromEntityUnmarshallers.stringUnmarshaller.flatMap(_=> {_ => { sd => FastFuture(SessionDescriptionParser.parse(sd))}})
   val stunServer = system.actorOf(StunServer.props())
 
   val renderer = new RtcWebSDPRenderer

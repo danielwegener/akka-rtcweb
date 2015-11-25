@@ -31,7 +31,7 @@ trait GroupParser {
    * }}}
    */
   private[grouping] def `mid-attribute`: Rule1[MediaStreamIdentifier] = rule {
-    str("mid:") ~ token ~> (t => MediaStreamIdentifier(t))
+    atomic("a=mid:") ~ token ~> (t => MediaStreamIdentifier(t))
   }
 
   def groupSessionAttributeExtensions: Rule1[ExtensionAttribute] = rule { `group-attribute` }
@@ -45,14 +45,14 @@ trait GroupParser {
    * }}}
    */
   private[grouping] def `group-attribute`: Rule1[Group] = rule {
-    str("group:") ~ semantics ~ oneOrMore(SP ~ `identification-tag` ~>
+    atomic("a=group:") ~ semantics ~ oneOrMore(SP ~ `identification-tag` ~>
       (ident => MediaStreamIdentifier(ident))) ~> ((a, b) => Group(a, b))
   }
 
   /** {{{semantics = "LS" / "FID" / semantics-extension}}}   */
   private def semantics: Rule1[Semantics] = rule {
-    (str("LS") ~ push(Semantics.LS)) |
-      (str("FID") ~ push(Semantics.FID)) |
+    (atomic("LS") ~ push(Semantics.LS)) |
+      (atomic("FID") ~ push(Semantics.FID)) |
       `semantics-extension` ~> (ext => Semantics.UnknownSemanticsExtension(ext))
   }
 

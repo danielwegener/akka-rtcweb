@@ -12,8 +12,10 @@ private[ice] trait UfragPwdParser {
 
   import CharacterClasses._
 
-  def `ice-pwd-att`: Rule1[IcePwd] = rule { str("ice-pwd:") ~ password ~> (pwd => IcePwd(pwd)) }
-  def `ice-ufrag-att`: Rule1[IceUfrag] = rule { str("ice-ufrag:") ~ ufrag ~> (ufrag => IceUfrag(ufrag)) }
+  def `ice-pwd-att`: Rule1[IcePwd] = rule { atomic("a=ice-pwd:") ~ password ~> (pwd => IcePwd(pwd)) }
+  def `ice-ufrag-att`: Rule1[IceUfrag] = rule { atomic("a=ice-ufrag:") ~ ufrag ~> (ufrag => IceUfrag(ufrag)) }
+
+  //TODO: support ice-options attr
   def `password`: Rule1[String] = rule { capture(22 to 256 times `ice-char`) }
   def `ufrag`: Rule1[String] = rule { capture(4 to 256 times `ice-char`) }
 

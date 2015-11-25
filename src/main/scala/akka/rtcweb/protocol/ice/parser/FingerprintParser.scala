@@ -14,7 +14,7 @@ trait FingerprintParser {
   import CharacterClasses._
 
   /** {{{fingerprint-attribute  =  "fingerprint" ":" hash-func SP fingerprint}}} */
-  def `fingerprint-attribute` = rule { str("fingerprint:") ~ `hash-func` ~ SP ~ fingerprint ~> ((hf: HashFunction, fp: String) => Fingerprint(hf, fp)) }
+  def `fingerprint-attribute` = rule { atomic("a=fingerprint:") ~ `hash-func` ~ SP ~ fingerprint ~> ((hf: HashFunction, fp: String) => Fingerprint(hf, fp)) }
 
   /**
    * {{{
@@ -24,13 +24,13 @@ trait FingerprintParser {
    * }}}
    */
   private def `hash-func`: Rule1[HashFunction] = rule {
-    str("sha-1") ~ push(HashFunction.`sha-1`) |
-      str("sha-224") ~ push(HashFunction.`sha-224`) |
-      str("sha-256") ~ push(HashFunction.`sha-256`) |
-      str("sha-384") ~ push(HashFunction.`sha-384`) |
-      str("sha-512") ~ push(HashFunction.`sha-512`) |
-      str("md5") ~ push(HashFunction.`md5`) |
-      str("md2") ~ push(HashFunction.`md2`) |
+    atomic("sha-1") ~ push(HashFunction.`sha-1`) |
+      atomic("sha-224") ~ push(HashFunction.`sha-224`) |
+      atomic("sha-256") ~ push(HashFunction.`sha-256`) |
+      atomic("sha-384") ~ push(HashFunction.`sha-384`) |
+      atomic("sha-512") ~ push(HashFunction.`sha-512`) |
+      atomic("md5") ~ push(HashFunction.`md5`) |
+      atomic("md2") ~ push(HashFunction.`md2`) |
       (token ~> (t => HashFunction.UnknownHashFunction(t)))
   }
   //; Additional hash functions can only come

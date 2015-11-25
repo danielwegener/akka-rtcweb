@@ -35,7 +35,7 @@ private[ice] trait CandidateParser {
    *
    */
   def `candidate-attribute`: Rule1[Candidate] = rule {
-    str("candidate:") ~ foundation ~ SP ~ `component-id` ~ SP ~
+    atomic("a=candidate:") ~ foundation ~ SP ~ `component-id` ~ SP ~
       transport ~ SP ~
       (priority ~ SP ~> (p => Priority(p))) ~
       `connection-address SP port` ~
@@ -70,10 +70,10 @@ private[ice] trait CandidateParser {
 
   /** {{{candidate-types = "host" / "srflx" / "prflx" / "relay" / token}}} */
   private def `candidate-types`: Rule1[CandidateType] = rule {
-    str("host") ~ push(CandidateType.HostCandidate) |
-      str("srflx") ~ push(CandidateType.ServerReflexiveCandidate) |
-      str("prflx") ~ push(CandidateType.PeerReflexiveCandidate) |
-      str("relay") ~ push(CandidateType.RelayCandidate) |
+    atomic("host") ~ push(CandidateType.HostCandidate) |
+      atomic("srflx") ~ push(CandidateType.ServerReflexiveCandidate) |
+      atomic("prflx") ~ push(CandidateType.PeerReflexiveCandidate) |
+      atomic("relay") ~ push(CandidateType.RelayCandidate) |
       token ~> (t => UnknownCandidateType(t))
   }
 

@@ -48,12 +48,12 @@ private[protocol] trait CommonSdpParser {
 
   /** information-field =   [%x69 "=" text CRLF] */
   def `information-field`: Rule1[String] = rule {
-    str("i=") ~ text ~ CRLF
+    atomic("i=") ~ text ~ CRLF
   }
 
   /** key-field = [%x6b "=" key-type CRLF] */
   def `key-field`: Rule1[EncryptionKey] = rule {
-    str("k=") ~ `key-type` ~ CRLF
+    atomic("k=") ~ `key-type` ~ CRLF
   }
 
   /**
@@ -63,10 +63,10 @@ private[protocol] trait CommonSdpParser {
    * %x75 %x72 %x69 ":" uri              ; "uri:"}}}
    */
   def `key-type`: Rule1[EncryptionKey] = rule {
-    (str("prompt") ~ push(PromptEncryptionKey)) |
-      (str("clear:") ~ `byte-string` ~> ((s) => ClearEncryptionKey(s))) |
-      (str("base64:") ~ rfc2045String ~> ((bytes) => Base64EncryptionKey(bytes))) |
-      (str("uri:") ~ `non-ws-string` ~> ((s) => UriEncryptionKey(s)))
+    (atomic("prompt") ~ push(PromptEncryptionKey)) |
+      (atomic("clear:") ~ `byte-string` ~> ((s) => ClearEncryptionKey(s))) |
+      (atomic("base64:") ~ rfc2045String ~> ((bytes) => Base64EncryptionKey(bytes))) |
+      (atomic("uri:") ~ `non-ws-string` ~> ((s) => UriEncryptionKey(s)))
   }
 
   /**
@@ -75,21 +75,21 @@ private[protocol] trait CommonSdpParser {
    * att-value =           byte-string
    */
   def attribute: Rule1[Attribute] = rule {
-    (token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
-      (token ~> ((t: String) => PropertyAttribute(t)))
+    atomic("a=") ~ (( token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
+      (token ~> ((t: String) => PropertyAttribute(t))))
   }
 
   /**connection-field =    [%x63 "=" nettype SP addrtype SP connection-address CRLF] */
   def `connection-field`: Rule1[ConnectionData] = rule {
-    str("c=") ~ nettype ~ SP ~ addrtype ~ SP ~ `connection-address` ~ CRLF ~> ((a, b, c) ⇒ ConnectionData(a, b, c))
+    atomic("c=") ~ nettype ~ SP ~ addrtype ~ SP ~ `connection-address` ~ CRLF ~> ((a, b, c) ⇒ ConnectionData(a, b, c))
   }
 
   def nettype: Rule1[NetworkType] = rule {
-    str("IN") ~ push(NetworkType.IN)
+    atomic("IN") ~ push(NetworkType.IN)
   }
 
   def addrtype: Rule1[AddressType] = rule {
-    str("IP4") ~ push(AddressType.IP4) | str("IP6") ~ push(AddressType.IP6)
+    atomic("IP4") ~ push(AddressType.IP4) | atomic("IP6") ~ push(AddressType.IP6)
   }
 
   def `connection-address SP port`: Rule1[InetSocketAddress] = rule { `connection-address` ~ SP ~ port ~> ((a: InetSocketAddress, p: Int) => InetSocketAddress.createUnresolved(a.getHostName, p)) }
@@ -107,15 +107,15 @@ private[protocol] trait CommonSdpParser {
   def port: Rule1[Int] = rule { number ~> ((l: Long) => l.toInt) }
 
   def `bandwidth-field`: Rule1[BandwidthInformation] = rule {
-    str("b=") ~ `bandwidth-type` ~ ch(':') ~ number ~ CRLF ~> ((t: BandwidthType, n: Long) ⇒ BandwidthInformation(t, n.toInt))
+    atomic("b=") ~ `bandwidth-type` ~ ch(':') ~ number ~ CRLF ~> ((t: BandwidthType, n: Long) ⇒ BandwidthInformation(t, n.toInt))
   }
 
   def `bandwidth-type`: Rule1[BandwidthType] = rule {
-    (str("CT") ~ push(BandwidthType.CT)) |
-      (str("AS") ~ push(BandwidthType.AS)) |
-      (str("RS") ~ push(BandwidthType.RS)) |
-      (str("RR") ~ push(BandwidthType.RR)) |
-      (capture(str("X-") ~ oneOrMore(ALPHANUM)) ~> (s ⇒ BandwidthType.Experimental(s)))
+    (atomic("CT") ~ push(BandwidthType.CT)) |
+      (atomic("AS") ~ push(BandwidthType.AS)) |
+      (atomic("RS") ~ push(BandwidthType.RS)) |
+      (atomic("RR") ~ push(BandwidthType.RR)) |
+      (capture(atomic("X-") ~ oneOrMore(ALPHANUM)) ~> (s ⇒ BandwidthType.Experimental(s)))
   }
 
 }
@@ -143,7 +143,7 @@ private[protocol] trait MediaParser {
 
   /** media-field = %x6d "=" media SP port ["/" integer] SP proto 1*(SP fmt) CRLF */
   def `media-field`: Rule1[(Media, PortRange, MediaTransportProtocol, Seq[String])] = rule {
-    str("m=") ~ media ~ SP ~ port ~ optional(ch('/') ~ integer) ~ SP ~ proto ~ zeroOrMore(SP ~ fmt) ~ CRLF ~>
+    atomic("m=") ~ media ~ SP ~ port ~ optional(ch('/') ~ integer) ~ SP ~ proto ~ zeroOrMore(SP ~ fmt) ~ CRLF ~>
       ((m: Media, port: Int, portRange: Option[Long], proto: MediaTransportProtocol, fmts: Seq[String]) => (m, PortRange(port, portRange.map(_.toInt)), proto, fmts))
   }
 
@@ -154,32 +154,32 @@ private[protocol] trait MediaParser {
 
   /** media = token  ;typically "audio", "video", "text", "application" */
   def media: Rule1[Media] = rule {
-    str("audio") ~ push(Media.audio) |
-      str("video") ~ push(Media.video) |
-      str("text") ~ push(Media.text) |
-      str("application") ~ push(Media.application) |
+    atomic("audio") ~ push(Media.audio) |
+      atomic("video") ~ push(Media.video) |
+      atomic("text") ~ push(Media.text) |
+      atomic("application") ~ push(Media.application) |
       token ~> ((t) => CustomMedia(t))
   }
 
   /** proto = token *("/" token) ;typically "RTP/AVP" or "udp" */
   // simplified
   def proto: Rule1[MediaTransportProtocol] = rule {
-    str("udp") ~ push(MediaTransportProtocol.udp) |
-      str("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
-      str("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
-      str("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`) |
-      str("UDP/TLS/RTP/SAVPF") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVPF`) |
-      str("UDP/TLS/RTP/SAVP") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVP`) |
-      str("SCTP") ~ push(MediaTransportProtocol.SCTP) |
-      str("SCTP/DTLS") ~ push(MediaTransportProtocol.`SCTP/DTLS`) |
-      str("DTLS/SCTP") ~ push(MediaTransportProtocol.`DTLS/SCTP`) |
-      str("UDP/DTLS/SCTP") ~ push(MediaTransportProtocol.`UDP/DTLS/SCTP`) |
-      str("TCP/DTLS/SCTP") ~ push(MediaTransportProtocol.`TCP/DTLS/SCTP`)
+    atomic("udp") ~ push(MediaTransportProtocol.udp) |
+      atomic("RTP/AVP") ~ push(MediaTransportProtocol.`RTP/AVP`) |
+      atomic("RTP/SAVPF") ~ push(MediaTransportProtocol.`RTP/SAVPF`) |
+      atomic("RTP/SAVP") ~ push(MediaTransportProtocol.`RTP/SAVP`) |
+      atomic("UDP/TLS/RTP/SAVPF") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVPF`) |
+      atomic("UDP/TLS/RTP/SAVP") ~ push(MediaTransportProtocol.`UDP/TLS/RTP/SAVP`) |
+      atomic("SCTP") ~ push(MediaTransportProtocol.SCTP) |
+      atomic("SCTP/DTLS") ~ push(MediaTransportProtocol.`SCTP/DTLS`) |
+      atomic("DTLS/SCTP") ~ push(MediaTransportProtocol.`DTLS/SCTP`) |
+      atomic("UDP/DTLS/SCTP") ~ push(MediaTransportProtocol.`UDP/DTLS/SCTP`) |
+      atomic("TCP/DTLS/SCTP") ~ push(MediaTransportProtocol.`TCP/DTLS/SCTP`)
   }
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */
   def `media-attribute-field`: Rule1[Attribute] = rule {
-    str("a=") ~ (mediaAttributesExtensionsRule | attribute) ~ CRLF
+    &(atomic("a=")) ~ (mediaAttributesExtensionsRule | attribute) ~ CRLF
   }
 
 }
@@ -213,12 +213,12 @@ private[protocol] trait SessionDescriptionParser {
 
   /** proto-version =       %x76 "=" 1*DIGIT CRLF */
   def `proto-version`: Rule1[ProtocolVersion] = rule {
-    str("v=0") ~ push(ProtocolVersion.`0`) ~ CRLF
+    atomic("v=0") ~ push(ProtocolVersion.`0`) ~ CRLF
   }
 
   /** origin-field =        %x6f "=" username SP sess-id SP sess-version SP nettype SP addrtype SP unicast-address CRLF */
   def `origin-field`: Rule1[Origin] = rule {
-    str("o=") ~ (username ~ SP ~ `sess-id` ~ SP ~ `sess-version` ~ SP ~ nettype ~ SP ~ addrtype ~ SP ~ `unicast-address`) ~ CRLF ~> ((a, b, c, d, e, f) ⇒ Origin(a, b, c, d, e, f))
+    atomic("o=") ~ (username ~ SP ~ `sess-id` ~ SP ~ `sess-version` ~ SP ~ nettype ~ SP ~ addrtype ~ SP ~ `unicast-address`) ~ CRLF ~> ((a, b, c, d, e, f) ⇒ Origin(a, b, c, d, e, f))
   }
 
   /** username =            non-ws-string */
@@ -234,36 +234,36 @@ private[protocol] trait SessionDescriptionParser {
 
   /** session-name-field =  %x73 "=" text CRLF */
   def `session-name-field`: Rule1[Option[String]] = rule {
-    str("s=") ~ ((SP ~ push(None)) | (text ~> (s ⇒ Some(s)))) ~ CRLF
+    atomic("s=") ~ ((SP ~ push(None)) | (text ~> (s ⇒ Some(s)))) ~ CRLF
   }
 
   /** uri-field =           [%x75 "=" uri CRLF] */
   def `uri-field`: Rule1[String] = rule {
-    str("u=") ~ `non-ws-string` ~ CRLF
+    atomic("u=") ~ `non-ws-string` ~ CRLF
   }
 
   /** email-fields =        *(%x65 "=" email-address CRLF) */
   //TODO: simplified
   def `email-field`: Rule1[String] = rule {
-    str("e=") ~ text ~ CRLF
+    atomic("e=") ~ text ~ CRLF
 
   }
 
   /** %x70 "=" phone-number CRLF */
   //TODO: simplified
   def `phone-field`: Rule1[String] = rule {
-    str("p=") ~ text ~ CRLF
+    atomic("p=") ~ text ~ CRLF
   }
 
   /**  time-fields =         1*( %x74 "=" start-time SP stop-time (CRLF repeat-fields) CRLF) [zone-adjustments CRLF] **/
   def `time-field`: Rule1[Timing] = rule {
-    str("t=") ~ numberDifferentThanZero ~ SP ~ numberDifferentThanZero ~ CRLF ~ optional(`repeat-field`) ~ optional(`zone-adjustments`) ~>
+    atomic("t=") ~ numberDifferentThanZero ~ SP ~ numberDifferentThanZero ~ CRLF ~ optional(`repeat-field`) ~ optional(`zone-adjustments`) ~>
       ((a: Option[Long], b: Option[Long], r: Option[RepeatTimes], adjustments: Option[Seq[TimeZoneAdjustment]]) ⇒ Timing(a, b, r, adjustments.getOrElse(Nil)))
   }
 
   /** repeat-fields =       %x72 "=" repeat-interval SP typed-time 1*(SP typed-time) */
   def `repeat-field`: Rule1[RepeatTimes] = rule {
-    str("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ oneOrMore(SP ~ `typed-time`) ~ CRLF ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
+    atomic("r=") ~ `repeat-interval` ~ SP ~ `typed-time` ~ oneOrMore(SP ~ `typed-time`) ~ CRLF ~> ((a, b, c) ⇒ RepeatTimes(a, b, c))
   }
 
   /** repeat-interval =     POS-DIGIT *DIGIT [fixed-len-time-unit] */
@@ -274,7 +274,7 @@ private[protocol] trait SessionDescriptionParser {
   /** zone-adjustments =  %x7a "=" time SP ["-"] typed-time (SP time SP ["-"] typed-time) */
   // todo: simplified, no negative allowed
   def `zone-adjustments`: Rule1[Seq[TimeZoneAdjustment]] = rule {
-    str("z=") ~ `zone-adjustment` ~ zeroOrMore(SP ~ `zone-adjustment`) ~ CRLF ~>
+    atomic("z=") ~ `zone-adjustment` ~ zeroOrMore(SP ~ `zone-adjustment`) ~ CRLF ~>
       ((first: TimeZoneAdjustment, more: Seq[TimeZoneAdjustment]) => Seq(first) ++ more)
   }
 
@@ -299,7 +299,7 @@ private[protocol] trait SessionDescriptionParser {
 
   /** attribute-fields =    *(%x61 "=" attribute CRLF) */
   def `session-attribute-field`: Rule1[Attribute] = rule {
-    str("a=") ~ (sessionAttributesExtensionsRule | attribute) ~ CRLF
+    &(atomic("a=")) ~ (sessionAttributesExtensionsRule | attribute) ~ CRLF
   }
 
   private def part1 = rule {

@@ -19,7 +19,7 @@ private[ice] trait RemoteCandidateParser {
    * 0*(SP remote-candidate)}}}
    */
   def `remote-candidate-att`: Rule1[RemoteCandidates] = rule {
-    str("remote-candidates:") ~ `remote-candidate` ~ zeroOrMore(SP ~ `remote-candidate`) ~>
+    atomic("a=remote-candidates:") ~ `remote-candidate` ~ zeroOrMore(SP ~ `remote-candidate`) ~>
       ((head: (Int, InetSocketAddress), tail: Seq[(Int, InetSocketAddress)]) => RemoteCandidates((head +: tail).toMap))
   }
 

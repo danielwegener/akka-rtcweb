@@ -40,8 +40,12 @@ final case class SctpPort(port: Int) extends SctpExtensionAttribute {
  * If the SDP 'fmtp' attribute is not present, the default value is 64K.
  * @see [[http://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-08#section-6]]
  */
-final case class Fmtp(associationUsage: String, maxMessageSize: Long) extends SctpExtensionAttribute {
+final case class SctpFmtp(associationUsage: String, maxMessageSize: Option[Long]) extends SctpExtensionAttribute {
   override def key: String = "fmtp"
+}
+
+object SctpFmtp {
+  final val defaultMaxMessageSize:Long = 64*1024
 }
 
 /**

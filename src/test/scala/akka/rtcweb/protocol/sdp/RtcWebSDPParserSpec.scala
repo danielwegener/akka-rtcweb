@@ -3,7 +3,7 @@ package akka.rtcweb.protocol.sdp
 import java.net.InetSocketAddress
 
 import akka.parboiled2.ParserInput.StringBasedParserInput
-import akka.parboiled2.Parser
+import akka.parboiled2.{ErrorFormatter, ParseError, Parser}
 import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
 import akka.rtcweb.protocol.sdp.sctp.SctpPort
@@ -11,7 +11,7 @@ import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.Seq
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 class RtcWebSDPParserSpec extends Specification {
 
@@ -99,7 +99,6 @@ class RtcWebSDPParserSpec extends Specification {
           |a=ice-pwd:1VsAwIdEnw9iGqYp7C49EByQ
           |a=ice-options:google-ice
           |a=fingerprint:sha-256 D3:D6:06:09:FC:5F:4D:54:E8:64:90:45:7C:7A:FA:92:56:54:19:9B:1C:A1:EA:2A:61:64:D8:04:41:5B:44:73
-          |a=setup:actpass
           |a=mid:data
           |a=sctpmap:5000 webrtc-datachannel 1024
           |a=sctp-port:5000
@@ -107,6 +106,8 @@ class RtcWebSDPParserSpec extends Specification {
           .replace("\n", "\r\n")))
 
       val resultTry = parser.parseSessionDescription()
+        .recoverWith{ case e@ParseError(position, principalPosition, traces) => Failure(new IllegalArgumentException(e.format(parser, new ErrorFormatter(true, true, true, true))))}
+
       resultTry should beSuccessfulTry
       val result = resultTry.get
 
