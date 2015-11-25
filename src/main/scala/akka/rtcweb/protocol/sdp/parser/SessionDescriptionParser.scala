@@ -1,6 +1,6 @@
 package akka.rtcweb.protocol.sdp.parser
 
-import java.net.{ InetSocketAddress }
+import java.net.InetSocketAddress
 
 import akka.parboiled2._
 import akka.rtcweb.protocol.sdp._
@@ -10,20 +10,6 @@ import scala.collection.immutable.Seq
 
 import scala.util.{ Try, Failure, Success }
 
-/** Plain SDP parser **/
-private[sdp] class PlainSessionDescriptionParserImpl(val input: ParserInput) extends Parser with CommonRules with Base64Parsing with NoSessionAttributeExtension with NoMediaAttributeExtension
-    with StringBuilding
-    with SessionDescriptionParser with CommonSdpParser with MediaParser {
-
-  def parseSessionDescription(): Try[SessionDescription] =
-    `session-description`.run()
-
-}
-
-object SessionDescriptionParser {
-
-  def parse(payload: String): Try[SessionDescription] = new PlainSessionDescriptionParserImpl(ParserInput(payload)).parseSessionDescription()
-}
 
 private[protocol] trait SessionAttributeExtensionRule {
   def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute]
@@ -205,6 +191,8 @@ private[protocol] trait SessionDescriptionParser {
   this: Parser with CommonSdpParser with MediaParser with CommonRules with Base64Parsing with StringBuilding with SessionAttributeExtensionRule with MediaAttributeExtensionRule ⇒
 
   import CharacterClasses._
+
+  def sdp = `session-description`
 
   def `session-description` = rule {
     part1 ~ part2 ~ zeroOrMore(`media-description`) ~ EOI ~>
