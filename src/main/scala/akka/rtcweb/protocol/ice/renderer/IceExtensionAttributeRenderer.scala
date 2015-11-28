@@ -58,7 +58,7 @@ trait IceExtensionAttributeRenderer {
   def renderIceExtensionAttribute[R <: Rendering](r: R, a: IceExtensionAttribute): r.type = a match {
     case Candidate(foundation, componentId, transport, priority, connectionAddress, candidateType, relayConnectionAddress, extensionAttributes) =>
       r ~ "candidate:" ~ foundation ~ SP ~ componentId ~ SP ~ transport ~ SP ~ priority ~ SP ~ connectionAddress ~ SP ~ "typ" ~ SP ~ candidateType
-      relayConnectionAddress.foreach(r ~ SP ~ _)
+      relayConnectionAddress.foreach(rca => r ~ SP ~ "raddr" ~ SP ~ rca.getHostString ~ SP ~ "rport" ~ SP ~ rca.getPort)
       extensionAttributes.foreach { case (key, value) => r ~ SP ~ key ~ SP ~ value }
       r
     case RemoteCandidates(candidates) => ???
