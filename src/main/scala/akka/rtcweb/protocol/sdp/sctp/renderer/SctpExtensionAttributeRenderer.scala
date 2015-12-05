@@ -10,7 +10,7 @@ trait SctpExtensionAttributeRenderer {
   def renderSctpExtensionAttribute[R <: Rendering](r: R, a: SctpExtensionAttribute): r.type = a match {
     case SctpPort(portNumber) => r ~ "sctp-port:" ~ portNumber
     case SctpFmtp(associationUsage, maxMessageSize) => r ~ "fmtp:" ~ associationUsage ~ maxMessageSize.map(" " + _).getOrElse("")
-    case Sctpmap(number, app) => r ~ "sctpmap:" ~ number.toString ~ SP ~ app // todo: max-messa-gesize and streams
+    case Sctpmap(number, app, maxMessageSize) => r ~ "sctpmap:" ~ number.toString ~ SP ~ app ~ maxMessageSize.map(" " + _).getOrElse("") // todo: streams
   }
 
 }

@@ -42,7 +42,7 @@ trait SctpExtensionAttributeParser extends {
    * {{{sctpmap-attr        =  "a=sctpmap:" sctpmap-number
    * app [max-message-size] [streams]}}}
    */
-  private def `sctpmap-attr`: Rule1[Sctpmap] = rule { `sctpmap-number` ~ SP ~ app ~ optional(SP ~ `max-message-size`) ~ optional(SP ~ streams) ~> ((number: Long, app: String, mms: Option[Long], str: Option[Long]) => Sctpmap(number, app)) }
+  private def `sctpmap-attr`: Rule1[Sctpmap] = rule { `sctpmap-number` ~ SP ~ app ~ optional(SP ~ `max-message-size`) ~ optional(SP ~ streams) ~> ((number: Long, app: String, mms: Option[Long], str: Option[Long]) => Sctpmap(number, app, mms)) }
 
   /** sctpmap-number      =  1*DIGIT */
   private def `sctpmap-number` = integer
