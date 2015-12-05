@@ -6,7 +6,7 @@ import akka.parboiled2.ParserInput.StringBasedParserInput
 import akka.parboiled2.{ErrorFormatter, ParseError, Parser}
 import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
-import akka.rtcweb.protocol.sdp.sctp.SctpPort
+import akka.rtcweb.protocol.sdp.sctp.{Sctpmap, SctpPort}
 import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
 import org.specs2.mutable.Specification
 
@@ -146,6 +146,7 @@ class RtcWebSDPParserSpec extends Specification {
       result.mediaDescriptions(1).mediaAttributes should contain(IceUfrag("wAYPGvXiff8UghxF8"))
       result.mediaDescriptions(1).mediaAttributes should contain(IcePwd("KAo7HueRkuhnYvI3xhT5uVCTc"))
 
+      result.mediaDescriptions(3).mediaAttributes should contain(Sctpmap(5000, "webrtc-datachannel", Some(1024L)))
       result.mediaDescriptions(3).mediaAttributes should contain(SctpPort(5000))
 
     }
