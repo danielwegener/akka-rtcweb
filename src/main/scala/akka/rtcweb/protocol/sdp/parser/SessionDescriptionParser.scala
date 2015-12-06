@@ -10,7 +10,6 @@ import scala.collection.immutable.Seq
 
 import scala.util.{ Try, Failure, Success }
 
-
 private[protocol] trait SessionAttributeExtensionRule {
   def sessionAttributesExtensionsRule: Rule1[ExtensionAttribute]
 }
@@ -61,7 +60,7 @@ private[protocol] trait CommonSdpParser {
    * att-value =           byte-string
    */
   def attribute: Rule1[Attribute] = rule {
-    atomic("a=") ~ (( token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
+    atomic("a=") ~ ((token ~ ch(':') ~ `byte-string` ~> ((t, v) => ValueAttribute(t, v))) |
       (token ~> ((t: String) => PropertyAttribute(t))))
   }
 

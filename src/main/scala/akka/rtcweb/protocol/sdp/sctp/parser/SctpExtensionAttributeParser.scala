@@ -3,12 +3,12 @@ package akka.rtcweb.protocol.sdp.sctp.parser
 import akka.parboiled2.{ Parser, Rule1 }
 import akka.rtcweb.protocol.sdp.ExtensionAttribute
 import akka.rtcweb.protocol.sdp.parser.CommonRules
-import akka.rtcweb.protocol.sdp.sctp.{SctpFmtp, Sctpmap, SctpFmtp$, SctpPort}
+import akka.rtcweb.protocol.sdp.sctp.{ Sctpmap, SctpPort }
 
 trait SctpExtensionAttributeParser extends {
   this: Parser with CommonRules =>
 
-  def sctpMediaAttributeExtensions: Rule1[ExtensionAttribute] = rule { `sctp-port-attr` | `sctpmap-attr`  }
+  def sctpMediaAttributeExtensions: Rule1[ExtensionAttribute] = rule { `sctp-port-attr` | `sctpmap-attr` }
 
   import akka.rtcweb.protocol.sdp.parser.CharacterClasses._
 
@@ -26,7 +26,7 @@ trait SctpExtensionAttributeParser extends {
   //private def `fmtp-attr`:Rule1[SctpFmtp] =  rule { (atomic("a=fmtp:") ~ `association-usage` ~ optional(SP ~`max-message-size`)) ~> ((usage:String, mms:Option[Long]) => SctpFmtp(usage,mms)) }
 
   /** association-usage = token */
-  private def `association-usage`:Rule1[String] = rule { token }
+  private def `association-usage`: Rule1[String] = rule { token }
 
   /**
    * sctpmap-attr        =  "a=sctpmap:" sctpmap-number

@@ -85,14 +85,14 @@ object MediaTransportProtocol {
   case object `SCTP/DTLS` extends MediaTransportProtocol
 
   /**
-    * The 'DTLS/SCTP' proto value describes an SCTP association on top
-    * of a DTLS connection, as defined in
-    * [I-D.ietf-tsvwg-sctp-dtls-encaps].
-    *
-    *  NOTE: In the case of 'DTLS/SCTP', the actual transport protocol below
-    * DTLS is either UDP or TCP.
-    * @see [[http://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-08#section-4.2]]
-    */
+   * The 'DTLS/SCTP' proto value describes an SCTP association on top
+   * of a DTLS connection, as defined in
+   * [I-D.ietf-tsvwg-sctp-dtls-encaps].
+   *
+   *  NOTE: In the case of 'DTLS/SCTP', the actual transport protocol below
+   * DTLS is either UDP or TCP.
+   * @see [[http://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-08#section-4.2]]
+   */
   //@deprecated(message = "Removed in draft-ietf-mmusic-sctp-sdp-10", since = "draft-ietf-mmusic-sctp-sdp-10")
   case object `DTLS/SCTP` extends MediaTransportProtocol
 

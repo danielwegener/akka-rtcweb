@@ -10,7 +10,7 @@ crossScalaVersions := Seq("2.10.5", "2.11.7")
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 
-lazy val `akka-streams-version` = "2.0-M1"
+lazy val `akka-streams-version` = "2.0-M2"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-experimental" % `akka-streams-version`,

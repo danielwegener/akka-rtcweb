@@ -45,7 +45,7 @@ final case class SctpFmtp(associationUsage: String, maxMessageSize: Option[Long]
 }
 
 object SctpFmtp {
-  final val defaultMaxMessageSize:Long = 64*1024
+  final val defaultMaxMessageSize: Long = 64 * 1024
 }
 
 /**
@@ -97,6 +97,6 @@ object SctpFmtp {
  * @see [[https://tools.ietf.org/html/draft-ietf-mmusic-sctp-sdp-06#section-5.1]]
  */
 //@deprecated(since = "draft-ietf-mmusic-sctp-sdp-07")
-final case class Sctpmap(number: Long, app: String, maxMessageSize:Option[Long]) extends SctpExtensionAttribute {
+final case class Sctpmap(number: Long, app: String, maxMessageSize: Option[Long]) extends SctpExtensionAttribute {
   override def key: String = "sctpmap"
 }
