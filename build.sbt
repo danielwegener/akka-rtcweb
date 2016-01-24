@@ -10,16 +10,17 @@ crossScalaVersions := Seq("2.10.5", "2.11.7")
 
 resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
 
-lazy val `akka-streams-version` = "2.0-M2"
+lazy val `akka-streams-version` = "2.0.2"
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-experimental" % `akka-streams-version`,
   "com.typesafe.akka" %% "akka-stream-testkit-experimental" % `akka-streams-version` % "test",
   "com.typesafe.akka" %% "akka-parsing-experimental" % `akka-streams-version`,
   "com.typesafe.akka" %% "akka-http-experimental" % `akka-streams-version`,
-  "com.typesafe.akka" %% "akka-slf4j" % "2.3.11",
+  "com.typesafe.akka" %% "akka-actor" % "2.4.1",
+  "com.typesafe.akka" %% "akka-slf4j" % "2.4.1",
   "org.scodec" %% "scodec-core" % "1.8.3",
-  "com.typesafe.akka" %% "akka-testkit" % "2.3.11" % Test,
+  "com.typesafe.akka" %% "akka-testkit" % "2.4.1" % Test,
   "org.specs2" %% "specs2-core" % "3.6.5" % Test,
   "org.slf4j" % "slf4j-simple" % "1.7.12" % Test
 )

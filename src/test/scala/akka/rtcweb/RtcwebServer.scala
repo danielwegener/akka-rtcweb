@@ -11,7 +11,6 @@ import akka.parboiled2.ParserInput
 import akka.rtcweb.protocol.{RtcWebSDPParser, RtcWebSDPRenderer}
 import akka.rtcweb.protocol.ice.StunServer
 import akka.rtcweb.protocol.sdp.SessionDescription
-import akka.rtcweb.protocol.sdp.parser.SessionDescriptionParser
 import akka.stream.ActorMaterializer
 import akka.stream.io.InterfaceMonitor
 import akka.util.Timeout
@@ -28,11 +27,11 @@ object RtcwebServer extends Directives {
   implicit val executionContext: ExecutionContext = system.dispatcher
   implicit val materializer = ActorMaterializer()(system)
 
-  val sdpMediaType = MediaType.custom("application/sdp", MediaType.Encoding.Fixed(HttpCharsets.`UTF-8`))
+  val sdpMediaType = MediaType.customWithFixedCharset("application","sdp", HttpCharsets.`UTF-8`)
   //(IO(StreamDtls) ? StreamDtls.Bind(materializer.settings, InetSocketAddress.createUnresolved("127.0.0.1", 4242))).mapTo[StreamDtls.DtlsConnection]
   val f = Source.fromInputStream(getClass.getResourceAsStream("/index.html")).getLines().mkString("\n")
   val interfaceMonitor = system.actorOf(InterfaceMonitor.props(1 seconds))
-  val index = HttpResponse(entity = HttpEntity(MediaTypes.`text/html`, f))
+  val index = HttpResponse(entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, f))
 
 
 
