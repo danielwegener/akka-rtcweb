@@ -1,13 +1,24 @@
 package akka.rtcweb.protocol.jsep
 
+import java.io.ByteArrayInputStream
 import java.net.InetSocketAddress
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.security.cert.{ X509Certificate, CertificateFactory }
 
-import akka.actor.{ Actor, ActorRef, Props }
+import akka.actor._
+import akka.rtcweb.protocol.ice._
+import akka.rtcweb.protocol.ice.IceAgent.CreateOfferResponse
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.{ ICECandidatePolicy, PeerConnectionConfiguration }
 import akka.rtcweb.protocol.sdp._
+import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
+import akka.rtcweb.protocol.sdp.sctp.Sctpmap
+import akka.stream.Materializer
+import akka.pattern.ask
+import akka.util.Timeout
 
-import scala.collection.immutable.Seq
 import scala.concurrent.duration.{ FiniteDuration, _ }
+import scala.language.postfixOps
 import scala.util.Random
 
 object RTCPeerConnection {
@@ -16,11 +27,12 @@ object RTCPeerConnection {
 
   /**
    * Creates Props for an actor of this type.
+   *
    * @param config ???
    * @return a Props for creating this actor, which can then be further configured
    *         (e.g. calling `.withDispatcher()` on it)
    */
-  def props(config: PeerConnectionConfiguration) = Props(new RTCPeerConnection(config))
+  def props(config: PeerConnectionConfiguration, iceAgent: ActorRef)(implicit materializer: Materializer) = Props(new RTCPeerConnection(config, iceAgent)(materializer))
 
   /**
    * By specifying a policy from the list below, the application can control how aggressively it
@@ -30,7 +42,7 @@ object RTCPeerConnection {
   sealed trait BundlePolicy
 
   /**
-   *  Typically, when gathering ICE candidates, the browser will gather all
+   * Typically, when gathering ICE candidates, the browser will gather all
    * possible forms of initial candidates - host, server reflexive, and
    * relay.  However, in certain cases, applications may want to have more
    * specific control over the gathering process, due to privacy or
@@ -64,6 +76,7 @@ object RTCPeerConnection {
    * Later, if a different policy is specified by the application, the
    * application can apply it by kicking off a new gathering phase via an
    * ICE restart.
+   *
    * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-3.4.3]]
    */
   sealed trait ICECandidatePolicy
@@ -76,83 +89,82 @@ object RTCPeerConnection {
    */
   sealed trait RTCSessionDescription
 
-  sealed trait HasSDPPayload extends RTCSessionDescription { def sessionDescription: SessionDescription }
+  sealed trait HasSDPPayload extends RTCSessionDescription {
+    def sessionDescription: SessionDescription
+  }
 
   sealed trait PeerConnectionMessage
 
   final case class StunServerDescription(address: InetSocketAddress, credentials: Option[Nothing] = None)
 
   /**
-   * @param stunServers TODO
+   * @param stunServers          TODO
    * @param iceCandidatePoolSize TODO
-   * @param bundlePolicy   Lastly, the application can specify its preferred policy regarding
-   * use of BUNDLE, the multiplexing mechanism defined in
-   * [I-D.ietf-mmusic-sdp-bundle-negotiation].  By specifying a policy
-   * from the list below, the application can control how aggressively it
-   * will try to BUNDLE media streams together.  The set of available
-   * policies is as follows:
-   * @param iceCandidatePolicy If an ICE candidate policy is specified,
-   * it functions as described in Section 3.4.3, causing the browser to only surface the permitted
-   * candidates to the application, and only use those candidates for
-   * connectivity checks.  The set of available policies is as follows:
+   * @param bundlePolicy         Lastly, the application can specify its preferred policy regarding
+   *                             use of BUNDLE, the multiplexing mechanism defined in
+   *                             [I-D.ietf-mmusic-sdp-bundle-negotiation].  By specifying a policy
+   *                             from the list below, the application can control how aggressively it
+   *                             will try to BUNDLE media streams together.  The set of available
+   *                             policies is as follows:
+   * @param iceCandidatePolicy   If an ICE candidate policy is specified,
+   *                             it functions as described in Section 3.4.3, causing the browser to only surface the permitted
+   *                             candidates to the application, and only use those candidates for
+   *                             connectivity checks.  The set of available policies is as follows:
    */
   final case class PeerConnectionConfiguration(
-    stunServers: Seq[StunServerDescription],
+    stunServers: Vector[StunServerDescription],
     iceCandidatePoolSize: Int,
     bundlePolicy: BundlePolicy,
     iceCandidatePolicy: ICECandidatePolicy = ICECandidatePolicy.all)
 
   /**
-   *  The createOffer method takes as a parameter an RTCOfferOptions
+   * The createOffer method takes as a parameter an RTCOfferOptions
    * object.  Special processing is performed when generating a SDP
    * description if the following constraints are present.
    *
-   * @param OfferToReceiveAudio If the "OfferToReceiveAudio" option is specified, with an integer
-   * value of N, the offer MUST include N non-rejected m= sections with
-   * media type "audio", even if fewer than N audio MediaStreamTracks have
-   * been added to the PeerConnection.  This allows the offerer to receive
-   * audio, including multiple independent streams, even when not sending
-   * it; accordingly, the directional attribute on the audio m= sections
-   * without associated MediaStreamTracks MUST be set to recvonly.  If
-   * this option is specified in the case where at least N audio
-   * MediaStreamTracks have already been added to the PeerConnection, or N
-   * non-rejected m= sections with media type "audio" would otherwise be
-   * generated, it has no effect.  For backwards compatibility, a value of
-   * "true" is interpreted as equivalent to N=1.
-   *
-   * @param OfferToReceiveVideo If the "OfferToReceiveVideo" option is specified, with an integer
-   * value of N, the offer MUST include N non-rejected m= sections with
-   * media type "video", even if fewer than N video MediaStreamTracks have
-   * been added to the PeerConnection.  This allows the offerer to receive
-   * video, including multiple independent streams, even when not sending
-   * it; accordingly, the directional attribute on the video m= sections
-   * without associated MediaStreamTracks MUST be set to recvonly.  If
-   * this option is specified in the case where at least N video
-   * MediaStreamTracks have already been added to the PeerConnection, or N
-   * non-rejected m= sections with media type "video" would otherwise be
-   * generated, it has no effect.  For backwards compatibility, a value of
-   * "true" is interpreted as equivalent to N=1.
-   *
-   * @param VoiceActivityDetection  If the "VoiceActivityDetection" option is specified, with a value of
-   * "true", the offer MUST indicate support for silence suppression in
-   * the audio it receives by including comfort noise ("CN") codecs for
-   * each offered audio codec, as specified in [RFC3389], Section 5.1,
-   * except for codecs that have their own internal silence suppression
-   * support.  For codecs that have their own internal silence suppression
-   * support, the appropriate fmtp parameters for that codec MUST be
-   * specified to indicate that silence suppression for received audio is
-   * desired.  For example, when using the Opus codec, the "usedtx=1"
-   * parameter would be specified in the offer.  This option allows the
-   * endpoint to significantly reduce the amount of audio bandwidth it
-   * receives, at the cost of some fidelity, depending on the quality of
-   * the remote VAD algorithm.
-   *
-   * @param IceRestart  If the "IceRestart" option is specified, with a value of "true", the
-   * offer MUST indicate an ICE restart by generating new ICE ufrag and
-   * pwd attributes, as specified in RFC5245, Section 9.1.1.1.  If this
-   * option is specified on an initial offer, it has no effect (since a
-   * new ICE ufrag and pwd are already generated).  This option is useful
-   * for reestablishing connectivity in cases where failures are detected.
+   * @param OfferToReceiveAudio    If the "OfferToReceiveAudio" option is specified, with an integer
+   *                               value of N, the offer MUST include N non-rejected m= sections with
+   *                               media type "audio", even if fewer than N audio MediaStreamTracks have
+   *                               been added to the PeerConnection.  This allows the offerer to receive
+   *                               audio, including multiple independent streams, even when not sending
+   *                               it; accordingly, the directional attribute on the audio m= sections
+   *                               without associated MediaStreamTracks MUST be set to recvonly.  If
+   *                               this option is specified in the case where at least N audio
+   *                               MediaStreamTracks have already been added to the PeerConnection, or N
+   *                               non-rejected m= sections with media type "audio" would otherwise be
+   *                               generated, it has no effect.  For backwards compatibility, a value of
+   *                               "true" is interpreted as equivalent to N=1.
+   * @param OfferToReceiveVideo    If the "OfferToReceiveVideo" option is specified, with an integer
+   *                               value of N, the offer MUST include N non-rejected m= sections with
+   *                               media type "video", even if fewer than N video MediaStreamTracks have
+   *                               been added to the PeerConnection.  This allows the offerer to receive
+   *                               video, including multiple independent streams, even when not sending
+   *                               it; accordingly, the directional attribute on the video m= sections
+   *                               without associated MediaStreamTracks MUST be set to recvonly.  If
+   *                               this option is specified in the case where at least N video
+   *                               MediaStreamTracks have already been added to the PeerConnection, or N
+   *                               non-rejected m= sections with media type "video" would otherwise be
+   *                               generated, it has no effect.  For backwards compatibility, a value of
+   *                               "true" is interpreted as equivalent to N=1.
+   * @param VoiceActivityDetection If the "VoiceActivityDetection" option is specified, with a value of
+   *                               "true", the offer MUST indicate support for silence suppression in
+   *                               the audio it receives by including comfort noise ("CN") codecs for
+   *                               each offered audio codec, as specified in [RFC3389], Section 5.1,
+   *                               except for codecs that have their own internal silence suppression
+   *                               support.  For codecs that have their own internal silence suppression
+   *                               support, the appropriate fmtp parameters for that codec MUST be
+   *                               specified to indicate that silence suppression for received audio is
+   *                               desired.  For example, when using the Opus codec, the "usedtx=1"
+   *                               parameter would be specified in the offer.  This option allows the
+   *                               endpoint to significantly reduce the amount of audio bandwidth it
+   *                               receives, at the cost of some fidelity, depending on the quality of
+   *                               the remote VAD algorithm.
+   * @param IceRestart             If the "IceRestart" option is specified, with a value of "true", the
+   *                               offer MUST indicate an ICE restart by generating new ICE ufrag and
+   *                               pwd attributes, as specified in RFC5245, Section 9.1.1.1.  If this
+   *                               option is specified on an initial offer, it has no effect (since a
+   *                               new ICE ufrag and pwd are already generated).  This option is useful
+   *                               for reestablishing connectivity in cases where failures are detected.
    *
    */
   final case class RTCOfferOptions(
@@ -160,8 +172,8 @@ object RTCPeerConnection {
     OfferToReceiveVideo: Option[Int] = None,
     VoiceActivityDetection: Boolean = false,
     IceRestart: Boolean = false,
-    DtlsSrtpKeyAgreement: Boolean,
-    RtpDataChannels: Boolean)
+    DtlsSrtpKeyAgreement: Boolean = false,
+    RtpDataChannels: Boolean = false)
 
   final case class CreateAnswerOptions()
 
@@ -292,6 +304,7 @@ object RTCPeerConnection {
    * setLocalDescription is called with an answer (provisional or final),
    * and the media directions are compatible, and media are available to
    * send, this will result in the starting of media transmission.
+   *
    * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.5]]
    */
   final case class SetLocalDescription(rtcSessionDescription: RTCSessionDescription) extends PeerConnectionMessage
@@ -309,6 +322,7 @@ object RTCPeerConnection {
    * setRemoteDescription is called with an answer (provisional or final),
    * and the media directions are compatible, and media are available to
    * send, this will result in the starting of media transmission.
+   *
    * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.6]]
    */
   final case class SetRemoteDescription(rtcSessionDescription: RTCSessionDescription) extends PeerConnectionMessage
@@ -348,6 +362,7 @@ object RTCPeerConnection {
    * This call may result in a change to the state of the ICE Agent, and
    * may result in a change to media state if it results in connectivity
    * being established.
+   *
    * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.10]]
    */
   final case class SetConfiguration(configuration: RTCPeerConnection.PeerConnectionConfiguration) extends PeerConnectionMessage
@@ -369,22 +384,23 @@ object RTCPeerConnection {
    * 9. Create channel's associated underlying data transport and configure it according to the relevant properties of channel.
    *
    */
-  final case class CreateDataChannel(listener: ActorRef, label: String, dataChannelDict: RTCDataChannelInit = RTCDataChannelInit.DEFAULT) extends PeerConnectionMessage
+  final case class CreateDataChannel(flow: DataChannelFlow, label: String, dataChannelDict: RTCDataChannelInit = RTCDataChannelInit.DEFAULT) extends PeerConnectionMessage
 
   /**
    * This type represents a collection of object properties and does not have an explicit JavaScript representation.
-   * @param ordered If set to false, data is allowed to be delivered out of order. The default value of true,
-   *                guarantees that data will be delivered in order.
-   * @param maxRetransmits Limits the number of times a channel will retransmit data if not successfully delivered.
-   *                       This value may be clamped if it exceeds the maximum value supported by the user agent.
+   *
+   * @param ordered           If set to false, data is allowed to be delivered out of order. The default value of true,
+   *                          guarantees that data will be delivered in order.
+   * @param maxRetransmits    Limits the number of times a channel will retransmit data if not successfully delivered.
+   *                          This value may be clamped if it exceeds the maximum value supported by the user agent.
    * @param maxPacketLifeTime Limits the time during which the channel will retransmit data if not successfully delivered.
    *                          This value may be clamped if it exceeds the maximum value supported by the user agent.
-   * @param protocol Subprotocol name used for this channel.
-   * @param negotiated The default value of false tells the user agent to announce the channel in-band and instruct
-   *                   the other peer to dispatch a corresponding RTCDataChannel object. If set to true, it is up to
-   *                   the application to negotiate the channel and create a RTCDataChannel object with the same id
-   *                   at the other peer.
-   * @param id Overrides the default selection of id for this channel.
+   * @param protocol          Subprotocol name used for this channel.
+   * @param negotiated        The default value of false tells the user agent to announce the channel in-band and instruct
+   *                          the other peer to dispatch a corresponding RTCDataChannel object. If set to true, it is up to
+   *                          the application to negotiate the channel and create a RTCDataChannel object with the same id
+   *                          at the other peer.
+   * @param id                Overrides the default selection of id for this channel.
    */
   final case class RTCDataChannelInit(
     ordered: Boolean = true,
@@ -395,8 +411,10 @@ object RTCPeerConnection {
     id: Int)
 
   object ICECandidatePolicy {
+
     /** All candidates will be gathered and used. **/
     case object all extends ICECandidatePolicy
+
     /**
      * Candidates with private IP addresses [RFC1918] will be
      * filtered out.  This prevents exposure of internal network details,
@@ -405,6 +423,7 @@ object RTCPeerConnection {
      * section 6. *
      */
     case object public extends ICECandidatePolicy
+
     /**
      * All candidates except relay candidates will be filtered out.
      * This obfuscates the location information that might be ascertained
@@ -413,6 +432,7 @@ object RTCPeerConnection {
      * location to a metro or possibly even global level. *
      */
     case object relay extends ICECandidatePolicy
+
   }
 
   /**
@@ -423,6 +443,7 @@ object RTCPeerConnection {
    *
    * A null object will be returned if the local description has not yet
    * been established, or if the PeerConnection has been closed.
+   *
    * @see [[http://tools.ietf.org/html/draft-ietf-rtcweb-jsep-08#section-4.1.7]]
    */
   case object GetLocalDescription extends PeerConnectionMessage
@@ -468,11 +489,13 @@ object RTCPeerConnection {
      * legacy endpoints that do not support RTCP mux.
      */
     case object `max-bundle-and-rtcp-mux` extends BundlePolicy
+
   }
+
   object RTCSessionDescription {
 
     /**
-     *  "offer" indicates that a description should be parsed as an offer;
+     * "offer" indicates that a description should be parsed as an offer;
      * said description may include many possible media configurations.  A
      * description used as an "offer" may be applied anytime the
      * PeerConnection is in a stable state, or as an update to a previously
@@ -491,7 +514,7 @@ object RTCPeerConnection {
     final case class pranswer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
 
     /**
-     *  "answer" indicates that a description should be parsed as an answer,
+     * "answer" indicates that a description should be parsed as an answer,
      * the offer-answer exchange should be considered complete, and any
      * resources (decoders, candidates) that are no longer needed can be
      * released.  A description used as an "answer" may be applied as a
@@ -512,7 +535,7 @@ object RTCPeerConnection {
     final case class answer(sessionDescription: SessionDescription) extends RTCSessionDescription with HasSDPPayload
 
     /**
-     *  "rollback" is a special session description type implying that the
+     * "rollback" is a special session description type implying that the
      * state machine should be rolled back to the previous state, as
      * described in Section 4.1.4.2.  The contents MUST be empty.
      */
@@ -526,7 +549,122 @@ object RTCPeerConnection {
 
 }
 
-final class RTCPeerConnection private[jsep] (private val config: PeerConnectionConfiguration) extends Actor {
+object RTCPeerConnectionFSM {
+
+  sealed trait State
+
+  case object Stable extends State
+
+  case object RemoteOffer extends State
+
+  case object LocalPrAnswer extends State
+
+  case object LocalOffer extends State
+
+  case object RemotePrAnswer extends State
+
+  case object Closed extends State
+
+  case class Data(localDescription: Option[SessionDescription], remoteDescription: Option[SessionDescription])
+
+  val NoData = Data(None, None)
+
+}
+
+/**
+ * {{{
+ * setRemote(OFFER)               setLocal(PRANSWER)
+ * /-----\                               /-----\
+ * |     |                               |     |
+ * v     |                               v     |
+ * +---------------+    |                +---------------+    |
+ * |               |----/                |               |----/
+ * |               | setLocal(PRANSWER)  |               |
+ * |  Remote-Offer |------------------- >| Local-Pranswer|
+ * |               |                     |               |
+ * |               |                     |               |
+ * +---------------+                     +---------------+
+ * ^   |                                   |
+ * |   | setLocal(ANSWER)                  |
+ * setRemote(OFFER)  |                                   |
+ * |   V                  setLocal(ANSWER) |
+ * +---------------+                            |
+ * |               |                            |
+ * |               |<---------------------------+
+ * |    Stable     |
+ * |               |<---------------------------+
+ * |               |                            |
+ * +---------------+          setRemote(ANSWER) |
+ * ^   |                                   |
+ * |   | setLocal(OFFER)                   |
+ * setRemote(ANSWER) |                                   |
+ * |   V                                   |
+ * +---------------+                     +---------------+
+ * |               |                     |               |
+ * |               | setRemote(PRANSWER) |               |
+ * |  Local-Offer  |------------------- >|Remote-Pranswer|
+ * |               |                     |               |
+ * |               |----\                |               |----\
+ * +---------------+    |                +---------------+    |
+ * ^     |                               ^     |
+ * |     |                               |     |
+ * \-----/                               \-----/
+ * setLocal(OFFER)               setRemote(PRANSWER)
+ * }}}
+ *
+ * @see [[https://tools.ietf.org/html/draft-ietf-rtcweb-jsep-12#section-3.2 JSEP State Machine]]
+ */
+class RTCPeerConnectionFSM(private val iceAgent: ActorRef) extends FSM[RTCPeerConnectionFSM.State, RTCPeerConnectionFSM.Data] with ActorLogging {
+
+  import RTCPeerConnectionFSM._
+  import RTCPeerConnection._
+
+  startWith(Stable, NoData)
+
+  when(Stable) {
+    case Event(SetLocalDescription(RTCSessionDescription.offer(localSdp)), NoData) =>
+      goto(LocalOffer) using NoData.copy(localDescription = Some(localSdp))
+    case Event(SetRemoteDescription(RTCSessionDescription.offer(sdp)), NoData) =>
+      goto(RemoteOffer) using NoData.copy(remoteDescription = Some(sdp))
+  }
+
+  when(LocalOffer) {
+    case Event(SetLocalDescription(RTCSessionDescription.offer(offerSdp)), data) =>
+      goto(LocalOffer) using data.copy(localDescription = Some(offerSdp))
+    case Event(SetRemoteDescription(RTCSessionDescription.answer(answerSDP)), data) =>
+      goto(Stable) using data.copy(remoteDescription = Some(answerSDP))
+    case Event(SetRemoteDescription(RTCSessionDescription.pranswer(prAnswerSDP)), data) =>
+      goto(RemotePrAnswer) using data.copy(remoteDescription = Some(prAnswerSDP))
+  }
+
+  when(RemoteOffer) {
+    case Event(SetRemoteDescription(RTCSessionDescription.offer(offerSdp)), data) =>
+      goto(RemoteOffer) using data.copy(remoteDescription = Some(offerSdp))
+    case Event(SetLocalDescription(RTCSessionDescription.answer(answerSDP)), data) =>
+      goto(Stable) using data.copy(localDescription = Some(answerSDP))
+    case Event(SetLocalDescription(RTCSessionDescription.pranswer(prAnswerSDP)), data) =>
+      goto(LocalPrAnswer) using data.copy(localDescription = Some(prAnswerSDP))
+  }
+
+  when(LocalPrAnswer) {
+    case Event(SetLocalDescription(RTCSessionDescription.pranswer(prAnswerSDP)), data) =>
+      goto(LocalPrAnswer) using data.copy(localDescription = Some(prAnswerSDP))
+    case Event(SetLocalDescription(RTCSessionDescription.answer(answerSDP)), data) =>
+      goto(Stable) using data.copy(localDescription = Some(answerSDP))
+  }
+
+  when(RemotePrAnswer) {
+    case Event(SetRemoteDescription(RTCSessionDescription.pranswer(prAnswerSDP)), data) =>
+      goto(RemotePrAnswer) using data.copy(remoteDescription = Some(prAnswerSDP))
+    case Event(SetRemoteDescription(RTCSessionDescription.answer(answerSDP)), data) =>
+      goto(Stable) using data.copy(remoteDescription = Some(answerSDP))
+  }
+
+  initialize()
+
+}
+
+class RTCPeerConnection private[jsep] (private val config: PeerConnectionConfiguration, private val iceAgent: ActorRef)(implicit materializer: Materializer) extends Actor {
 
   require(config.iceCandidatePolicy == ICECandidatePolicy.all, "Only ICECandidatePolicy.all is supported yet.")
 
@@ -535,67 +673,98 @@ final class RTCPeerConnection private[jsep] (private val config: PeerConnectionC
   /** known dataChannels, id to ActorRef */
   private val dataChannels: collection.mutable.Map[Int, (RTCDataChannelInit, Label, ActorRef)] = collection.mutable.Map.empty
   private var channelIdCounter: Int = 0
+  private var sessionVersion: Long = 0
+
+  //private val cert = new org.bouncycastle.cert.X509v3CertificateBuilder(new X500Name("wat"), BigInteger.ONE,null, null, null)
+
+  implicit val timeout = Timeout(5 seconds)
+  implicit val ex = context.dispatcher
 
   override def receive: Receive = {
 
-    case CreateOffer(options) => {
-      require(!options.RtpDataChannels, "Option RtpDataChannels is not yet supported")
-      sender ! RTCSessionDescription.offer(createOffer)
-    }
-    case CreateDataChannel(listener, label, dataChannelInit) =>
+    case CreateOffer(options) =>
+      require(!options.RtpDataChannels, "Option RtpDataChannels is not supported")
+      val theSender = sender
+      (iceAgent ? IceAgent.CreateOffer).mapTo[IceAgent.CreateOfferResponse].onSuccess {
+        case CreateOfferResponse(stunCandidates) =>
+          val sd = createLocalSessionDescription(1, stunCandidates, iceControlling = true, createSessionId.toString, sessionVersion, IceUfrag("ufrag"), IcePwd("icePwd"), None)
+          theSender ! RTCSessionDescription.offer(sd)
+      }
+
+    case CreateDataChannel(flow, label, dataChannelInit) =>
       val validChannelId = if (dataChannels.contains(dataChannelInit.id) || dataChannelInit.id == 0) nextChannelId else dataChannelInit.id
       val config = dataChannelInit.copy(id = validChannelId)
-      val dataChannelActorProps = RTCDataChannel.props(listener, config)
-      val dataChannelActor = context.actorOf(dataChannelActorProps)
+      val dataChannelActor = context.actorOf(RTCDataChannel.props(flow, config))
       dataChannels += validChannelId -> ((config, label, dataChannelActor))
   }
 
-  private def createOffer = {
+  def createLocalSessionDescription(sctpPort: Int, iceCandidates: Vector[Candidate], iceControlling: Boolean, sessionId: String, sessionVersion: Long, ufrag: IceUfrag, pwd: IcePwd, pemCrt: Option[String]): SessionDescription = {
+    val socketAddress = InetSocketAddress.createUnresolved("127.0.0.1", 0)
+    val origin = Origin(username = None, `sess-id` = sessionId, `sess-version` = sessionVersion, addrtype = AddressType.IP4, `unicast-address` = socketAddress)
 
-    val mediaDescriptions: Seq[MediaDescription] = dataChannels.map {
-      case (id, dc) =>
-        val attributes: Seq[Attribute] = Nil
+    val mediaDescription = {
 
-        MediaDescription(media = Media.application,
-          mediaTitle = None,
-          portRange = PortRange(9),
-          protocol = MediaTransportProtocol.`UDP/DTLS/SCTP`,
-          mediaAttributes = attributes,
-          fmt = Nil,
-          connectionInformation = Some(
-            ConnectionData(NetworkType.IN, AddressType.IP6, InetSocketAddress.createUnresolved("::", 0))
-          ),
-          bandwidthInformation = Nil,
-          encryptionKey = None
-        )
-    }.toList
+      val fingerprint = pemCrt.map(createFingerprint)
+      val iceSetup = if (iceControlling) Setup(Setup.Role.active) else Setup(Setup.Role.passive)
+      val iceMid = MediaStreamIdentifier("data")
+      val iceSctpMap = Sctpmap(sctpPort, "webrtc-datachannel", Some(1024L))
 
-    val sessionAttributes: Seq[Attribute] = Seq(ValueAttribute("msid-semantic", "WMS"))
+      val mediaAttributes: Vector[Attribute] = iceCandidates ++: ufrag +: pwd +: fingerprint.toVector ++:
+        Vector(iceSetup, iceMid, iceSctpMap)
+      MediaDescription(
+        media = Media.application,
+        mediaTitle = None,
+        //portRange             = PortRange(dataSession.getSctpLocalPort),
+        //portRange             = PortRange(udpIceCandidates.collectFirst { case f ⇒ f.connectionAddress.getPort }.getOrElse(0)),
+        // TODO: WTF? is 9 magic?
+        portRange = PortRange(9),
+        protocol = MediaTransportProtocol.`DTLS/SCTP`,
+        mediaAttributes = mediaAttributes,
+        fmt = Vector(sctpPort.toString),
+        connectionInformation = Some(ConnectionData(NetworkType.IN, AddressType.IP4, socketAddress)),
+        bandwidthInformation = Vector.empty,
+        encryptionKey = None
+      )
+    }
 
     SessionDescription(
-      protocolVersion = ProtocolVersion.`0`,
-      origin = Origin(
-        username = None,
-        `sess-id` = createSessionId.toString,
-        `sess-version` = 0L,
-        addrtype = AddressType.IP4,
-        `unicast-address` = InetSocketAddress.createUnresolved("0.0.0.0", 0)),
-      sessionAttributes = sessionAttributes,
-      mediaDescriptions = mediaDescriptions,
-      sessionName = None,
-      sessionInformation = None,
-      descriptionUri = None,
-      emailAddresses = Nil,
-      phoneNumbers = Nil,
-      connectionInformation = None,
-      bandwidthInformation = None,
-      encryptionKey = None,
-      timings = Seq(Timing(Some(0L), Some(0L)))
+      origin = origin,
+      timings = Vector(Timing(None, None)),
+      sessionAttributes = Vector(ValueAttribute("msid-semantic", " WMS")), //, PropertyAttribute("sendrecv")),
+      mediaDescriptions = Vector(mediaDescription)
     )
+
+  }
+
+  def createFingerprint(pemCert: String): Fingerprint = {
+    val is = new ByteArrayInputStream(pemCert.getBytes(StandardCharsets.UTF_8))
+    val x509CertFact: CertificateFactory = CertificateFactory.getInstance("X.509")
+    val cert: X509Certificate = x509CertFact.generateCertificate(is).asInstanceOf[X509Certificate]
+    val der = cert.getEncoded
+    val sha256 = MessageDigest.getInstance("SHA-256")
+    sha256.update(der)
+    val digest = sha256.digest()
+    val hexified = hexify(digest)
+    is.close()
+    Fingerprint(HashFunction.`sha-256`, hexified)
+  }
+
+  def hexify(bytes: Array[Byte]): String = {
+    val hexDigits = Array[Char]('0', '1', '2', '3', '4', '5', '6', '7',
+      '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
+    val buf = new StringBuffer(bytes.length * 2)
+    bytes.zipWithIndex.foreach {
+      case (b, i) ⇒
+        buf.append(hexDigits((bytes(i) & 0xf0) >> 4))
+        buf.append(hexDigits(bytes(i) & 0x0f))
+    }
+    buf.toString.grouped(2).mkString(":")
   }
 
   private def createSessionId = Random.nextLong()
 
-  private def nextChannelId: Int = { channelIdCounter += 1; channelIdCounter }
+  private def nextChannelId: Int = {
+    channelIdCounter += 1; channelIdCounter
+  }
 
 }

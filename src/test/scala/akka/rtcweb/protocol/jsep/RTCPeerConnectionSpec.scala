@@ -7,6 +7,8 @@ import akka.rtcweb.protocol.RtcWebSDPRenderer
 import akka.rtcweb.protocol.jsep.RTCPeerConnection._
 import akka.rtcweb.protocol.sdp.sctp.Sctpmap
 import akka.rtcweb.protocol.sdp._
+import akka.stream.{ ActorMaterializerSettings, ActorMaterializer }
+import akka.stream.scaladsl.Flow
 import org.specs2.execute.Result
 import org.specs2.mutable.Specification
 
@@ -25,7 +27,7 @@ class RTCPeerConnectionSpec extends Specification with TestKitBase with DefaultT
   sequential
 
   lazy val initialOffer = {
-    unitRef ! CreateDataChannel(dataChannelProbe.ref, "my-data-channel")
+    unitRef ! CreateDataChannel(Flow.apply, "my-data-channel")
     val rtcOfferOptions = RTCOfferOptions(DtlsSrtpKeyAgreement = false, RtpDataChannels = false)
     listenerProbe.send(unitRef, CreateOffer(rtcOfferOptions))
     lazy val initialRTCOffer = listenerProbe.expectMsgClass(1 second, classOf[RTCSessionDescription.offer])
@@ -33,11 +35,13 @@ class RTCPeerConnectionSpec extends Specification with TestKitBase with DefaultT
   }
 
   override implicit val system: ActorSystem = ActorSystem("RTCPeerConnectionSpec")
+  implicit val materializer = ActorMaterializer(ActorMaterializerSettings(system))
 
   val listenerProbe = TestProbe()
   val dataChannelProbe = TestProbe()
   val bundlePolicy: BundlePolicy = BundlePolicy.`max-bundle`
-  val unitRef = TestActorRef[RTCPeerConnection](RTCPeerConnection.props(PeerConnectionConfiguration(Nil, 1, bundlePolicy)))
+  val iceAgentProbe = TestProbe()
+  val unitRef = TestActorRef[RTCPeerConnection](RTCPeerConnection.props(PeerConnectionConfiguration(Vector.empty, 1, bundlePolicy), iceAgentProbe.ref))
   val unit = unitRef.underlyingActor
   val sdpRenderer = new RtcWebSDPRenderer
 

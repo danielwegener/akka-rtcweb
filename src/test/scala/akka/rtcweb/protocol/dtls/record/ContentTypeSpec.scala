@@ -6,7 +6,7 @@ import org.specs2.mutable.Specification
 class ContentTypeSpec extends Specification with CodecSpec {
 
   "ContentType" should {
-    "be pickable forth and back" in {
+    "be encodable and decodable" in {
       roundtrip(ContentType.alert)
       roundtrip(ContentType.application_data)
       roundtrip(ContentType.changeCipherSpec)

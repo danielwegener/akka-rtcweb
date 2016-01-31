@@ -11,7 +11,7 @@ class RFC5245Spec extends Specification with TestKitBase {
 
   val listener = TestProbe()
 
-  val unitRef = TestActorRef(Props(new IceAgent(AgentRole.Controlling, listener.ref, Vector.empty)))
+  val unitRef = TestActorRef(Props(new IceAgent(AgentRole.Controlling, listener.ref, Vector.empty, 1024 to 2048)))
 
   def is =
     s2"""

@@ -3,15 +3,15 @@ package akka.rtcweb.protocol.sdp
 import java.net.InetSocketAddress
 
 import akka.parboiled2.ParserInput.StringBasedParserInput
-import akka.parboiled2.{ErrorFormatter, ParseError, Parser}
+import akka.parboiled2.{ ErrorFormatter, ParseError, Parser }
 import akka.rtcweb.protocol.ice._
 import akka.rtcweb.protocol.sdp.grouping.MediaStreamIdentifier
-import akka.rtcweb.protocol.sdp.sctp.{Sctpmap, SctpPort}
+import akka.rtcweb.protocol.sdp.sctp.{ Sctpmap, SctpPort }
 import akka.rtcweb.protocol.{ RtcWebSDPParser, RtcWebSDPRenderer }
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.Seq
-import scala.util.{Failure, Try}
+import scala.util.{ Failure, Try }
 
 class RtcWebSDPParserSpec extends Specification {
 
@@ -106,7 +106,7 @@ class RtcWebSDPParserSpec extends Specification {
           .replace("\n", "\r\n")))
 
       val resultTry = parser.parseSessionDescription()
-        .recoverWith{ case e@ParseError(position, principalPosition, traces) => Failure(new IllegalArgumentException(e.format(parser, new ErrorFormatter(true, true, true, true))))}
+        .recoverWith { case e @ ParseError(position, principalPosition, traces) => Failure(new IllegalArgumentException(e.format(parser, new ErrorFormatter(true, true, true, true)))) }
 
       resultTry should beSuccessfulTry
       val result = resultTry.get

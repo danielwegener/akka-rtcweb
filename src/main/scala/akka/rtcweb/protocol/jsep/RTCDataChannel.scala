@@ -3,17 +3,21 @@ package akka.rtcweb.protocol.jsep
 import akka.actor._
 import akka.rtcweb.protocol.jsep.RTCDataChannel.OnStateChange
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.RTCDataChannelInit
+import akka.stream.Materializer
+import akka.util.ByteString
 
 sealed trait RTCDataChannelState
 object RTCDataChannelState {
 
   /**
-   * The user agent is attempting to establish the underlying data transport. This is the initial state of a RTCDataChannel object created with createDataChannel() .
+   * The user agent is attempting to establish the underlying data transport.
+   * This is the initial state of a RTCDataChannel object created with createDataChannel() .
    */
   case object connecting extends RTCDataChannelState
 
   /**
-   * The underlying data transport is established and communication is possible. This is the initial state of a RTCDataChannel object dispatched as a part of a RTCDataChannelEvent .
+   * The underlying data transport is established and communication is possible.
+   * This is the initial state of a RTCDataChannel object dispatched as a part of a RTCDataChannelEvent .
    */
   case object open extends RTCDataChannelState
 
@@ -30,27 +34,32 @@ object RTCDataChannelState {
 
 object RTCDataChannel {
 
-  sealed trait RTCDataChannelMessage
-  final case class OnStateChange(newState: RTCDataChannelState)
+  sealed trait RTCDataChannelProtocol
 
-  def props(dataChannelListener: ActorRef, config: RTCDataChannelInit) = Props(new RTCDataChannel(dataChannelListener, config))
+  sealed trait RTCDataChannelMessage extends RTCDataChannelProtocol
+  final case class OnStateChange(newState: RTCDataChannelState) extends RTCDataChannelMessage
+
+  sealed trait Commands extends RTCDataChannelProtocol
+  final case class SendBinaryData(bytes: ByteString) extends Commands
+  final case class SendData(data: String) extends Commands
+
+  def props(flow: DataChannelFlow, config: RTCDataChannelInit)(implicit materializer: Materializer) = Props(new RTCDataChannel(flow, config, materializer))
 
 }
 
-final class RTCDataChannel private[jsep] (val listener: ActorRef, config: RTCDataChannelInit) extends Actor with ActorLogging {
+final class RTCDataChannel private[jsep] (val flow: DataChannelFlow, config: RTCDataChannelInit, private implicit val materializer: Materializer) extends Actor with ActorLogging {
 
   val peerConnection = context.parent
   var channelState: RTCDataChannelState = RTCDataChannelState.connecting
 
-  context.watch(listener)
-
   override def receive: Receive = {
-    case Terminated(`listener`) => log.info("listener stopped. stopping self."); context.stop(self)
+    case _ => ???
+    //case Terminated(`listener`) => log.info("listener stopped. stopping self."); context.stop(self)
   }
 
   /** Tell the listener that we went south  */
   override def postStop() = {
-    listener ! OnStateChange(RTCDataChannelState.closed)
+    //todo: stop the materialized flow (source and sink)
   }
 
 }

@@ -1,5 +1,6 @@
 package akka.rtcweb.protocol.ice.stun
 
+import akka.rtcweb.protocol.ice.stun.StunMessage.TransactionId
 import scodec._
 import scodec.bits._
 import codecs._
@@ -33,6 +34,8 @@ import shapeless._
  * }}}
  */
 object StunMessage {
+
+  type TransactionId = ByteVector
 
   final val MAGIC_COOKIE = hex"0x2112A442".bits
   /**
@@ -90,7 +93,7 @@ object StunMessage {
           { "Transaction ID" | fixedSizeBits(96, bytes) } ::
           { "Attributes" | vector(StunAttribute.codec) }, -16)
 
-  }.as[StunMessage]
+  }.as[StunMessage].complete
 
 }
 
@@ -125,7 +128,7 @@ object StunMessage {
 case class StunMessage(
     messageClass: Class,
     method: Method,
-    transactionId: ByteVector,
+    transactionId: TransactionId,
     attribute: Vector[StunAttribute] = Vector.empty) {
   require(transactionId.length == 12, "The transactionId MUST be 12 byte (96-bit).")
 }

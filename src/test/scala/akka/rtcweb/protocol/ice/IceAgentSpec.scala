@@ -4,8 +4,8 @@ import java.net.{ InetAddress, InetSocketAddress }
 
 import akka.actor.ActorSystem
 import akka.io.Udp
-import akka.rtcweb.protocol.ice.IceAgent.{ AgentRole, OnIceCandidate }
-import akka.rtcweb.protocol.ice.stun.{ Class, Method, StunMessage }
+import akka.rtcweb.protocol.ice.IceAgent.{ OnIceGatheringStateChange, AgentRole, OnIceCandidate }
+import akka.rtcweb.protocol.ice.stun.{ StunAgent, Class, Method, StunMessage }
 import akka.rtcweb.protocol.jsep.RTCPeerConnection.StunServerDescription
 import akka.testkit._
 import akka.util.{ ByteString, Timeout }
@@ -27,27 +27,20 @@ class IceAgentSpec extends Specification with TestKitBase {
 
   "IceAgent" should {
 
-    "go on a discovery" in {
-      val remoteHost = new InetSocketAddress("10.11.12.13", 4040)
+    "go out and find server reflexive candidates" in {
+      val stunServers = Vector(
+        new InetSocketAddress("stun.l.google.com", 19302)
+      //new InetSocketAddress("stun1.l.google.com", 19302)
+      ).map(StunServerDescription(_, None))
 
-      val unitRef = TestActorRef[IceAgent](IceAgent.props(AgentRole.Controlling, testActor, Vector(StunServerDescription(remoteHost))))
-      val udpTestProbe = TestProbe()
       val clientTestProbe = TestProbe()
-      val localPort = new InetSocketAddress("::", 4242)
+      val portRange = 1024 to 2048
+      val unitRef = TestActorRef[IceAgent](IceAgent.props(AgentRole.Controlling, clientTestProbe.ref, stunServers, portRange))
 
-      unitRef.receive(Udp.Bound(localPort), udpTestProbe.ref)
-      unitRef.receive(IceAgent.GatherCandidates, clientTestProbe.ref)
-
-      val stunRequest = udpTestProbe.expectMsgPF() {
-        case Udp.Send(payload, target, ack) if target == remoteHost =>
-          StunMessage.codec.decode(BitVector(payload.asByteBuffer)).require.value
+      clientTestProbe.fishForMessage(5.seconds, "an server reflexive candidate") {
+        case OnIceGatheringStateChange(_) => false
+        case OnIceCandidate(Candidate(_, _, Transport.UDP, _, _, CandidateType.ServerReflexiveCandidate, _, _)) => true
       }
-
-      val stunResponse = StunMessage(Class.successResponse, Method.Binding, stunRequest.transactionId)
-      unitRef.receive(Udp.Received(ByteString(StunMessage.codec.encode(stunResponse).require.toByteBuffer), remoteHost), udpTestProbe.ref)
-
-      clientTestProbe.expectMsgClass(5.seconds, classOf[OnIceCandidate])
-      clientTestProbe.expectMsgClass(5.seconds, classOf[OnIceCandidate])
       success
     }
   }

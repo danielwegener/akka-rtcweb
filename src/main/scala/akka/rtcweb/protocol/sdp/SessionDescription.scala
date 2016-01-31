@@ -2,7 +2,13 @@ package akka.rtcweb.protocol.sdp
 
 import java.net.InetSocketAddress
 
+import akka.rtcweb.protocol.sdp.SessionDescription.SessionId
+
 import scala.collection.immutable.Seq
+
+object SessionDescription {
+  type SessionId = String
+}
 
 /**
  * Session description
@@ -116,7 +122,7 @@ object ProtocolVersion {
  */
 final case class Origin(
   username: Option[String],
-  `sess-id`: String,
+  `sess-id`: SessionId,
   `sess-version`: Long,
   nettype: NetworkType = NetworkType.IN,
   addrtype: AddressType,
